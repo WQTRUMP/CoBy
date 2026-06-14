@@ -54,8 +54,11 @@ const graphRepository: GraphRepository = {
         id: company.id,
         ticker: company.ticker,
         name: company.name,
+        canonicalName: company.canonicalName,
+        displayName: company.displayName,
         isMag7: company.isMag7,
         marketCapUsd: company.marketCapUsd,
+        entityProfile: company.entityProfile,
         primaryRegion: company.primaryRegion,
         activeSnapshotId: company.activeSnapshotId,
       }));
@@ -313,8 +316,14 @@ describe("backend app", () => {
       items: [
         {
           id: "company:AAPL",
+          canonicalName: "Apple",
+          displayName: "Apple",
           primaryRegion: "US",
           activeSnapshotId: "snapshot:2026-06-14.1",
+          entityProfile: {
+            canonicalName: "Apple",
+            displayName: "Apple",
+          },
         },
       ],
       page: 1,

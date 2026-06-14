@@ -244,8 +244,11 @@ function toCompanyListItem(company: CompanyDetailDTO): CompanyListItemDTO {
     id: company.id,
     ticker: company.ticker,
     name: company.name,
+    canonicalName: company.canonicalName,
+    displayName: company.displayName,
     isMag7: company.isMag7,
     marketCapUsd: company.marketCapUsd,
+    entityProfile: company.entityProfile,
     primaryRegion: company.primaryRegion,
     activeSnapshotId: company.activeSnapshotId,
   };
@@ -359,9 +362,6 @@ function buildCompanySearchMatch(company: CompanyDetailDTO, query: string): Comp
 function toCompanySearchResultItem(company: CompanyDetailDTO, query: string): CompanySearchResultItemDTO {
   return {
     ...toCompanyListItem(company),
-    canonicalName: company.canonicalName,
-    displayName: company.displayName,
-    entityProfile: company.entityProfile,
     match: buildCompanySearchMatch(company, query),
   };
 }
@@ -462,7 +462,9 @@ class MockGraphRepository implements GraphRepository {
 
         return (
           company.name.toLowerCase().includes(normalized) ||
-          company.ticker?.toLowerCase().includes(normalized)
+          company.displayName?.toLowerCase().includes(normalized) ||
+          company.ticker?.toLowerCase().includes(normalized) ||
+          company.aliases.some((alias) => alias.toLowerCase().includes(normalized))
         );
       })
       .map(toCompanyListItem);

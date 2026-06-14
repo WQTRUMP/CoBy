@@ -331,8 +331,11 @@ class RealSampleGraphRepository implements GraphRepository {
         id: company.id,
         ticker: company.ticker,
         name: company.name,
+        canonicalName: company.canonicalName,
+        displayName: company.displayName,
         isMag7: company.isMag7,
         marketCapUsd: company.marketCapUsd,
+        entityProfile: company.entityProfile,
         primaryRegion: company.primaryRegion,
         activeSnapshotId: company.activeSnapshotId,
       }));
@@ -631,7 +634,8 @@ describe("full package app", () => {
   });
 
   it("serves real search, suggest, path, stats, and evidence payloads from the full package", async () => {
-    const [search, suggest, path, stats, evidence] = await Promise.all([
+    const [list, search, suggest, path, stats, evidence] = await Promise.all([
+      app.inject({ method: "GET", url: "/api/v1/companies?q=amazon&page=1&pageSize=5" }),
       app.inject({ method: "GET", url: "/api/v1/companies/search?q=amazon&limit=5" }),
       app.inject({ method: "GET", url: "/api/v1/companies/suggest?q=tes&limit=5" }),
       app.inject({
@@ -648,21 +652,44 @@ describe("full package app", () => {
       }),
     ]);
 
+    expect(list.statusCode).toBe(200);
+    expect(list.json().items.some((item: { id: string }) => item.id === "company:AMZN")).toBe(true);
+    expect(list.json().items[0]).toMatchObject({
+      canonicalName: "Amazon",
+      displayName: "Amazon",
+      entityProfile: {
+        canonicalName: "Amazon",
+        displayName: "Amazon",
+      },
+    });
+
     expect(search.statusCode).toBe(200);
     expect(search.json().items.some((item: { id: string }) => item.id === "company:AMZN")).toBe(true);
     expect(search.json().items[0]).toMatchObject({
       canonicalName: "Amazon",
       displayName: "Amazon",
+      entityProfile: {
+        canonicalName: "Amazon",
+        displayName: "Amazon",
+      },
       match: {
         field: expect.any(String),
+        explanation: expect.stringContaining("canonical"),
       },
     });
 
     expect(suggest.statusCode).toBe(200);
     expect(suggest.json().items.some((item: { id: string }) => item.id === "company:TSLA")).toBe(true);
     expect(suggest.json().items[0]).toMatchObject({
+      canonicalName: "Tesla",
+      displayName: "Tesla",
+      entityProfile: {
+        canonicalName: "Tesla",
+        displayName: "Tesla",
+      },
       match: {
         field: expect.any(String),
+        explanation: expect.any(String),
       },
     });
 
