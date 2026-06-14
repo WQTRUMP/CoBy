@@ -128,13 +128,16 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
       return null;
     }
 
+    const focusCompanyOption = state.companies.find((company) => company.id === rawGraph.company.item.id) ?? null;
+
     return adaptGraphViewModel({
       company: rawGraph.company,
       overview: rawGraph.overview,
       subgraph: rawGraph.subgraph,
       query,
+      focusCompanyOption,
     });
-  }, [queryKey, query, rawGraph]);
+  }, [queryKey, query, rawGraph, state.companies]);
 
   useEffect(() => {
     if (!graph) {

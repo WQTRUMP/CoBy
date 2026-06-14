@@ -7,7 +7,7 @@ import { CompanySidebar } from "../.tmp-contract-tests/src/components/CompanySid
 import { EvidencePanel } from "../.tmp-contract-tests/src/components/EvidencePanel.js";
 import { GraphCanvas } from "../.tmp-contract-tests/src/components/GraphCanvas.js";
 import { TopBar } from "../.tmp-contract-tests/src/components/TopBar.js";
-import { adaptGraphViewModel } from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
+import { adaptCompanyOptions, adaptGraphViewModel } from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
 import {
   getCompaniesResponse,
   getCompanyOverviewResponse,
@@ -16,10 +16,47 @@ import {
 } from "../.tmp-contract-tests/src/mocks/mockSupplyChain.js";
 
 test("renders relationship filters with real type and subtype options", () => {
+  const companies = adaptCompanyOptions({
+    ...getCompaniesResponse(),
+    items: getCompaniesResponse().items.map((company) => ({
+      ...company,
+      match:
+        company.id === "company:TSLA"
+          ? {
+              field: "alias",
+              value: "Tesla Manufacturing LLC",
+              aliasType: "legal_entity",
+              explanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla" and display "Tesla".',
+            }
+          : undefined,
+    })),
+    query: "tesla manufacturing llc",
+  });
   const graph = adaptGraphViewModel({
     company: getCompanyResponse("company:TSLA"),
     overview: getCompanyOverviewResponse("company:TSLA"),
     subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    focusCompanyOption: {
+      id: "company:TSLA",
+      ticker: "TSLA",
+      name: "Tesla",
+      displayName: "Tesla",
+      canonicalName: "Tesla",
+      shortName: "Tesla",
+      focus: "Tesla",
+      searchMatch: {
+        field: "alias",
+        value: "Tesla Manufacturing LLC",
+        aliasType: "legal_entity",
+        explanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla" and display "Tesla".',
+      },
+      aliasHitExplanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla" and display "Tesla".',
+      hierarchySummary: "Group: Tesla",
+      primaryRegion: "North America",
+      marketCapUsd: 1000,
+      isMag7: true,
+      entityProfile: getCompanyResponse("company:TSLA").item.entityProfile,
+    },
     query: {
       companyId: "company:TSLA",
       depth: 2,
@@ -29,7 +66,7 @@ test("renders relationship filters with real type and subtype options", () => {
 
   const markup = renderToStaticMarkup(
     React.createElement(TopBar, {
-      companies: graph.focusCompany ? [] : [],
+      companies,
       depth: 2,
       filtersOpen: true,
       graph,
@@ -54,6 +91,8 @@ test("renders relationship filters with real type and subtype options", () => {
   assert.match(markup, /Component Supply/);
   assert.match(markup, /Battery Cells \(1\)/);
   assert.match(markup, /canonical groups, brands, legal entities, and facility aliases separately/i);
+  assert.match(markup, /Tesla live focus/);
+  assert.match(markup, /Matched legal entity "Tesla Manufacturing LLC"/);
 });
 
 test("renders graph legend with concrete relationship labels instead of generic buckets", () => {
@@ -180,6 +219,57 @@ test("renders entity-layer guidance in the company sidebar without falling back 
     },
     overview: getCompanyOverviewResponse("company:TSLA"),
     subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    focusCompanyOption: {
+      id: "company:TSLA",
+      ticker: "TSLA",
+      name: "Tesla, Inc.",
+      displayName: "Tesla Energy",
+      canonicalName: "Tesla, Inc.",
+      shortName: "Tesla Energy",
+      focus: "Tesla Energy",
+      searchMatch: {
+        field: "alias",
+        value: "Tesla Manufacturing LLC",
+        aliasType: "legal_entity",
+        explanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla, Inc." and display "Tesla Energy".',
+      },
+      aliasHitExplanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla, Inc." and display "Tesla Energy".',
+      hierarchySummary: "Group: Tesla, Inc.",
+      primaryRegion: "North America",
+      marketCapUsd: 1000,
+      isMag7: true,
+      entityProfile: {
+        canonicalName: "Tesla, Inc.",
+        displayName: "Tesla Energy",
+        legalEntities: [
+          {
+            id: "alias:legal",
+            name: "Tesla Manufacturing LLC",
+            normalizedName: "tesla manufacturing llc",
+            aliasType: "legal_entity",
+            isPrimary: true,
+          },
+        ],
+        brands: [
+          {
+            id: "alias:brand",
+            name: "Powerwall",
+            normalizedName: "powerwall",
+            aliasType: "brand",
+            isPrimary: true,
+          },
+        ],
+        aliases: [
+          {
+            id: "alias:facility",
+            name: "Gigafactory Texas",
+            normalizedName: "gigafactory texas",
+            aliasType: "facility",
+            isPrimary: false,
+          },
+        ],
+      },
+    },
     query: {
       companyId: "company:TSLA",
       depth: 2,
@@ -205,6 +295,7 @@ test("renders entity-layer guidance in the company sidebar without falling back 
   assert.match(markup, /Tesla, Inc\./);
   assert.match(markup, /Group \/ brand \/ legal entity \/ facility/);
   assert.match(markup, /Gigafactory Texas/);
+  assert.match(markup, /Matched legal entity "Tesla Manufacturing LLC"/);
   assert.doesNotMatch(markup, /Legacy Alias/);
 });
 

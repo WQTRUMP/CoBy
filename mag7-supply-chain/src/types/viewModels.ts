@@ -1,4 +1,4 @@
-import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO, EntityProfile } from "@mag7/contracts";
+import type { BackendSource, CompanySearchMatchDTO, EntityProfile, EvidenceDTO, RelationDTO, SnapshotDTO } from "@mag7/contracts";
 
 export interface GraphQuery {
   companyId?: string | null;
@@ -16,6 +16,8 @@ export interface CompanyOptionViewModel {
   canonicalName: string;
   shortName: string;
   focus: string;
+  searchMatch: CompanySearchMatchDTO | null;
+  aliasHitExplanation: string | null;
   hierarchySummary: string;
   primaryRegion: string;
   marketCapUsd: number | null;

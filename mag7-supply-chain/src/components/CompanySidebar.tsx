@@ -31,9 +31,10 @@ export function CompanySidebar(props: CompanySidebarProps) {
         <div className="detailCompany">
           <div className="detailLogo">{company.ticker.slice(0, 2)}</div>
           <div>
-            <p className="sectionEyebrow compact">{company.shortName}</p>
+            <p className="sectionEyebrow compact">{company.ticker || company.canonicalName}</p>
             <h3>{company.displayName}</h3>
             <p>{company.canonicalName}</p>
+            {company.aliasHitExplanation ? <p>{company.aliasHitExplanation}</p> : null}
             <span className="tierBadge">Tier 1 suppliers</span>
           </div>
         </div>

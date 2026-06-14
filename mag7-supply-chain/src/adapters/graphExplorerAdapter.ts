@@ -4,10 +4,14 @@ import type {
   CompanyListItemDTO,
   CompanyListResponseDTO,
   CompanyOverviewDTO,
+  CompanySearchResultItemDTO,
+  CompanySuggestItemDTO,
   EvidenceDTO,
   RelationDTO,
   RelationEvidenceResponseDTO,
+  SearchCompaniesResponseDTO,
   SubgraphDTO,
+  SuggestCompaniesResponseDTO,
 } from "@mag7/contracts";
 import type {
   CompanyOptionViewModel,
@@ -38,6 +42,8 @@ type DisplayNameAwareCompany = {
   entityProfile?: CompanyDetailDTO["entityProfile"];
 };
 
+type CompanyOptionSource = CompanyListItemDTO | CompanySearchResultItemDTO | CompanySuggestItemDTO;
+
 const SOURCE_TYPE_LABELS = {
   "10k": "10-K",
   earnings_call: "Earnings Call",
@@ -56,7 +62,9 @@ const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], Gr
   Material: "material",
 };
 
-export function adaptCompanyOptions(response: CompanyListResponseDTO): CompanyOptionViewModel[] {
+export function adaptCompanyOptions(
+  response: CompanyListResponseDTO | SearchCompaniesResponseDTO | SuggestCompaniesResponseDTO,
+): CompanyOptionViewModel[] {
   return response.items.map(adaptCompanyOption);
 }
 
@@ -79,9 +87,10 @@ export function adaptCompanyOverview(overview: CompanyOverviewDTO): CompanyOverv
 export function adaptCompanyProfile(
   response: CompanyDetailResponseDTO,
   overview: CompanyOverviewDTO,
+  optionOverride?: CompanyOptionViewModel | null,
 ): CompanyProfileViewModel {
   const company = response.item;
-  const option = adaptCompanyOption(company);
+  const option = optionOverride ?? adaptCompanyOption(company);
   const overviewView = adaptCompanyOverview(overview);
 
   return {
@@ -104,8 +113,9 @@ export function adaptGraphViewModel(input: {
   overview: CompanyOverviewDTO;
   subgraph: SubgraphDTO;
   query: GraphQuery;
+  focusCompanyOption?: CompanyOptionViewModel | null;
 }): GraphViewModel {
-  const focusCompany = adaptCompanyProfile(input.company, input.overview);
+  const focusCompany = adaptCompanyProfile(input.company, input.overview, input.focusCompanyOption);
   const layout = buildNodeLayout(input.subgraph.nodes, input.subgraph.relations, focusCompany.id);
   const typeFilteredRelations = input.subgraph.relations.filter((relation) => matchesRelationshipTypeFilter(relation, input.query));
   const filteredRelations = typeFilteredRelations.filter((relation) => matchesRelationshipSubtypeFilter(relation, input.query));
@@ -133,22 +143,26 @@ export function adaptRelationEvidence(
   return response.items.map((item) => adaptEvidence(item, relation.confidence));
 }
 
-function adaptCompanyOption(company: CompanyListItemDTO): CompanyOptionViewModel {
-  const enhancedCompany = company as CompanyListItemDTO & DisplayNameAwareCompany;
+function adaptCompanyOption(company: CompanyOptionSource | CompanyDetailDTO): CompanyOptionViewModel {
+  const enhancedCompany = company as (CompanyOptionSource | CompanyDetailDTO) & DisplayNameAwareCompany;
   const displayName = getPreferredDisplayName(enhancedCompany);
   const canonicalName = getCanonicalName(enhancedCompany);
+  const name = getBaseCompanyName(company, displayName, canonicalName);
+  const searchMatch = "match" in company ? company.match ?? null : null;
 
   return {
     id: company.id,
-    ticker: company.ticker ?? company.name.slice(0, 4).toUpperCase(),
-    name: company.name,
+    ticker: company.ticker ?? name.slice(0, 4).toUpperCase(),
+    name,
     displayName,
     canonicalName,
-    shortName: getShortName({ name: displayName }),
+    shortName: displayName,
     focus: displayName,
+    searchMatch,
+    aliasHitExplanation: searchMatch?.field === "alias" ? searchMatch.explanation : null,
     hierarchySummary: formatHierarchySummary(enhancedCompany.entityProfile, "company"),
-    primaryRegion: company.primaryRegion,
-    marketCapUsd: company.marketCapUsd,
+    primaryRegion: "primaryRegion" in company ? company.primaryRegion : "Global",
+    marketCapUsd: "marketCapUsd" in company ? company.marketCapUsd : null,
     isMag7: company.isMag7,
     entityProfile: enhancedCompany.entityProfile ?? null,
   };
@@ -401,16 +415,28 @@ function collectRelationshipSubtypeOptions(relations: RelationDTO[]): RelationFi
     }));
 }
 
-function getShortName(company: Pick<CompanyListItemDTO, "name"> & { aliases?: string[] }): string {
-  return company.name.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "");
-}
-
 function getPreferredDisplayName(company: DisplayNameAwareCompany) {
   return company.displayName ?? company.entityProfile?.displayName ?? company.canonicalName ?? company.name;
 }
 
 function getCanonicalName(company: DisplayNameAwareCompany) {
   return company.canonicalName ?? company.entityProfile?.canonicalName ?? company.name;
+}
+
+function getBaseCompanyName(
+  company: CompanyOptionSource | CompanyDetailDTO,
+  displayName: string,
+  canonicalName: string,
+) {
+  if ("name" in company && typeof company.name === "string") {
+    return company.name;
+  }
+
+  if ("label" in company && typeof company.label === "string" && company.label.trim()) {
+    return company.label.replace(/\s+\([A-Z0-9.-]+\)$/, "");
+  }
+
+  return displayName || canonicalName;
 }
 
 function getPreferredNodeLabel(node: SubgraphDTO["nodes"][number]) {

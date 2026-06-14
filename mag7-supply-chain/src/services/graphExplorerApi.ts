@@ -3,6 +3,7 @@ import {
   companyListResponseSchema,
   companyOverviewSchema,
   relationEvidenceResponseSchema,
+  searchCompaniesResponseSchema,
   subgraphQuerySchema,
   subgraphSchema,
 } from "@mag7/contracts";
@@ -11,12 +12,13 @@ import type {
   CompanyListResponseDTO,
   CompanyOverviewDTO,
   RelationEvidenceResponseDTO,
+  SearchCompaniesResponseDTO,
   SubgraphDTO,
   SubgraphQuery,
 } from "@mag7/contracts";
 
 export interface GraphExplorerApi {
-  listCompanies(query?: string): Promise<CompanyListResponseDTO>;
+  listCompanies(query?: string): Promise<CompanyListResponseDTO | SearchCompaniesResponseDTO>;
   getCompany(companyId: string): Promise<CompanyDetailResponseDTO>;
   getCompanyOverview(companyId: string): Promise<CompanyOverviewDTO>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
@@ -25,6 +27,7 @@ export interface GraphExplorerApi {
 
 export const graphApiContract = {
   companies: "/api/v1/companies",
+  companySearch: "/api/v1/companies/search",
   company: "/api/v1/companies/:companyId",
   overview: "/api/v1/companies/:companyId/overview",
   subgraph: "/api/v1/graph/subgraph",
@@ -44,12 +47,18 @@ export class ApiRequestError extends Error {
 export function createHttpGraphExplorerApi(baseUrl = ""): GraphExplorerApi {
   return {
     async listCompanies(query) {
-      const url = new URL(`${baseUrl}${graphApiContract.companies}`, window.location.origin);
-      if (query?.trim()) {
-        url.searchParams.set("q", query.trim());
+      const normalizedQuery = query?.trim();
+      const isSearch = Boolean(normalizedQuery);
+      const url = new URL(
+        `${baseUrl}${isSearch ? graphApiContract.companySearch : graphApiContract.companies}`,
+        window.location.origin,
+      );
+      if (normalizedQuery) {
+        url.searchParams.set("q", normalizedQuery);
+        url.searchParams.set("limit", "10");
       }
 
-      return request(url, companyListResponseSchema);
+      return request(url, isSearch ? searchCompaniesResponseSchema : companyListResponseSchema);
     },
     async getCompany(companyId) {
       return request(

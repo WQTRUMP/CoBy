@@ -113,7 +113,8 @@ export function TopBar(props: TopBarProps) {
 
         <article className="heroCanvasCard">
           <div className="heroCanvasCopy">
-            <span>{graph.focusCompany.shortName} live focus</span>
+            <span>{graph.focusCompany.displayName} live focus</span>
+            {graph.focusCompany.aliasHitExplanation ? <small>{graph.focusCompany.aliasHitExplanation}</small> : null}
             <button
               aria-expanded={filtersOpen}
               aria-controls="relationship-filters-panel"
@@ -187,9 +188,9 @@ export function TopBar(props: TopBarProps) {
             onClick={() => onCompanySelect(company.id)}
             type="button"
           >
-            <strong>{company.shortName}</strong>
-            <span>{company.focus}</span>
-            <small>{company.hierarchySummary}</small>
+            <strong>{company.displayName}</strong>
+            <span>{company.canonicalName !== company.displayName ? company.canonicalName : company.ticker}</span>
+            <small>{company.aliasHitExplanation ?? company.hierarchySummary}</small>
           </button>
         ))}
       </section>

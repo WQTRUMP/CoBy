@@ -1,6 +1,7 @@
-import { companyDetailResponseSchema, companyListResponseSchema, companyOverviewSchema, relationEvidenceResponseSchema, subgraphQuerySchema, subgraphSchema, } from "@mag7/contracts";
+import { companyDetailResponseSchema, companyListResponseSchema, companyOverviewSchema, relationEvidenceResponseSchema, searchCompaniesResponseSchema, subgraphQuerySchema, subgraphSchema, } from "@mag7/contracts";
 export const graphApiContract = {
     companies: "/api/v1/companies",
+    companySearch: "/api/v1/companies/search",
     company: "/api/v1/companies/:companyId",
     overview: "/api/v1/companies/:companyId/overview",
     subgraph: "/api/v1/graph/subgraph",
@@ -17,11 +18,14 @@ export class ApiRequestError extends Error {
 export function createHttpGraphExplorerApi(baseUrl = "") {
     return {
         async listCompanies(query) {
-            const url = new URL(`${baseUrl}${graphApiContract.companies}`, window.location.origin);
-            if (query?.trim()) {
-                url.searchParams.set("q", query.trim());
+            const normalizedQuery = query?.trim();
+            const isSearch = Boolean(normalizedQuery);
+            const url = new URL(`${baseUrl}${isSearch ? graphApiContract.companySearch : graphApiContract.companies}`, window.location.origin);
+            if (normalizedQuery) {
+                url.searchParams.set("q", normalizedQuery);
+                url.searchParams.set("limit", "10");
             }
-            return request(url, companyListResponseSchema);
+            return request(url, isSearch ? searchCompaniesResponseSchema : companyListResponseSchema);
         },
         async getCompany(companyId) {
             return request(`${baseUrl}${graphApiContract.company.replace(":companyId", encodeURIComponent(companyId))}`, companyDetailResponseSchema);

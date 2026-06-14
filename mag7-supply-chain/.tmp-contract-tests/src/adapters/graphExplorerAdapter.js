@@ -33,9 +33,9 @@ export function adaptCompanyOverview(overview) {
         source: overview.source,
     };
 }
-export function adaptCompanyProfile(response, overview) {
+export function adaptCompanyProfile(response, overview, optionOverride) {
     const company = response.item;
-    const option = adaptCompanyOption(company);
+    const option = optionOverride ?? adaptCompanyOption(company);
     const overviewView = adaptCompanyOverview(overview);
     return {
         ...option,
@@ -52,7 +52,7 @@ export function adaptCompanyProfile(response, overview) {
     };
 }
 export function adaptGraphViewModel(input) {
-    const focusCompany = adaptCompanyProfile(input.company, input.overview);
+    const focusCompany = adaptCompanyProfile(input.company, input.overview, input.focusCompanyOption);
     const layout = buildNodeLayout(input.subgraph.nodes, input.subgraph.relations, focusCompany.id);
     const typeFilteredRelations = input.subgraph.relations.filter((relation) => matchesRelationshipTypeFilter(relation, input.query));
     const filteredRelations = typeFilteredRelations.filter((relation) => matchesRelationshipSubtypeFilter(relation, input.query));
@@ -78,17 +78,21 @@ function adaptCompanyOption(company) {
     const enhancedCompany = company;
     const displayName = getPreferredDisplayName(enhancedCompany);
     const canonicalName = getCanonicalName(enhancedCompany);
+    const name = getBaseCompanyName(company, displayName, canonicalName);
+    const searchMatch = "match" in company ? company.match ?? null : null;
     return {
         id: company.id,
-        ticker: company.ticker ?? company.name.slice(0, 4).toUpperCase(),
-        name: company.name,
+        ticker: company.ticker ?? name.slice(0, 4).toUpperCase(),
+        name,
         displayName,
         canonicalName,
-        shortName: getShortName({ name: displayName }),
+        shortName: displayName,
         focus: displayName,
+        searchMatch,
+        aliasHitExplanation: searchMatch?.field === "alias" ? searchMatch.explanation : null,
         hierarchySummary: formatHierarchySummary(enhancedCompany.entityProfile, "company"),
-        primaryRegion: company.primaryRegion,
-        marketCapUsd: company.marketCapUsd,
+        primaryRegion: "primaryRegion" in company ? company.primaryRegion : "Global",
+        marketCapUsd: "marketCapUsd" in company ? company.marketCapUsd : null,
         isMag7: company.isMag7,
         entityProfile: enhancedCompany.entityProfile ?? null,
     };
@@ -293,14 +297,20 @@ function collectRelationshipSubtypeOptions(relations) {
         label: formatRelationshipSubtype(value) ?? value,
     }));
 }
-function getShortName(company) {
-    return company.name.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "");
-}
 function getPreferredDisplayName(company) {
     return company.displayName ?? company.entityProfile?.displayName ?? company.canonicalName ?? company.name;
 }
 function getCanonicalName(company) {
     return company.canonicalName ?? company.entityProfile?.canonicalName ?? company.name;
+}
+function getBaseCompanyName(company, displayName, canonicalName) {
+    if ("name" in company && typeof company.name === "string") {
+        return company.name;
+    }
+    if ("label" in company && typeof company.label === "string" && company.label.trim()) {
+        return company.label.replace(/\s+\([A-Z0-9.-]+\)$/, "");
+    }
+    return displayName || canonicalName;
 }
 function getPreferredNodeLabel(node) {
     if (node.company) {

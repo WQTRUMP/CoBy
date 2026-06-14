@@ -23,6 +23,7 @@ test("adapts company list items from shared contract responses", () => {
   assert.equal(companies[0]?.shortName, "Tesla");
   assert.equal(companies[0]?.displayName, "Tesla");
   assert.equal(companies[0]?.canonicalName, "Tesla");
+  assert.equal(companies[0]?.aliasHitExplanation, null);
   assert.equal(companies[0]?.primaryRegion, "North America");
 });
 
@@ -71,9 +72,57 @@ test("uses displayName for company list short names instead of aliases[0]", () =
   assert.equal(companies[0]?.displayName, "Google");
   assert.equal(companies[0]?.shortName, "Google");
   assert.equal(companies[0]?.canonicalName, "Alphabet");
+  assert.equal(companies[0]?.aliasHitExplanation, null);
   assert.doesNotMatch(companies[0]?.hierarchySummary ?? "", /Alphabet Inc\./);
   assert.match(companies[0]?.hierarchySummary ?? "", /Google LLC/);
   assert.match(companies[0]?.hierarchySummary ?? "", /Google Cloud/);
+});
+
+test("preserves alias-hit explanations from search results while keeping displayName as the primary label", () => {
+  const companies = adaptCompanyOptions({
+    items: [
+      {
+        id: "company:GOOG",
+        ticker: "GOOG",
+        name: "Alphabet",
+        canonicalName: "Alphabet",
+        displayName: "Google",
+        isMag7: true,
+        marketCapUsd: 1000,
+        primaryRegion: "North America",
+        activeSnapshotId: "snapshot:published",
+        entityProfile: {
+          canonicalName: "Alphabet",
+          displayName: "Google",
+          legalEntities: [
+            {
+              id: "alias:google-llc",
+              name: "Google LLC",
+              normalizedName: "google llc",
+              aliasType: "legal_entity",
+              isPrimary: true,
+            },
+          ],
+          brands: [],
+          aliases: [],
+        },
+        match: {
+          field: "alias",
+          value: "Google LLC",
+          aliasType: "legal_entity",
+          explanation: 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".',
+        },
+      },
+    ],
+    total: 1,
+    query: "google llc",
+    source: "mock",
+  });
+
+  assert.equal(companies[0]?.displayName, "Google");
+  assert.equal(companies[0]?.canonicalName, "Alphabet");
+  assert.equal(companies[0]?.aliasHitExplanation, 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".');
+  assert.equal(companies[0]?.searchMatch?.field, "alias");
 });
 
 test("prefers displayName and canonical entity profile fields over aliases for company presentation", () => {
@@ -125,8 +174,41 @@ test("prefers displayName and canonical entity profile fields over aliases for c
   assert.equal(company.displayName, "Tesla Energy");
   assert.equal(company.canonicalName, "Tesla, Inc.");
   assert.equal(company.shortName, "Tesla Energy");
+  assert.equal(company.aliasHitExplanation, null);
   assert.match(company.hierarchySummary, /Group: Tesla, Inc\./);
   assert.match(company.hierarchySummary, /Facilities: Gigafactory Texas/);
+});
+
+test("carries selected-company alias-hit explanations into the focus company profile", () => {
+  const company = adaptCompanyProfile(
+    getCompanyResponse("company:TSLA"),
+    getCompanyOverviewResponse("company:TSLA"),
+    {
+      id: "company:TSLA",
+      ticker: "TSLA",
+      name: "Tesla, Inc.",
+      displayName: "Tesla",
+      canonicalName: "Tesla, Inc.",
+      shortName: "Tesla",
+      focus: "Tesla",
+      searchMatch: {
+        field: "alias",
+        value: "Tesla Manufacturing LLC",
+        aliasType: "legal_entity",
+        explanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla, Inc." and display "Tesla".',
+      },
+      aliasHitExplanation: 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla, Inc." and display "Tesla".',
+      hierarchySummary: "Group: Tesla, Inc.",
+      primaryRegion: "North America",
+      marketCapUsd: 1000,
+      isMag7: true,
+      entityProfile: getCompanyResponse("company:TSLA").item.entityProfile,
+    },
+  );
+
+  assert.equal(company.displayName, "Tesla");
+  assert.equal(company.aliasHitExplanation, 'Matched legal entity "Tesla Manufacturing LLC" for canonical "Tesla, Inc." and display "Tesla".');
+  assert.equal(company.searchMatch?.field, "alias");
 });
 
 test("preserves non-direct relations, notes, tier, and evidence aggregation in the graph view-model", () => {
