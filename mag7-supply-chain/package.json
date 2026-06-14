@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test:contracts": "rm -rf .tmp-contract-tests && npx tsc -p tsconfig.contract-tests.json && node --experimental-specifier-resolution=node --test contract-tests/graphExplorerAdapter.test.mjs"
+    "test:contracts": "rm -rf .tmp-contract-tests && npx tsc -p tsconfig.contract-tests.json && mkdir -p .tmp-contract-tests/packages/contracts && ln -s ../../../packages/contracts/node_modules .tmp-contract-tests/packages/contracts/node_modules && node --experimental-specifier-resolution=node --test contract-tests/*.test.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

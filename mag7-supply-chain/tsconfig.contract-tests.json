@@ -11,8 +11,8 @@
   },
   "include": [
     "src/adapters/**/*.ts",
-    "src/contracts/**/*.ts",
     "src/mocks/**/*.ts",
+    "src/services/**/*.ts",
     "src/types/**/*.ts",
     "packages/contracts/src/**/*.ts"
   ]

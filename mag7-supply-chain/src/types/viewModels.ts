@@ -1,4 +1,4 @@
-import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO } from "../../packages/contracts/src/index";
+import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO } from "../../packages/contracts/src/index.js";
 
 export interface GraphQuery {
   companyId: string;

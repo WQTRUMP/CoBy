@@ -9,7 +9,7 @@ import type {
   RelationEvidenceResponseDTO,
   SnapshotDTO,
   SubgraphDTO,
-} from "../../packages/contracts/src/index";
+} from "../../packages/contracts/src/index.js";
 
 const snapshot: SnapshotDTO = {
   id: "snapshot:2026-06-14.1",

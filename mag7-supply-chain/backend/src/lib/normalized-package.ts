@@ -5,15 +5,12 @@ import {
   standardizedImportEvidenceRecordSchema,
   standardizedImportRelationRecordSchema,
   type StandardizedImportEvidenceRecord,
+  type StandardizedImportPackage,
   type StandardizedImportRelationRecord,
-} from "../../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 export type NormalizedRelationRecord = StandardizedImportRelationRecord;
 export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
-
-export interface NormalizedImportPackage {
-  relations: NormalizedRelationRecord[];
-  evidence: NormalizedEvidenceRecord[];
-}
+export type NormalizedImportPackage = StandardizedImportPackage;
 
 interface CompanySeed {
   id: string;
@@ -41,13 +38,11 @@ export interface ImportCompanyNode extends CompanySeed {
 
 export interface ImportRelationNode {
   id: string;
-  sourceCompanyId: string;
-  targetCompanyId: string;
-  relationshipType: string;
+  relationshipType: StandardizedImportRelationRecord["relationship_type"];
   relationshipSubtype: string;
   tier: number;
   depthFromMag7: number;
-  confidence: string;
+  confidence: StandardizedImportRelationRecord["confidence_label"];
   confidenceScore: number;
   summary: string;
   productScope: string[];
@@ -70,10 +65,16 @@ export interface ImportRelationNode {
   lastVerifiedAt: string;
 }
 
+export interface ImportRelationEdge {
+  relationId: string;
+  sourceCompanyId: string;
+  targetCompanyId: string;
+  snapshotId: string;
+}
+
 export interface ImportEvidenceNode {
   id: string;
-  relationId: string;
-  sourceType: string;
+  sourceType: StandardizedImportEvidenceRecord["source_type"];
   title: string;
   publisher: string;
   url: string;
@@ -93,6 +94,11 @@ export interface ImportEvidenceNode {
   notes: string | null;
 }
 
+export interface ImportEvidenceBinding {
+  relationId: string;
+  evidenceId: string;
+}
+
 export interface ImportSnapshotNode {
   id: string;
   version: string;
@@ -104,7 +110,9 @@ export interface ImportSnapshotNode {
 
 export interface PreparedNormalizedImport {
   relations: ImportRelationNode[];
+  relationEdges: ImportRelationEdge[];
   evidence: ImportEvidenceNode[];
+  evidenceBindings: ImportEvidenceBinding[];
   companies: ImportCompanyNode[];
   snapshots: ImportSnapshotNode[];
 }
@@ -377,8 +385,6 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     snapshots: [...snapshotMap.values()],
     relations: pkg.relations.map((relation) => ({
       id: relation.relation_id,
-      sourceCompanyId: getCompanySeed(relation.supplier_slug, relation.supplier, false).id,
-      targetCompanyId: getCompanySeed(relation.company_slug, relation.company, true).id,
       relationshipType: relation.relationship_type,
       relationshipSubtype: relation.relationship_subtype,
       tier: relation.tier,
@@ -405,9 +411,14 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       sourceReportPath: relation.source_report_path,
       lastVerifiedAt: relation.last_verified_at,
     })),
+    relationEdges: pkg.relations.map((relation) => ({
+      relationId: relation.relation_id,
+      sourceCompanyId: getCompanySeed(relation.supplier_slug, relation.supplier, false).id,
+      targetCompanyId: getCompanySeed(relation.company_slug, relation.company, true).id,
+      snapshotId: relation.snapshot_id,
+    })),
     evidence: pkg.evidence.map((evidence) => ({
       id: evidence.evidence_id,
-      relationId: evidence.relation_id,
       sourceType: evidence.source_type,
       title: evidence.title,
       publisher: evidence.publisher,
@@ -426,6 +437,10 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       parserVersion: evidence.parser_version,
       sourceReportPath: evidence.source_report_path,
       notes: evidence.notes ?? null,
+    })),
+    evidenceBindings: pkg.evidence.map((evidence) => ({
+      relationId: evidence.relation_id,
+      evidenceId: evidence.evidence_id,
     })),
   };
 }

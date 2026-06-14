@@ -8,7 +8,7 @@ import type {
   RelationDTO,
   RelationEvidenceResponseDTO,
   SubgraphDTO,
-} from "../../packages/contracts/src/index";
+} from "../../packages/contracts/src/index.js";
 import type {
   CompanyOptionViewModel,
   CompanyOverviewViewModel,
