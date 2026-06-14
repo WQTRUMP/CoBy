@@ -1,24 +1,27 @@
 import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
-import type { GraphNodeDTO, GraphRelationDTO, SubgraphDTO } from "../types/contracts";
+import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
 
 interface GraphCanvasProps {
   activeNodeId: string;
   activeRelationId: string | null;
-  focusNode: GraphNodeDTO;
-  graph: SubgraphDTO;
-  onNodeSelect: (node: GraphNodeDTO) => void;
-  onRelationSelect: (relation: GraphRelationDTO) => void;
+  focusNode: GraphNodeViewModel;
+  graph: GraphViewModel;
+  onNodeSelect: (node: GraphNodeViewModel) => void;
+  onRelationSelect: (relation: GraphRelationViewModel) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }
 
-const relationLabels: Record<GraphRelationDTO["relationshipType"], string> = {
+const relationLabels: Record<GraphRelationViewModel["relationshipType"], string> = {
   component_supply: "Component",
   manufacturing: "Manufacturing",
   cloud_service: "Cloud / Compute",
   raw_material_supply: "Raw Material",
   equipment_supply: "Equipment",
   software_dependency: "Entry",
+  logistics: "Logistics",
+  professional_service: "Professional",
+  channel_partner: "Channel",
 };
 
 export function GraphCanvas(props: GraphCanvasProps) {
@@ -128,7 +131,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
   );
 }
 
-function curvePath(source: GraphNodeDTO, target: GraphNodeDTO) {
+function curvePath(source: GraphNodeViewModel, target: GraphNodeViewModel) {
   const controlX = (source.x + target.x) / 2;
   const controlY = Math.min(source.y, target.y) - Math.abs(source.x - target.x) * 0.12;
   return `M ${source.x} ${source.y} Q ${controlX} ${controlY} ${target.x} ${target.y}`;

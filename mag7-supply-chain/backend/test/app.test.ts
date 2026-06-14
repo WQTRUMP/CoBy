@@ -5,7 +5,7 @@ import { mockSubgraph } from "../src/lib/mock-data.js";
 import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
 import type { CacheClient } from "../src/lib/redis.js";
 import type { GraphRepository, Neo4jHealth } from "../src/lib/neo4j.js";
-import type { GraphNodeDTO } from "../../packages/contracts/src/index.js";
+import type { CompanyListQuery, GraphNodeDTO } from "../../packages/contracts/src/index.js";
 
 const cache = new Map<string, string>();
 
@@ -28,11 +28,34 @@ const cacheClient: CacheClient = {
 
 const graphRepository: GraphRepository = {
   source: "mock",
-  async listCompanies() {
-    return mockSubgraph.nodes
+  async listCompanies(query: CompanyListQuery) {
+    const items = mockSubgraph.nodes
       .filter((node: GraphNodeDTO) => node.entityType === "Company" && Boolean(node.company))
       .map((node: GraphNodeDTO) => node.company!)
       .filter(Boolean);
+
+    const normalized = query.q?.toLowerCase();
+    return items
+      .filter((company) => (query.isMag7 === undefined ? true : company.isMag7 === query.isMag7))
+      .filter((company) => {
+        if (!normalized) {
+          return true;
+        }
+
+        return (
+          company.name.toLowerCase().includes(normalized) ||
+          company.ticker?.toLowerCase().includes(normalized)
+        );
+      })
+      .map((company) => ({
+        id: company.id,
+        ticker: company.ticker,
+        name: company.name,
+        isMag7: company.isMag7,
+        marketCapUsd: company.marketCapUsd,
+        primaryRegion: company.primaryRegion,
+        activeSnapshotId: company.activeSnapshotId,
+      }));
   },
   async getCompany(companyId) {
     return (
@@ -46,9 +69,13 @@ const graphRepository: GraphRepository = {
     return {
       companyId,
       companyName: "Apple",
+      activeSnapshotId: mockSubgraph.snapshot.id,
       totalRelations: 2,
+      tier1SupplierCount: 1,
       supplierCount: 1,
+      highRiskRelationCount: 1,
       evidenceCount: 2,
+      evidenceCoverage: 1,
       lastUpdatedAt: mockSubgraph.snapshot.publishedAt,
       source: "mock",
     };
@@ -100,7 +127,7 @@ describe("backend app", () => {
       status: "degraded",
       service: "mag7-backend",
       contracts: {
-        importSchemaVersion: "mag7-supply-chain.import-relations.v1",
+        importSchemaVersion: "mag7-supply-chain.import-relations.v2",
         mockGraphBoundary: true,
       },
     });
@@ -118,7 +145,11 @@ describe("backend app", () => {
   });
 
   it("returns company detail and overview payloads", async () => {
-    const [detailResponse, overviewResponse] = await Promise.all([
+    const [listResponse, detailResponse, overviewResponse] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies?q=app&page=1&pageSize=10",
+      }),
       app.inject({
         method: "GET",
         url: "/api/v1/companies/company:AAPL",
@@ -129,11 +160,28 @@ describe("backend app", () => {
       }),
     ]);
 
+    expect(listResponse.statusCode).toBe(200);
+    expect(listResponse.json()).toMatchObject({
+      items: [
+        {
+          id: "company:AAPL",
+          primaryRegion: "US",
+          activeSnapshotId: "snapshot:2026-06-14.1",
+        },
+      ],
+      page: 1,
+      pageSize: 10,
+      total: 1,
+      source: "mock",
+    });
+
     expect(detailResponse.statusCode).toBe(200);
     expect(detailResponse.json()).toMatchObject({
       item: {
         id: "company:AAPL",
         name: "Apple",
+        primaryRegion: "US",
+        activeSnapshotId: "snapshot:2026-06-14.1",
       },
       source: "mock",
     });
@@ -142,7 +190,9 @@ describe("backend app", () => {
     expect(overviewResponse.json()).toMatchObject({
       companyId: "company:AAPL",
       totalRelations: 2,
+      tier1SupplierCount: 1,
       evidenceCount: 2,
+      evidenceCoverage: 1,
     });
   });
 
@@ -168,21 +218,36 @@ describe("backend app", () => {
         requestId: "import-test",
         source: "unit-test",
         dataVersion: "2026.06.14-01",
-        schemaVersion: "mag7-supply-chain.import-relations.v1",
+        schemaVersion: "mag7-supply-chain.import-relations.v2",
         relations: [
           {
+            relation_id: "rel:apple:tsmc:manufacturing:apple-silicon",
+            snapshot_id: "snapshot:2026-06-14.1",
             company: "Apple",
+            company_slug: "apple",
             supplier: "TSMC",
+            supplier_slug: "tsmc",
             tier: 1,
+            depth_from_mag7: 1,
             relationship_type: "manufacturing",
-            product_scope: "advanced silicon manufacturing",
+            relationship_subtype: "wafer_foundry",
+            product_scope: ["advanced silicon manufacturing"],
+            evidence_ids: ["evidence:apple:2025-08-06:tsmc-arizona"],
+            primary_evidence_id: "evidence:apple:2025-08-06:tsmc-arizona",
             evidence_date: "2026-06-14T00:00:00.000Z",
+            evidence_date_resolution: "published_at",
             evidence_excerpt: "Evidence",
             source_url: "https://example.com/report",
             confidence_label: "strong_evidence",
             confidence_score: 0.88,
+            source_method: "unit_test",
+            source_count: 1,
+            status: "approved",
+            summary: "TSMC provides manufacturing capacity for Apple silicon.",
             notes: "TSMC -> Apple",
-            source_type: "supplier_report",
+            lineage_key: "Apple|TSMC|manufacturing|Apple silicon",
+            source_report_path: "/tmp/unit-test.md",
+            last_verified_at: "2026-06-14T00:00:00.000Z",
           },
         ],
       },
@@ -192,7 +257,8 @@ describe("backend app", () => {
     expect(response.json()).toMatchObject({
       accepted: true,
       relationCount: 1,
-      schemaVersion: "mag7-supply-chain.import-relations.v1",
+      schemaVersion: "mag7-supply-chain.import-relations.v2",
+      storageMode: "lossless",
     });
   });
 
@@ -204,7 +270,7 @@ describe("backend app", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      schemaVersion: "mag7-supply-chain.import-relations.v1",
+      schemaVersion: "mag7-supply-chain.import-relations.v2",
       mode: "mock-ready",
     });
   });
@@ -297,6 +363,9 @@ describe("backend app", () => {
     expect(prepared.relations[0]).toMatchObject({
       sourceCompanyId: "company:TSMC",
       targetCompanyId: "company:AAPL",
+      productScope: ["Apple silicon"],
+      evidenceIds: ["evidence:apple:2025-08-06:tsmc-arizona"],
+      primaryEvidenceId: "evidence:apple:2025-08-06:tsmc-arizona",
     });
   });
 });

@@ -13,7 +13,7 @@ export async function registerHealthRoutes(app: FastifyInstance) {
       time: new Date().toISOString(),
       repositoryMode: app.graphRepository.source,
       contracts: {
-        importSchemaVersion: "mag7-supply-chain.import-relations.v1",
+        importSchemaVersion: "mag7-supply-chain.import-relations.v2",
         mockGraphBoundary: app.graphRepository.source === "mock",
       },
       dependencies: {

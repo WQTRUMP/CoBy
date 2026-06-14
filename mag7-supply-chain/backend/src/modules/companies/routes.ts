@@ -1,17 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-const companiesQuerySchema = z.object({
-  q: z.string().optional(),
-});
+import { companyListQuerySchema } from "../../../../packages/contracts/src/index.js";
 
 export async function registerCompanyRoutes(app: FastifyInstance) {
   app.get("/api/v1/companies", async (request) => {
-    const query = companiesQuerySchema.parse(request.query);
-    const items = await app.graphRepository.listCompanies(query.q);
+    const query = companyListQuerySchema.parse(request.query);
+    const items = await app.graphRepository.listCompanies(query);
+    const start = (query.page - 1) * query.pageSize;
+    const pagedItems = items.slice(start, start + query.pageSize);
 
     return {
-      items,
+      items: pagedItems,
+      page: query.page,
+      pageSize: query.pageSize,
       total: items.length,
       source: app.graphRepository.source,
     };

@@ -2,7 +2,10 @@ import neo4j, { type Driver } from "neo4j-driver";
 
 import { env } from "../config/env.js";
 import type {
-  CompanyDTO,
+  CompanyDetailDTO,
+  CompanyListItemDTO,
+  CompanyListQuery,
+  CompanyOverviewDTO,
   EvidenceDTO,
   RelationDTO,
   SubgraphDTO,
@@ -20,9 +23,9 @@ export interface Neo4jHealth {
 
 export interface GraphRepository {
   source: "neo4j" | "mock";
-  listCompanies(query?: string): Promise<CompanyDTO[]>;
-  getCompany(companyId: string): Promise<CompanyDTO | null>;
-  getCompanyOverview(companyId: string): Promise<Record<string, unknown> | null>;
+  listCompanies(query: CompanyListQuery): Promise<CompanyListItemDTO[]>;
+  getCompany(companyId: string): Promise<CompanyDetailDTO | null>;
+  getCompanyOverview(companyId: string): Promise<CompanyOverviewDTO | null>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
   getRelationEvidence(relationId: string): Promise<EvidenceDTO[]>;
   importNormalizedPackage(payload: PreparedNormalizedImport): Promise<{
@@ -54,13 +57,13 @@ function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)) : [];
 }
 
-function mapCompanyNode(properties: Record<string, unknown>): CompanyDTO {
+function mapCompanyNode(properties: Record<string, unknown>): CompanyDetailDTO {
   return {
     id: String(properties.id),
     ticker: typeof properties.ticker === "string" ? properties.ticker : undefined,
     name: String(properties.name),
     entityType: "Company",
-    companyType: String(properties.companyType) as CompanyDTO["companyType"],
+    companyType: String(properties.companyType) as CompanyDetailDTO["companyType"],
     country: String(properties.country),
     isMag7: Boolean(properties.isMag7),
     marketCapUsd: toNumber(properties.marketCapUsd),
@@ -68,6 +71,28 @@ function mapCompanyNode(properties: Record<string, unknown>): CompanyDTO {
     aliases: toStringArray(properties.aliases),
     active: properties.active !== false,
     importanceScore: toNumber(properties.importanceScore) ?? 0.5,
+    primaryRegion: typeof properties.primaryRegion === "string" ? properties.primaryRegion : String(properties.country),
+    activeSnapshotId:
+      typeof properties.activeSnapshotId === "string" ? properties.activeSnapshotId : null,
+    summary:
+      typeof properties.summary === "string"
+        ? properties.summary
+        : typeof properties.description === "string"
+          ? properties.description
+          : null,
+    lastUpdatedAt: typeof properties.lastUpdatedAt === "string" ? properties.lastUpdatedAt : null,
+  };
+}
+
+function toCompanyListItem(company: CompanyDetailDTO): CompanyListItemDTO {
+  return {
+    id: company.id,
+    ticker: company.ticker,
+    name: company.name,
+    isMag7: company.isMag7,
+    marketCapUsd: company.marketCapUsd,
+    primaryRegion: company.primaryRegion,
+    activeSnapshotId: company.activeSnapshotId,
   };
 }
 
@@ -98,17 +123,21 @@ function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO
 class MockGraphRepository implements GraphRepository {
   source = "mock" as const;
 
-  async listCompanies(query?: string) {
-    if (!query) {
-      return mockCompanies;
-    }
+  async listCompanies(query: CompanyListQuery) {
+    const normalized = query.q?.toLowerCase();
+    return mockCompanies
+      .filter((company) => (query.isMag7 === undefined ? true : company.isMag7 === query.isMag7))
+      .filter((company) => {
+        if (!normalized) {
+          return true;
+        }
 
-    const normalized = query.toLowerCase();
-    return mockCompanies.filter(
-      (company) =>
-        company.name.toLowerCase().includes(normalized) ||
-        company.ticker?.toLowerCase().includes(normalized),
-    );
+        return (
+          company.name.toLowerCase().includes(normalized) ||
+          company.ticker?.toLowerCase().includes(normalized)
+        );
+      })
+      .map(toCompanyListItem);
   }
 
   async getCompany(companyId: string) {
@@ -128,12 +157,20 @@ class MockGraphRepository implements GraphRepository {
     return {
       companyId,
       companyName: company.name,
+      activeSnapshotId: company.activeSnapshotId,
       totalRelations: relatedRelations.length,
+      tier1SupplierCount: relatedRelations.filter((relation) => relation.tier === 1).length,
       supplierCount: new Set(relatedRelations.map((relation) => relation.sourceId)).size,
+      highRiskRelationCount: relatedRelations.filter((relation) => relation.confidence !== "confirmed").length,
       evidenceCount: relatedRelations.reduce(
         (sum, relation) => sum + (relation.evidenceCount ?? relation.evidence?.length ?? 0),
         0,
       ),
+      evidenceCoverage:
+        relatedRelations.length === 0
+          ? 0
+          : relatedRelations.filter((relation) => (relation.evidenceCount ?? relation.evidence?.length ?? 0) > 0).length /
+            relatedRelations.length,
       lastUpdatedAt: mockSubgraph.snapshot.publishedAt,
       source: this.source,
     };
@@ -177,31 +214,38 @@ class MockGraphRepository implements GraphRepository {
   }
 }
 
-class Neo4jGraphRepository implements GraphRepository {
+export class Neo4jGraphRepository implements GraphRepository {
   source = "neo4j" as const;
 
   constructor(private readonly driver: Driver, private readonly database: string) {}
 
-  async listCompanies(query?: string) {
+  async listCompanies(query: CompanyListQuery) {
     const session = this.driver.session({ database: this.database });
 
     try {
       const result = await session.run(
         `
         MATCH (c:Company)
-        WHERE $query IS NULL
+        WHERE ($query IS NULL
           OR toLower(c.name) CONTAINS toLower($query)
-          OR toLower(c.ticker) CONTAINS toLower($query)
-        RETURN c
-        ORDER BY c.isMag7 DESC, c.marketCapUsd DESC
-        LIMIT 25
+          OR toLower(coalesce(c.ticker, "")) CONTAINS toLower($query))
+          AND ($isMag7 IS NULL OR c.isMag7 = $isMag7)
+        OPTIONAL MATCH (c)<-[:TARGET_OF]-(targetRel:SupplyRelation)<-[:CONTAINS]-(targetSnapshot:Snapshot)
+        OPTIONAL MATCH (c)-[:SOURCE_OF]->(sourceRel:SupplyRelation)<-[:CONTAINS]-(sourceSnapshot:Snapshot)
+        RETURN c {
+          .*,
+          primaryRegion: coalesce(c.primaryRegion, c.country),
+          activeSnapshotId: coalesce(head(collect(DISTINCT targetSnapshot.id)), head(collect(DISTINCT sourceSnapshot.id))),
+          lastUpdatedAt: coalesce(max(targetSnapshot.publishedAt), max(sourceSnapshot.publishedAt))
+        } AS company
+        ORDER BY c.isMag7 DESC, c.marketCapUsd DESC, c.name ASC
         `,
-        { query: query ?? null },
+        { query: query.q ?? null, isMag7: query.isMag7 ?? null },
       );
 
-      return result.records.map((record) =>
-        mapCompanyNode(record.get("c").properties as Record<string, unknown>),
-      );
+      return result.records
+        .map((record) => mapCompanyNode(record.get("company") as Record<string, unknown>))
+        .map(toCompanyListItem);
     } finally {
       await session.close();
     }
@@ -214,14 +258,22 @@ class Neo4jGraphRepository implements GraphRepository {
       const result = await session.run(
         `
         MATCH (c:Company {id: $companyId})
-        RETURN c
+        OPTIONAL MATCH (c)<-[:TARGET_OF]-(targetRel:SupplyRelation)<-[:CONTAINS]-(targetSnapshot:Snapshot)
+        OPTIONAL MATCH (c)-[:SOURCE_OF]->(sourceRel:SupplyRelation)<-[:CONTAINS]-(sourceSnapshot:Snapshot)
+        RETURN c {
+          .*,
+          primaryRegion: coalesce(c.primaryRegion, c.country),
+          activeSnapshotId: coalesce(head(collect(DISTINCT targetSnapshot.id)), head(collect(DISTINCT sourceSnapshot.id))),
+          lastUpdatedAt: coalesce(max(targetSnapshot.publishedAt), max(sourceSnapshot.publishedAt)),
+          summary: coalesce(c.summary, c.description)
+        } AS company
         LIMIT 1
         `,
         { companyId },
       );
 
       const record = result.records[0];
-      return record ? mapCompanyNode(record.get("c").properties as Record<string, unknown>) : null;
+      return record ? mapCompanyNode(record.get("company") as Record<string, unknown>) : null;
     } finally {
       await session.close();
     }
@@ -234,12 +286,15 @@ class Neo4jGraphRepository implements GraphRepository {
       const result = await session.run(
         `
         MATCH (c:Company {id: $companyId})
-        OPTIONAL MATCH (rel:SupplyRelation)
-        WHERE rel.sourceCompanyId = c.id OR rel.targetCompanyId = c.id
+        OPTIONAL MATCH (supplier:Company)-[:SOURCE_OF]->(rel:SupplyRelation)-[:TARGET_OF]->(c)
         OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
+        OPTIONAL MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
         RETURN c.name AS companyName,
+               head(collect(DISTINCT snapshot.id)) AS activeSnapshotId,
                count(DISTINCT rel) AS totalRelations,
-               count(DISTINCT CASE WHEN rel.targetCompanyId = c.id THEN rel.sourceCompanyId END) AS supplierCount,
+               count(DISTINCT CASE WHEN rel.tier = 1 THEN supplier END) AS tier1SupplierCount,
+               count(DISTINCT supplier) AS supplierCount,
+               count(DISTINCT CASE WHEN rel.confidence <> 'confirmed' THEN rel END) AS highRiskRelationCount,
                count(DISTINCT e) AS evidenceCount,
                max(rel.lastVerifiedAt) AS lastUpdatedAt
         `,
@@ -254,9 +309,17 @@ class Neo4jGraphRepository implements GraphRepository {
       return {
         companyId,
         companyName: String(record.get("companyName")),
+        activeSnapshotId:
+          typeof record.get("activeSnapshotId") === "string" ? String(record.get("activeSnapshotId")) : null,
         totalRelations: toNumber(record.get("totalRelations")) ?? 0,
+        tier1SupplierCount: toNumber(record.get("tier1SupplierCount")) ?? 0,
         supplierCount: toNumber(record.get("supplierCount")) ?? 0,
+        highRiskRelationCount: toNumber(record.get("highRiskRelationCount")) ?? 0,
         evidenceCount: toNumber(record.get("evidenceCount")) ?? 0,
+        evidenceCoverage:
+          (toNumber(record.get("totalRelations")) ?? 0) === 0
+            ? 0
+            : (toNumber(record.get("evidenceCount")) ?? 0) / (toNumber(record.get("totalRelations")) ?? 1),
         lastUpdatedAt:
           typeof record.get("lastUpdatedAt") === "string" ? String(record.get("lastUpdatedAt")) : null,
         source: this.source,
@@ -273,18 +336,17 @@ class Neo4jGraphRepository implements GraphRepository {
       const result = await session.run(
         `
         MATCH (root:Company {id: $companyId})
-        OPTIONAL MATCH (rel:SupplyRelation)
+        OPTIONAL MATCH path = (root)-[:TARGET_OF|SOURCE_OF*1..9]-(rel:SupplyRelation)
         WHERE rel.depthFromMag7 <= $depth
+          AND length(path) <= (($depth * 2) - 1)
           AND ($relationshipTypes IS NULL OR rel.relationshipType IN $relationshipTypes)
-          AND (rel.sourceCompanyId = root.id OR rel.targetCompanyId = root.id)
-        OPTIONAL MATCH (source:Company {id: rel.sourceCompanyId})
-        OPTIONAL MATCH (target:Company {id: rel.targetCompanyId})
+        WITH DISTINCT rel
+        WHERE rel IS NOT NULL
+        MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
         OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
-        OPTIONAL MATCH (snapshot:Snapshot {id: rel.snapshotId})
-        RETURN collect(DISTINCT source) + collect(DISTINCT target) + collect(DISTINCT root) AS companies,
-               collect(DISTINCT rel) AS relations,
-               collect(DISTINCT {relationId: rel.id, evidence: e}) AS evidenceLinks,
-               head(collect(DISTINCT snapshot)) AS snapshot
+        OPTIONAL MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        RETURN source, rel, target, collect(DISTINCT e) AS evidence, head(collect(DISTINCT snapshot)) AS snapshot
+        ORDER BY rel.id ASC
         `,
         {
           companyId: query.companyId,
@@ -299,58 +361,58 @@ class Neo4jGraphRepository implements GraphRepository {
       }
 
       const companyMap = new Map<string, SubgraphDTO["nodes"][number]>();
-      for (const companyNode of record.get("companies") as Array<{ properties: Record<string, unknown> } | null>) {
-        if (!companyNode?.properties?.id) {
-          continue;
-        }
+      const relations = result.records.map((resultRecord) => {
+          const sourceNode = resultRecord.get("source") as { properties: Record<string, unknown> };
+          const targetNode = resultRecord.get("target") as { properties: Record<string, unknown> };
+          const relationNode = resultRecord.get("rel") as { properties: Record<string, unknown> };
+          const sourceCompany = mapCompanyNode(sourceNode.properties);
+          const targetCompany = mapCompanyNode(targetNode.properties);
+          const relation = relationNode.properties;
 
-        const mapped = mapCompanyNode(companyNode.properties);
-        companyMap.set(mapped.id, {
-          id: mapped.id,
-          entityType: "Company",
-          label: mapped.name,
-          company: mapped,
-          country: mapped.country,
-          marketCapUsd: mapped.marketCapUsd,
-          importanceScore: mapped.importanceScore,
-        });
-      }
+          for (const company of [sourceCompany, targetCompany]) {
+            companyMap.set(company.id, {
+              id: company.id,
+              entityType: "Company",
+              label: company.name,
+              company,
+              country: company.country,
+              marketCapUsd: company.marketCapUsd,
+              importanceScore: company.importanceScore,
+            });
+          }
 
-      const evidenceByRelation = new Map<string, EvidenceDTO[]>();
-      for (const item of record.get("evidenceLinks") as Array<
-        { relationId?: string | null; evidence?: { properties?: Record<string, unknown> } | null } | null
-      >) {
-        if (!item?.relationId || !item.evidence?.properties) {
-          continue;
-        }
-
-        evidenceByRelation.set(String(item.relationId), [
-          ...(evidenceByRelation.get(String(item.relationId)) ?? []),
-          mapEvidenceProperties(item.evidence.properties),
-        ]);
-      }
-
-      const relations = (record.get("relations") as Array<{ properties: Record<string, unknown> } | null>)
-        .filter(Boolean)
-        .map((relationNode) => {
-          const relation = relationNode!.properties;
-          const items = evidenceByRelation.get(String(relation.id)) ?? [];
+          const items = (resultRecord.get("evidence") as Array<{ properties?: Record<string, unknown> } | null>)
+            .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+            .map((item) => mapEvidenceProperties(item.properties));
 
           return {
             id: String(relation.id),
-            sourceId: String(relation.sourceCompanyId),
-            targetId: String(relation.targetCompanyId),
+            sourceId: sourceCompany.id,
+            targetId: targetCompany.id,
             relationshipType: String(relation.relationshipType) as SubgraphDTO["relations"][number]["relationshipType"],
             tier: toNumber(relation.tier) ?? 1,
             depthFromMag7: toNumber(relation.depthFromMag7) ?? 1,
             confidence: String(relation.confidence) as SubgraphDTO["relations"][number]["confidence"],
             confidenceScore: toNumber(relation.confidenceScore) ?? 0,
             summary: String(relation.summary),
-            productScope: typeof relation.productScope === "string" ? relation.productScope : null,
+            relationshipSubtype:
+              typeof relation.relationshipSubtype === "string" ? relation.relationshipSubtype : null,
+            productScope:
+              Array.isArray(relation.productScope)
+                ? relation.productScope.map((item: unknown) => String(item))
+                : toStringArray(relation.productScope),
             notes: typeof relation.notes === "string" ? relation.notes : null,
+            evidenceIds: toStringArray(relation.evidenceIds),
+            primaryEvidenceId:
+              typeof relation.primaryEvidenceId === "string" ? relation.primaryEvidenceId : null,
             evidenceCount: toNumber(relation.evidenceCount) ?? items.length,
             snapshotId: String(relation.snapshotId),
             status: String(relation.status) as SubgraphDTO["relations"][number]["status"],
+            sourceMethod: typeof relation.sourceMethod === "string" ? relation.sourceMethod : null,
+            sourceCount: toNumber(relation.sourceCount) ?? 0,
+            lineageKey: typeof relation.lineageKey === "string" ? relation.lineageKey : null,
+            lastVerifiedAt:
+              typeof relation.lastVerifiedAt === "string" ? relation.lastVerifiedAt : null,
             validFrom: typeof relation.validFrom === "string" ? relation.validFrom : null,
             validTo: typeof relation.validTo === "string" ? relation.validTo : null,
             evidence: query.includeEvidence ? items : undefined,
@@ -361,7 +423,9 @@ class Neo4jGraphRepository implements GraphRepository {
         return mockSubgraph;
       }
 
-      const snapshotNode = record.get("snapshot") as { properties?: Record<string, unknown> } | null;
+      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
+        | { properties?: Record<string, unknown> }
+        | null;
 
       return {
         snapshot: snapshotNode?.properties

@@ -1,23 +1,25 @@
 import type { ReactNode } from "react";
 import { Buildings, ChartBar, Database, LinkBreak, Path, Stack } from "@phosphor-icons/react";
 import { EvidencePanel } from "./EvidencePanel";
-import type { CompanyDetail, EvidenceDTO, GraphNodeDTO, GraphRelationDTO } from "../types/contracts";
+import type {
+  CompanyProfileViewModel,
+  EvidenceSummaryViewModel,
+  EvidenceViewModel,
+  GraphNodeViewModel,
+  GraphRelationViewModel,
+} from "../types/viewModels";
 import { graphApiContract } from "../services/graphExplorerApi";
 
 interface CompanySidebarProps {
-  activeNode: GraphNodeDTO | null;
-  activeRelation: GraphRelationDTO | null;
+  activeNode: GraphNodeViewModel | null;
+  activeRelation: GraphRelationViewModel | null;
   activeTab: "overview" | "evidence" | "financials";
-  company: CompanyDetail;
-  evidence: EvidenceDTO[];
-  evidenceSummary: {
-    confirmed: number;
-    strongEvidence: number;
-    inferred: number;
-  };
-  onRelationSelect: (relation: GraphRelationDTO) => void;
+  company: CompanyProfileViewModel;
+  evidence: EvidenceViewModel[];
+  evidenceSummary: EvidenceSummaryViewModel;
+  onRelationSelect: (relation: GraphRelationViewModel) => void;
   onTabChange: (tab: "overview" | "evidence" | "financials") => void;
-  relations: GraphRelationDTO[];
+  relations: GraphRelationViewModel[];
 }
 
 export function CompanySidebar(props: CompanySidebarProps) {
@@ -97,6 +99,8 @@ export function CompanySidebar(props: CompanySidebarProps) {
               <p className="sectionEyebrow compact">API boundary</p>
               <ul className="detailList">
                 <li>{graphApiContract.companies}</li>
+                <li>{company.apiBindings.companyEndpoint}</li>
+                <li>{company.apiBindings.overviewEndpoint}</li>
                 <li>{company.apiBindings.graphEndpoint}</li>
                 <li>{graphApiContract.evidence}</li>
                 <li>
@@ -153,7 +157,11 @@ function MetricCard(props: { icon: ReactNode; label: string; value: string }) {
   );
 }
 
-function formatCurrency(value: number) {
+function formatCurrency(value: number | null) {
+  if (value === null) {
+    return "N/A";
+  }
+
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
     maximumFractionDigits: 1,

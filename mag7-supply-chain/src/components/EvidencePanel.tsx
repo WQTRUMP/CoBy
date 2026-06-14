@@ -1,9 +1,9 @@
 import { FileText, LinkSimple, ShieldCheck } from "@phosphor-icons/react";
-import type { EvidenceDTO, GraphRelationDTO } from "../types/contracts";
+import type { EvidenceViewModel, GraphRelationViewModel } from "../types/viewModels";
 
 interface EvidencePanelProps {
-  evidence: EvidenceDTO[];
-  relation: GraphRelationDTO | null;
+  evidence: EvidenceViewModel[];
+  relation: GraphRelationViewModel | null;
 }
 
 export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
@@ -22,7 +22,7 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
           <article className="evidenceCard" key={item.id}>
             <div className="relationMeta">
               <span className="miniBadge">
-                <FileText size={12} /> {item.sourceType}
+                <FileText size={12} /> {item.sourceTypeLabel}
               </span>
               <span className={`confidenceBadge ${item.confidence}`}>
                 <ShieldCheck size={12} /> {formatConfidence(item.confidence)}
@@ -46,7 +46,7 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
         <p className="sectionEyebrow compact">Evidence provenance</p>
         <div className="provenanceGrid">
           <span>Document</span>
-          <strong>{evidence[0]?.sourceType ?? "10-K / Report"}</strong>
+          <strong>{evidence[0]?.sourceTypeLabel ?? "10-K / Report"}</strong>
           <span>Filed date</span>
           <strong>{evidence[0]?.publishedAt ?? "Pending source binding"}</strong>
           <span>Issuer</span>
@@ -59,7 +59,7 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
   );
 }
 
-function formatConfidence(value: EvidenceDTO["confidence"]) {
+function formatConfidence(value: EvidenceViewModel["confidence"]) {
   if (value === "strong_evidence") return "Strong evidence";
   return value.charAt(0).toUpperCase() + value.slice(1);
 }

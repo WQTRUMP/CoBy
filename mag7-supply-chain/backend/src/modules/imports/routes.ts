@@ -1,7 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { importRelationsRequestSchema } from "../../../../packages/contracts/src/index.js";
+import {
+  importRelationsFieldCatalog,
+  importRelationsRequestSchema,
+} from "../../../../packages/contracts/src/index.js";
 import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,
@@ -23,21 +26,9 @@ export async function registerImportRoutes(app: FastifyInstance) {
       requestId: payload.requestId,
       schemaVersion: payload.schemaVersion,
       relationCount: payload.relations.length,
-      storageMode: "reserved",
-      reservedFields: [
-        "company",
-        "supplier",
-        "tier",
-        "relationship_type",
-        "product_scope",
-        "evidence_date",
-        "evidence_excerpt",
-        "source_url",
-        "confidence_label",
-        "confidence_score",
-        "notes",
-      ],
-      nextStep: "persist standardized package to Neo4j/Object Storage pipeline",
+      storageMode: "lossless",
+      reservedFields: importRelationsFieldCatalog.map((field) => field.name),
+      nextStep: "persist normalized relation package to Neo4j/Object Storage pipeline without dropping audit metadata",
     };
   });
 

@@ -1,8 +1,8 @@
 import { ArrowsClockwise, Buildings, Graph, GlobeHemisphereWest } from "@phosphor-icons/react";
-import type { SubgraphDTO } from "../types/contracts";
+import type { GraphViewModel } from "../types/viewModels";
 
 interface StatusStripProps {
-  graph: SubgraphDTO;
+  graph: GraphViewModel;
 }
 
 export function StatusStrip({ graph }: StatusStripProps) {

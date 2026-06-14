@@ -1,10 +1,10 @@
 import { MagnifyingGlass, ScanSmiley, SlidersHorizontal } from "@phosphor-icons/react";
-import type { CompanyDetail, SubgraphDTO } from "../types/contracts";
+import type { CompanyOptionViewModel, GraphViewModel } from "../types/viewModels";
 
 interface TopBarProps {
-  companies: CompanyDetail[];
+  companies: CompanyOptionViewModel[];
   depth: number;
-  graph: SubgraphDTO;
+  graph: GraphViewModel;
   onDepthChange: (depth: number) => void;
   onCompanySelect: (companyId: string) => void;
   onSearchChange: (value: string) => void;

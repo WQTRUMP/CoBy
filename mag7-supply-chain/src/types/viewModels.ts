@@ -1,8 +1,4 @@
-import type {
-  EvidenceDTO,
-  RelationDTO,
-  SnapshotDTO,
-} from "../contracts/api";
+import type { EvidenceDTO, RelationDTO, SnapshotDTO } from "../contracts/api";
 
 export interface GraphQuery {
   companyId: string;
@@ -25,9 +21,11 @@ export interface CompanyProfileViewModel extends CompanyOptionViewModel {
   summary: string;
   stats: {
     supplierCount: number;
+    tier1SupplierCount: number;
     relationCount: number;
     evidenceCount: number;
     criticalDependencyCount: number;
+    evidenceCoverage: number;
   };
   apiBindings: {
     companyEndpoint: string;
@@ -78,7 +76,7 @@ export interface GraphRelationViewModel {
   confidence: RelationDTO["confidence"];
   confidenceScore: number;
   summary: string;
-  productScope: string | null;
+  productScope: string[];
   notes: string | null;
   evidenceCount: number;
   evidence: EvidenceViewModel[];

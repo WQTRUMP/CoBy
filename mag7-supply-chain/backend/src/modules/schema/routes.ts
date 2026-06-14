@@ -10,7 +10,7 @@ import {
 export async function registerSchemaRoutes(app: FastifyInstance) {
   app.get("/api/v1/schema/import-relations", async () => {
     return {
-      schemaVersion: "mag7-supply-chain.import-relations.v1",
+      schemaVersion: "mag7-supply-chain.import-relations.v2",
       mode: app.graphRepository.source === "mock" ? "mock-ready" : "database-ready",
       fields: importRelationsFieldCatalog,
       enums: {
@@ -19,9 +19,10 @@ export async function registerSchemaRoutes(app: FastifyInstance) {
         source_type: sourceTypeSchema.options,
       },
       guidance: {
-        requiredEvidenceFields: ["evidence_date", "evidence_excerpt", "source_url"],
+        requiredEvidenceFields: ["evidence_ids", "primary_evidence_id", "evidence_date", "evidence_excerpt", "source_url"],
+        relationEvidenceBinding: "Use relation_id -> SUPPORTED_BY edges for evidence grouping; do not rely on Evidence.relationId in query consumers.",
         notes:
-          "Use this schema as the ingestion boundary for standardized research packages; do not reuse frontend mock fields.",
+          "Use this schema as the lossless ingestion boundary for standardized research packages; preserve product_scope arrays and audit fields end to end.",
       },
     };
   });

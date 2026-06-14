@@ -1,14 +1,17 @@
-import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { CompanySidebar } from "./components/CompanySidebar";
 import { GraphCanvas } from "./components/GraphCanvas";
 import { StatusStrip } from "./components/StatusStrip";
 import { TopBar } from "./components/TopBar";
 import { useGraphExplorer } from "./hooks/useGraphExplorer";
+import { createHttpGraphExplorerApi } from "./services/graphExplorerApi";
 import { mockGraphExplorerApi } from "./services/mockGraphExplorerApi";
-import type { GraphNodeDTO, GraphRelationDTO } from "./types/contracts";
+import type { EvidenceViewModel, GraphNodeViewModel, GraphRelationViewModel } from "./types/viewModels";
+
+const graphExplorerApi = import.meta.env.VITE_USE_MOCK_API === "true" ? mockGraphExplorerApi : createHttpGraphExplorerApi();
 
 export function App() {
-  const [selectedCompanyId, setSelectedCompanyId] = useState("tsla");
+  const [selectedCompanyId, setSelectedCompanyId] = useState("company:TSLA");
   const [depth, setDepth] = useState(2);
   const [search, setSearch] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -16,7 +19,7 @@ export function App() {
   const deferredSearch = useDeferredValue(search);
 
   const explorer = useGraphExplorer(
-    mockGraphExplorerApi,
+    graphExplorerApi,
     useMemo(
       () => ({
         companyId: selectedCompanyId,
@@ -28,15 +31,48 @@ export function App() {
   );
 
   const graph = explorer.graph;
-  const [activeNodeId, setActiveNodeId] = useState("tsla");
+  const [activeNodeId, setActiveNodeId] = useState("company:TSLA");
   const [activeRelationId, setActiveRelationId] = useState<string | null>(null);
+  const [activeEvidence, setActiveEvidence] = useState<EvidenceViewModel[]>([]);
 
   const activeNode = graph?.nodes.find((node) => node.id === activeNodeId) ?? null;
   const activeRelation = graph?.relations.find((relation) => relation.id === activeRelationId) ?? graph?.relations[0] ?? null;
-  const activeEvidence = useMemo(
-    () => graph?.evidence.filter((item) => activeRelation?.evidenceIds.includes(item.id)) ?? [],
-    [activeRelation, graph?.evidence],
-  );
+
+  useEffect(() => {
+    let alive = true;
+
+    async function hydrateRelationEvidence() {
+      if (!activeRelation) {
+        setActiveEvidence([]);
+        return;
+      }
+
+      const evidence = await explorer.loadRelationEvidence(activeRelation);
+      if (alive) {
+        setActiveEvidence(evidence);
+      }
+    }
+
+    void hydrateRelationEvidence();
+
+    return () => {
+      alive = false;
+    };
+  }, [activeRelation]);
+
+  useEffect(() => {
+    if (!graph) {
+      return;
+    }
+
+    if (!graph.nodes.some((node) => node.id === activeNodeId)) {
+      setActiveNodeId(graph.company.id);
+    }
+
+    if (activeRelationId && !graph.relations.some((relation) => relation.id === activeRelationId)) {
+      setActiveRelationId(graph.relations[0]?.id ?? null);
+    }
+  }, [activeNodeId, activeRelationId, graph]);
 
   function handleCompanySelect(companyId: string) {
     startTransition(() => {
@@ -48,14 +84,14 @@ export function App() {
     });
   }
 
-  function handleNodeSelect(node: GraphNodeDTO) {
+  function handleNodeSelect(node: GraphNodeViewModel) {
     setActiveNodeId(node.id);
     const relation = graph?.relations.find((item) => item.sourceId === node.id || item.targetId === node.id) ?? null;
     setActiveRelationId(relation?.id ?? null);
     setActiveTab(relation ? "evidence" : "overview");
   }
 
-  function handleRelationSelect(relation: GraphRelationDTO) {
+  function handleRelationSelect(relation: GraphRelationViewModel) {
     setActiveRelationId(relation.id);
     setActiveNodeId(relation.targetId);
     setActiveTab("evidence");
@@ -64,12 +100,6 @@ export function App() {
   if (!graph) {
     return <div className="loadingShell">Loading graph shell…</div>;
   }
-
-  const evidenceSummary = {
-    confirmed: graph.evidence.filter((item) => item.confidence === "confirmed").length,
-    strongEvidence: graph.evidence.filter((item) => item.confidence === "strong_evidence").length,
-    inferred: graph.evidence.filter((item) => item.confidence === "inferred").length,
-  };
 
   const focusNode = activeNode ?? graph.nodes[0];
 
@@ -140,7 +170,7 @@ export function App() {
           activeTab={activeTab}
           company={graph.company}
           evidence={activeEvidence}
-          evidenceSummary={evidenceSummary}
+          evidenceSummary={graph.evidenceSummary}
           onRelationSelect={handleRelationSelect}
           onTabChange={setActiveTab}
           relations={graph.relations}

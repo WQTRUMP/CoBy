@@ -1,10 +1,10 @@
 import { ArrowsInCardinal, Path, Sparkle } from "@phosphor-icons/react";
-import type { GraphRelationDTO } from "../types/contracts";
+import type { GraphRelationViewModel } from "../types/viewModels";
 
 interface RelationsPanelProps {
-  relations: GraphRelationDTO[];
+  relations: GraphRelationViewModel[];
   selectedRelationId: string | null;
-  onSelect: (relation: GraphRelationDTO) => void;
+  onSelect: (relation: GraphRelationViewModel) => void;
 }
 
 export function RelationsPanel({ onSelect, relations, selectedRelationId }: RelationsPanelProps) {

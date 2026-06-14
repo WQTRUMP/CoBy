@@ -1,11 +1,26 @@
-import { getCompanies, getSubgraph } from "../mocks/mockSupplyChain";
+import {
+  getCompaniesResponse,
+  getCompanyOverviewResponse,
+  getCompanyResponse,
+  getRelationEvidenceResponse,
+  getSubgraphResponse,
+} from "../mocks/mockSupplyChain";
 import type { GraphExplorerApi } from "./graphExplorerApi";
 
 export const mockGraphExplorerApi: GraphExplorerApi = {
-  async listCompanies() {
-    return getCompanies();
+  async listCompanies(query) {
+    return getCompaniesResponse(query);
+  },
+  async getCompany(companyId) {
+    return getCompanyResponse(companyId);
+  },
+  async getCompanyOverview(companyId) {
+    return getCompanyOverviewResponse(companyId);
   },
   async getSubgraph(query) {
-    return getSubgraph(query.companyId, query.depth, query.search);
+    return getSubgraphResponse(query.companyId, query.depth, query.includeEvidence ?? true);
+  },
+  async getRelationEvidence(relationId) {
+    return getRelationEvidenceResponse(relationId);
   },
 };

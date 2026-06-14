@@ -1,8 +1,9 @@
 import type {
-  CompaniesResponse,
-  CompanyDTO,
+  CompanyDetailDTO,
+  CompanyDetailResponse,
+  CompanyListItemDTO,
+  CompanyListResponse,
   CompanyOverviewDTO,
-  CompanyResponse,
   EvidenceDTO,
   RelationDTO,
   RelationEvidenceResponse,
@@ -37,12 +38,12 @@ const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], Gr
   Material: "material",
 };
 
-export function adaptCompanyOptions(response: CompaniesResponse): CompanyOptionViewModel[] {
+export function adaptCompanyOptions(response: CompanyListResponse): CompanyOptionViewModel[] {
   return response.items.map(adaptCompanyOption);
 }
 
 export function adaptGraphViewModel(input: {
-  company: CompanyResponse;
+  company: CompanyDetailResponse;
   overview: CompanyOverviewDTO;
   subgraph: SubgraphDTO;
   query: GraphQuery;
@@ -71,21 +72,21 @@ export function adaptRelationEvidence(
   return response.items.map((item) => adaptEvidence(item, relation.confidence));
 }
 
-function adaptCompanyOption(company: CompanyDTO): CompanyOptionViewModel {
+function adaptCompanyOption(company: CompanyListItemDTO): CompanyOptionViewModel {
   return {
     id: company.id,
     ticker: company.ticker ?? company.name.slice(0, 4).toUpperCase(),
     name: company.name,
     shortName: getShortName(company),
-    focus: company.description ?? humanizeCompanyType(company.companyType),
-    primaryRegion: company.country,
+    focus: company.name,
+    primaryRegion: company.primaryRegion,
     marketCapUsd: company.marketCapUsd,
     isMag7: company.isMag7,
   };
 }
 
 function adaptCompanyProfile(
-  company: CompanyDTO,
+  company: CompanyDetailDTO,
   overview: CompanyOverviewDTO,
   source: "mock" | "neo4j",
 ): CompanyProfileViewModel {
@@ -93,12 +94,14 @@ function adaptCompanyProfile(
 
   return {
     ...option,
-    summary: company.description ?? `${company.name} supply-chain overview.`,
+    summary: company.summary ?? company.description ?? `${company.name} supply-chain overview.`,
     stats: {
       supplierCount: overview.supplierCount,
+      tier1SupplierCount: overview.tier1SupplierCount,
       relationCount: overview.totalRelations,
       evidenceCount: overview.evidenceCount,
-      criticalDependencyCount: Math.max(1, Math.min(overview.supplierCount, Math.ceil(overview.totalRelations / 3))),
+      criticalDependencyCount: overview.highRiskRelationCount,
+      evidenceCoverage: overview.evidenceCoverage,
     },
     apiBindings: {
       companyEndpoint: `/api/v1/companies/${company.id}`,
@@ -106,7 +109,7 @@ function adaptCompanyProfile(
       graphEndpoint: `/api/v1/graph/subgraph?companyId=${encodeURIComponent(company.id)}`,
       evidenceEndpoint: "/api/v1/relations/:relationId/evidence",
     },
-    lastUpdated: overview.lastUpdatedAt,
+    lastUpdated: company.lastUpdatedAt ?? overview.lastUpdatedAt,
     source,
   };
 }
@@ -122,7 +125,7 @@ function adaptRelation(relation: RelationDTO, companyId: string): GraphRelationV
     confidence: relation.confidence,
     confidenceScore: relation.confidenceScore,
     summary: relation.summary,
-    productScope: relation.productScope ?? null,
+    productScope: relation.productScope,
     notes: relation.notes ?? null,
     evidenceCount: relation.evidenceCount,
     evidence: (relation.evidence ?? []).map((item) => adaptEvidence(item, relation.confidence)),
@@ -149,10 +152,14 @@ function adaptEvidence(evidence: EvidenceDTO, confidence: RelationDTO["confidenc
 function summarizeEvidence(relations: GraphRelationViewModel[]): EvidenceSummaryViewModel {
   return relations.reduce<EvidenceSummaryViewModel>(
     (summary, relation) => {
-      summary[relation.confidence] += relation.evidenceCount;
+      if (relation.confidence === "strong_evidence") {
+        summary.strongEvidence += relation.evidenceCount;
+      } else {
+        summary[relation.confidence] += relation.evidenceCount;
+      }
       return summary;
     },
-    { confirmed: 0, strongEvidence: 0, inferred: 0 } as EvidenceSummaryViewModel,
+    { confirmed: 0, strongEvidence: 0, inferred: 0 },
   );
 }
 
@@ -273,14 +280,7 @@ function selectVisibleNodeIds(
   return matchedIds;
 }
 
-function getShortName(company: CompanyDTO): string {
-  return company.aliases[0]?.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "") ??
+function getShortName(company: Pick<CompanyListItemDTO, "name"> & { aliases?: string[] }): string {
+  return company.aliases?.[0]?.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "") ??
     company.name.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "");
-}
-
-function humanizeCompanyType(type: CompanyDTO["companyType"]): string {
-  return type
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }
