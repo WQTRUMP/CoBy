@@ -1,6 +1,6 @@
 import "fastify";
 
-import type { GraphRepository, Neo4jHealth } from "../lib/neo4j.js";
+import type { GraphRepository, Neo4jHealth, RuntimeMode } from "../lib/neo4j.js";
 import type { CacheClient } from "../lib/redis.js";
 
 declare module "fastify" {
@@ -8,5 +8,6 @@ declare module "fastify" {
     cacheClient: CacheClient;
     graphRepository: GraphRepository;
     neo4jHealth: () => Promise<Neo4jHealth>;
+    runtimeMode: RuntimeMode;
   }
 }

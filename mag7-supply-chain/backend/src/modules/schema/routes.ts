@@ -13,7 +13,10 @@ export async function registerSchemaRoutes(app: FastifyInstance) {
   app.get("/api/v1/schema/import-relations", async () => {
     return {
       schemaVersion: "mag7-supply-chain.import-relations.v3",
-      mode: app.graphRepository.source === "mock" ? "mock-ready" : "database-ready",
+      mode:
+        app.runtimeMode === "prototype"
+          ? "prototype-mock-ready"
+          : "live-database-required",
       fields: importRelationsFieldCatalog,
       enums: {
         relationship_type: knownRelationshipTypes,

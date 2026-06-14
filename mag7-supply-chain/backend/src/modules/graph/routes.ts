@@ -15,6 +15,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
     const query = parseRequest(subgraphQuerySchema, request.query);
     const cacheKey = [
       "subgraph",
+      app.graphRepository.source,
       query.companyId,
       query.depth,
       (query.relationshipTypes ?? []).join(",") || "all",
@@ -43,6 +44,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
     const cacheKey = [
       "graph",
       "path",
+      app.graphRepository.source,
       query.sourceCompanyId,
       query.targetCompanyId,
       query.maxDepth,
@@ -67,7 +69,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
 
   app.get("/api/v1/graph/stats", async (request, reply) => {
     const query = parseRequest(graphStatsQuerySchema, request.query);
-    const cacheKey = ["graph", "stats", query.snapshot, query.companyId ?? "all"].join(":");
+    const cacheKey = ["graph", "stats", app.graphRepository.source, query.snapshot, query.companyId ?? "all"].join(":");
     const cached = await app.cacheClient.get(cacheKey);
     if (cached) {
       const payload = JSON.parse(cached);

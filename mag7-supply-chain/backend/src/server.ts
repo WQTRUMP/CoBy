@@ -9,6 +9,7 @@ const app = await buildApp({
   cacheClient,
   graphRepository: neo4j.repository,
   neo4jHealth: neo4j.health,
+  runtimeMode: env.GRAPH_RUNTIME_MODE,
 });
 
 const shutdown = async () => {

@@ -187,6 +187,7 @@ beforeAll(async () => {
     cacheClient,
     graphRepository,
     neo4jHealth,
+    runtimeMode: "prototype",
   });
 });
 
@@ -404,7 +405,9 @@ describe("backend app", () => {
       neo4jHealth: async () => ({
         status: "down",
         detail: "connect ECONNREFUSED 127.0.0.1:7687",
+        required: true,
       }),
+      runtimeMode: "live",
     });
 
     try {
