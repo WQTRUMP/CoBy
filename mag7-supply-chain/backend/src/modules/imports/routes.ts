@@ -9,6 +9,7 @@ import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,
 } from "../../lib/normalized-package.js";
+import { parseRequest } from "../../lib/request-validation.js";
 
 const normalizedImportRequestSchema = z.object({
   requestId: z.string(),
@@ -18,7 +19,7 @@ const normalizedImportRequestSchema = z.object({
 
 export async function registerImportRoutes(app: FastifyInstance) {
   app.post("/api/v1/imports/relations", async (request, reply) => {
-    const payload = importRelationsRequestSchema.parse(request.body);
+    const payload = parseRequest(importRelationsRequestSchema, request.body);
 
     reply.code(202);
     return {
@@ -33,7 +34,7 @@ export async function registerImportRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/v1/imports/normalized-package", async (request, reply) => {
-    const payload = normalizedImportRequestSchema.parse(request.body);
+    const payload = parseRequest(normalizedImportRequestSchema, request.body);
     const pkg = await loadNormalizedImportPackage(payload.relationFile, payload.evidenceFile);
     const prepared = prepareNormalizedImport(pkg);
     const summary = await app.graphRepository.importNormalizedPackage(prepared);

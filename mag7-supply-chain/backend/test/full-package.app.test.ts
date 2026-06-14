@@ -497,4 +497,33 @@ describe("full package app", () => {
       expect(second.headers["x-cache"]).toBe("hit");
     }
   });
+
+  it("maps ceo-reported malformed query inputs to 400 in full-package mode", async () => {
+    const [search, suggest, path] = await Promise.all([
+      app.inject({ method: "GET", url: "/api/v1/companies/search?limit=5" }),
+      app.inject({ method: "GET", url: "/api/v1/companies/suggest?limit=5" }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=0&snapshot=published",
+      }),
+    ]);
+
+    for (const response of [search, suggest, path]) {
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error: "bad_request",
+        message: "Invalid request parameters.",
+      });
+    }
+
+    expect(search.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "q" })]),
+    );
+    expect(suggest.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "q" })]),
+    );
+    expect(path.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "maxDepth" })]),
+    );
+  });
 });

@@ -6,12 +6,13 @@ import {
   searchCompaniesQuerySchema,
   suggestCompaniesQuerySchema,
 } from "@mag7/contracts";
+import { parseRequest } from "../../lib/request-validation.js";
 
 const CACHE_TTL_SECONDS = 300;
 
 export async function registerCompanyRoutes(app: FastifyInstance) {
   app.get("/api/v1/companies/search", async (request, reply) => {
-    const query = searchCompaniesQuerySchema.parse(request.query);
+    const query = parseRequest(searchCompaniesQuerySchema, request.query);
     const cacheKey = [
       "companies",
       "search",
@@ -46,7 +47,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/companies/suggest", async (request, reply) => {
-    const query = suggestCompaniesQuerySchema.parse(request.query);
+    const query = parseRequest(suggestCompaniesQuerySchema, request.query);
     const cacheKey = ["companies", "suggest", app.graphRepository.source, query.q.toLowerCase(), query.limit].join(":");
     const cached = await app.cacheClient.get(cacheKey);
 
@@ -80,7 +81,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/companies", async (request, reply) => {
-    const query = companyListQuerySchema.parse(request.query);
+    const query = parseRequest(companyListQuerySchema, request.query);
     const cacheKey = [
       "companies",
       "list",
@@ -115,7 +116,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/companies/:companyId", async (request, reply) => {
-    const params = z.object({ companyId: z.string() }).parse(request.params);
+    const params = parseRequest(z.object({ companyId: z.string() }), request.params);
     const cacheKey = ["companies", "detail", app.graphRepository.source, params.companyId].join(":");
     const cached = await app.cacheClient.get(cacheKey);
 
@@ -145,7 +146,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/companies/:companyId/overview", async (request, reply) => {
-    const params = z.object({ companyId: z.string() }).parse(request.params);
+    const params = parseRequest(z.object({ companyId: z.string() }), request.params);
     const cacheKey = ["companies", "overview", app.graphRepository.source, params.companyId].join(":");
     const cached = await app.cacheClient.get(cacheKey);
 

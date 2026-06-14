@@ -10,6 +10,7 @@ import { registerImportRoutes } from "./modules/imports/routes.js";
 import { registerSchemaRoutes } from "./modules/schema/routes.js";
 import type { GraphRepository, Neo4jHealth } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
+import { toRequestValidationError } from "./lib/request-validation.js";
 
 export interface AppOptions {
   cacheClient: CacheClient;
@@ -66,9 +67,10 @@ export async function buildApp(options: AppOptions) {
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
-      return reply.code(400).send({
+      const normalized = toRequestValidationError(error);
+      return reply.code(normalized.statusCode).send({
         error: "bad_request",
-        message: "Invalid request parameters.",
+        message: normalized.message,
         details: formatValidationDetails(error),
       });
     }

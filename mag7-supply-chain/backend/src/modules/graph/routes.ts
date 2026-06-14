@@ -6,12 +6,13 @@ import {
   graphStatsQuerySchema,
   subgraphQuerySchema,
 } from "@mag7/contracts";
+import { parseRequest } from "../../lib/request-validation.js";
 
 const CACHE_TTL_SECONDS = 600;
 
 export async function registerGraphRoutes(app: FastifyInstance) {
   app.get("/api/v1/graph/subgraph", async (request, reply) => {
-    const query = subgraphQuerySchema.parse(request.query);
+    const query = parseRequest(subgraphQuerySchema, request.query);
     const cacheKey = [
       "subgraph",
       query.companyId,
@@ -38,7 +39,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/graph/path", async (request, reply) => {
-    const query = graphPathQuerySchema.parse(request.query);
+    const query = parseRequest(graphPathQuerySchema, request.query);
     const cacheKey = [
       "graph",
       "path",
@@ -65,7 +66,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/graph/stats", async (request, reply) => {
-    const query = graphStatsQuerySchema.parse(request.query);
+    const query = parseRequest(graphStatsQuerySchema, request.query);
     const cacheKey = ["graph", "stats", query.snapshot, query.companyId ?? "all"].join(":");
     const cached = await app.cacheClient.get(cacheKey);
     if (cached) {
@@ -88,7 +89,7 @@ export async function registerGraphRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/relations/:relationId/evidence", async (request, reply) => {
-    const params = z.object({ relationId: z.string() }).parse(request.params);
+    const params = parseRequest(z.object({ relationId: z.string() }), request.params);
     const evidence = await app.graphRepository.getRelationEvidence(params.relationId);
 
     if (evidence.length === 0) {

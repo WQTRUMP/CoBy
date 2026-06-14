@@ -342,6 +342,38 @@ describe("backend app", () => {
     );
   });
 
+  it("keeps ceo-reported malformed query inputs on stable 400 responses", async () => {
+    const [searchResponse, suggestResponse, pathResponse] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/search?limit=5",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/suggest?limit=5",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=0&snapshot=published",
+      }),
+    ]);
+
+    expect(searchResponse.statusCode).toBe(400);
+    expect(searchResponse.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "q" })]),
+    );
+
+    expect(suggestResponse.statusCode).toBe(400);
+    expect(suggestResponse.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "q" })]),
+    );
+
+    expect(pathResponse.statusCode).toBe(400);
+    expect(pathResponse.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "maxDepth" })]),
+    );
+  });
+
   it("accepts import payload", async () => {
     const response = await app.inject({
       method: "POST",
