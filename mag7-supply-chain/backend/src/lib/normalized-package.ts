@@ -45,7 +45,7 @@ const normalizedEvidenceSchema = z.object({
   excerpt: z.string(),
   citation_text: z.string(),
   page_ref: z.string().optional(),
-  language: z.string().default("en"),
+  language: z.string().optional(),
   reliability_tier: z.number().int().min(1).max(4),
   parser_version: z.string(),
   license_note: z.string().optional(),
@@ -355,7 +355,7 @@ function getCompanySeed(slug: string, name: string, isMag7: boolean) {
 
 export async function readNormalizedJsonlFile<T>(
   filePath: string,
-  schema: z.ZodSchema<T>,
+  schema: z.ZodType<T>,
 ): Promise<T[]> {
   const contents = await readFile(filePath, "utf8");
   return contents
@@ -374,7 +374,8 @@ export async function loadNormalizedImportPackage(
   relationFile: string,
   evidenceFile: string,
 ): Promise<NormalizedImportPackage> {
-  const [relations, evidence] = await Promise.all([
+  const [relations, evidence]: [NormalizedRelationRecord[], NormalizedEvidenceRecord[]] =
+    await Promise.all([
     readNormalizedJsonlFile(relationFile, normalizedRelationSchema),
     readNormalizedJsonlFile(evidenceFile, normalizedEvidenceSchema),
   ]);
@@ -411,7 +412,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       id: relation.snapshot_id,
       version: relation.snapshot_id.replace("snapshot:", "").replace(/-/g, "."),
       status: "published",
-      publishedAt: `${relation.last_verified_at.replace("Z", ".000Z")}`,
+      publishedAt: relation.last_verified_at,
       scope: [...scope],
       notes: "Imported from normalized Mag7 sample package",
     });
@@ -462,7 +463,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       retrievedAt: evidence.retrieved_at,
       excerpt: evidence.excerpt,
       pageRef: evidence.page_ref ?? null,
-      language: evidence.language,
+      language: evidence.language ?? "en",
       hash: evidence.evidence_id,
       sourceDomain: evidence.source_domain,
       citationText: evidence.citation_text,
@@ -474,4 +475,3 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     })),
   };
 }
-

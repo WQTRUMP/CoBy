@@ -8,8 +8,12 @@
 - 标准化入库 schema 边界（为统一数据包任务预留）
 - `GET /api/v1/health` 健康检查
 - `GET /api/v1/companies` 公司列表
+- `GET /api/v1/companies/:companyId` 公司详情
+- `GET /api/v1/companies/:companyId/overview` 公司聚合概览
 - `GET /api/v1/graph/subgraph` 子图查询
+- `GET /api/v1/relations/:relationId/evidence` 关系证据列表
 - `POST /api/v1/imports/relations` 数据导入占位接口
+- `POST /api/v1/imports/normalized-package` 标准化 JSONL 导入入口
 - `GET /api/v1/schema/import-relations` 标准化入库字段说明
 
 ## 快速启动
@@ -34,14 +38,17 @@ http://127.0.0.1:4000
 - 图查询自动回退到内置 mock 数据
 - 健康检查会返回 `degraded`，并明确指出哪个依赖未配置或不可达
 - 健康检查同时返回当前 import contract 版本与 mock 边界状态
-- 导入接口只做 schema 校验和回执，不写入数据库
+- 导入接口会完成文件与 schema 校验，但不会写入真实 Neo4j
 
 ## 关键接口
 
 ```bash
 curl http://127.0.0.1:4000/api/v1/health
 curl "http://127.0.0.1:4000/api/v1/companies?q=app"
+curl "http://127.0.0.1:4000/api/v1/companies/company:AAPL"
+curl "http://127.0.0.1:4000/api/v1/companies/company:AAPL/overview"
 curl "http://127.0.0.1:4000/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&includeEvidence=true"
+curl "http://127.0.0.1:4000/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
 curl http://127.0.0.1:4000/api/v1/schema/import-relations
 ```
 
@@ -53,6 +60,26 @@ curl -X POST http://127.0.0.1:4000/api/v1/imports/relations \
   -d @examples/import-relations.json
 ```
 
+标准化 JSONL 导入：
+
+```bash
+npm run import:normalized -- \
+  --relations /workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl \
+  --evidence /workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl
+```
+
+或通过 HTTP 触发：
+
+```bash
+curl -X POST http://127.0.0.1:4000/api/v1/imports/normalized-package \
+  -H "content-type: application/json" \
+  -d '{
+    "requestId": "mag7-sample-import",
+    "relationFile": "/workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl",
+    "evidenceFile": "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl"
+  }'
+```
+
 ## 数据库初始化
 
 Neo4j 约束与索引位于：
@@ -60,7 +87,7 @@ Neo4j 约束与索引位于：
 - `../infra/neo4j/constraints.cypher`
 - `../infra/neo4j/indexes.cypher`
 
-导入前建议先执行这些脚本。
+导入前建议先执行这些脚本，然后再运行标准化 JSONL 导入。
 
 ## 标准化入库字段
 
@@ -81,6 +108,13 @@ Neo4j 约束与索引位于：
 可选补充字段包括 `source_type`、`source_title`、`source_publisher`、`evidence_page_ref`、`source_domain`、`parser_version`、`reliability_tier`、`depth_from_mag7`、`snapshot_id`。
 
 这一层是 ingestion contract，不复用前端原型字段，也不要求调用方提供 Neo4j 内部节点 ID。
+
+首批真实样例已经对齐：
+
+- Apple
+- Microsoft
+- Alphabet
+- Meta
 
 ## 测试
 

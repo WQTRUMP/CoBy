@@ -8,7 +8,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/backend/src/server.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "import:normalized": "tsx src/scripts/import-normalized-package.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

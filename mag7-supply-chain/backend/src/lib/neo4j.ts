@@ -149,7 +149,7 @@ class MockGraphRepository implements GraphRepository {
         const matchesType =
           !query.relationshipTypes || query.relationshipTypes.includes(relation.relationshipType);
 
-        return matchesCompany || (matchesDepth && matchesType);
+        return matchesCompany && matchesDepth && matchesType;
       }),
     };
 
