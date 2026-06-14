@@ -1,0 +1,13 @@
+.DS_Store
+*.log
+
+# Frontend dependencies and local package caches
+node_modules/
+.npm-cache/
+
+# Build output and local tool state
+dist/
+.vite/
+
+# Temporary visual QA screenshots
+mag7-supply-chain/prototype-shot-*.png
