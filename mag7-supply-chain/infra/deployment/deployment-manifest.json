@@ -9,7 +9,7 @@
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
     "readiness": "prototype_passed_real_data_launch_blocked",
-    "summary": "prototype 口径已通过，允许作为 mock/degraded 演示环境对外；real_data_launch 仍不通过，唯一核心原因是 live Neo4j/Redis 闭环未完成，以及 Redis 不可达时服务在当前环境仍可能无法完成启动。official_doc 与 4xx 校验问题已修复，不再构成阻塞。"
+    "summary": "prototype 口径已通过，允许作为 mock/degraded 演示环境对外；real_data_launch 仍不通过，唯一核心原因是缺少 live Neo4j/Redis 真实导入与运行时 HTTP 闭环验收。Redis 不可达启动降级语义已通过复验，official_doc 与 4xx 校验问题也已修复，不再构成阻塞。"
   },
   "runtime": {
     "frontend": {
@@ -100,10 +100,10 @@
         {
           "name": "redis_dependency_fault_mode",
           "enabled_when": "REDIS_URL 已配置但 Redis 不可达",
-          "health_status": "unknown_pending_revalidation",
-          "serves_requests": false,
+          "health_status": "degraded",
+          "serves_requests": true,
           "observed_in_verification": true,
-          "observed_business_response": "当前环境下服务未完成监听，仍待当前 Redis 复验链路 40ed9896 -> d586a41a 完成最终复验"
+          "observed_business_response": "基于修复后 dist 构建产物，服务可完成监听；`/api/v1/health` 返回 200 degraded，业务接口可继续返回 200，且健康检查明确 `cache disabled`。"
         },
         {
           "name": "full_graph_mode",
@@ -253,11 +253,21 @@
           }
         },
         "redis_unreachable_mode": {
-          "url": "http://127.0.0.1:4322/api/v1/health",
-          "http_status": null,
-          "body_status": null,
-          "repositoryMode": null,
-          "observation": "当前环境下未完成监听，仍待当前 Redis 复验链路 40ed9896 -> d586a41a 最终确认是否可按预期启动并禁用缓存。"
+          "url": "http://127.0.0.1:4321/api/v1/health",
+          "http_status": 200,
+          "body_status": "degraded",
+          "repositoryMode": "mock",
+          "dependencies": {
+            "neo4j": "not_configured",
+            "redis": "down"
+          },
+          "business_endpoint": {
+            "path": "/api/v1/companies/search?q=amazon&limit=5",
+            "http_status": 200,
+            "cache_header": "x-cache: miss",
+            "source": "mock"
+          },
+          "observation": "任务 d586a41a 已复验通过：Redis 不可达时服务可监听并禁用缓存，但该验证是在 mock repository 模式完成，不能替代 live Neo4j/Redis 真实导入闭环。"
         }
       }
     }
@@ -267,7 +277,7 @@
     "deployment_runner_only": true,
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
-    "summary": "prototype 可单独申请部署审批；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须等待 live 依赖验收闭环。artifact 成功入库后，应向 human 发送仅限 prototype 的部署决策请求，并明确 real_data_launch 仍不通过。",
+    "summary": "prototype 可单独申请部署审批；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须等待 live Neo4j/Redis 真实导入与运行时 HTTP 闭环验收。artifact 成功入库后，应向 human 发送仅限 prototype 的部署决策请求，并明确 real_data_launch 仍不通过。",
     "reasons": [
       "真实数据上线依赖 Neo4j 与 Redis 等有状态资源。",
       "Cloudflare 域名、DNS、反向代理与证书变更会影响外部流量。",
@@ -299,8 +309,7 @@
       "readiness": "failed",
       "blocking_conditions": [
         "当前环境没有完成 live Neo4j/Redis 导入与运行时闭环，`npm run import:normalized` 仍输出 `source: mock`。",
-        "虽已验证 Neo4j 不可达时 `/api/v1/health` 为 degraded 且业务接口返回结构化 503，但这不构成 live 图数据库验收通过。",
-        "Redis 不可达时服务在当前环境仍可能无法完成启动，需等待当前 Redis 复验链路 40ed9896 -> d586a41a 的最终复验结论。",
+        "虽已验证 Neo4j 不可达时 `/api/v1/health` 为 degraded 且业务接口返回结构化 503，也已验证 Redis 不可达时服务可监听并禁用缓存，但这些降级语义都不构成 live 图数据库导入与查询验收通过。",
         "全量包 in-memory real-shape 测试与 mock/degraded 运行态不能表述成真实 Neo4j+Redis 验收。"
       ]
     }
@@ -324,12 +333,12 @@
       "validated_node_version": "v22.22.3",
       "frontend_contract_tests": "passed: 9/9",
       "backend_build": "ok",
-      "backend_tests": "5 files / 23 tests passed",
+      "backend_tests": "6 files / 24 tests passed",
       "api_health": "200 degraded mock",
       "import_normalized": "source=mock companyCount=59 relationCount=56 evidenceCount=58 snapshotCount=2",
       "invalid_parameter_contract": "400 bad_request",
       "neo4j_unreachable_business_contract": "503 dependency_unavailable",
-      "redis_unreachable_startup": "port 4322 not listening within observation window"
+      "redis_unreachable_startup": "service listened on 127.0.0.1:4321; health=200 degraded; business endpoint=200 with x-cache: miss"
     }
   },
   "sources": [

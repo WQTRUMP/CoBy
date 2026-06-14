@@ -38,6 +38,7 @@ interface DisabledReason {
 export type RedisClientFactory = (options: { url: string }) => RedisClientLike;
 
 const REDIS_CONNECT_TIMEOUT_MS = 1_000;
+const REDIS_STARTUP_DETAIL = "Redis connection pending; cache disabled until ready";
 
 class NoopCacheClient implements CacheClient {
   enabled = false;
@@ -66,8 +67,9 @@ class NoopCacheClient implements CacheClient {
 }
 
 class RedisCacheClient implements CacheClient {
-  private available = true;
-  private detail = "Redis connection healthy";
+  private available = false;
+  private detail = REDIS_STARTUP_DETAIL;
+  private status: DependencyStatus = "down";
 
   constructor(private readonly client: RedisClientLike) {}
 
@@ -78,6 +80,7 @@ class RedisCacheClient implements CacheClient {
   private async disable(reason: string) {
     this.available = false;
     this.detail = reason;
+    this.status = "down";
 
     if (this.client.isOpen) {
       try {
@@ -128,7 +131,7 @@ class RedisCacheClient implements CacheClient {
   async health() {
     if (!this.available) {
       return {
-        status: "down" as const,
+        status: this.status,
         enabled: false,
         detail: this.detail,
       };
@@ -151,6 +154,16 @@ class RedisCacheClient implements CacheClient {
     if (this.client.isOpen) {
       await this.client.quit();
     }
+  }
+
+  markConnected() {
+    this.available = true;
+    this.status = "up";
+    this.detail = "Redis connection healthy";
+  }
+
+  async markStartupFailure(error: unknown) {
+    await this.disable(`Redis unavailable; cache disabled: ${toDependencyDetail(error, "Redis connect failed")}`);
   }
 }
 
@@ -178,29 +191,24 @@ export async function createCacheClient(options: CreateCacheClientOptions = {}):
       }) as RedisClientLike);
   const client = factory({ url });
   client.on("error", () => undefined);
+  const cacheClient = new RedisCacheClient(client);
+  const connectPromise = client.connect();
+  connectPromise.catch(() => undefined);
 
-  try {
-    await Promise.race([
-      client.connect(),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Redis connect timeout after ${REDIS_CONNECT_TIMEOUT_MS}ms`));
-        }, REDIS_CONNECT_TIMEOUT_MS + 100);
-      }),
-    ]);
-    return new RedisCacheClient(client);
-  } catch (error) {
-    if (client.isOpen) {
-      try {
-        await client.quit();
-      } catch {
-        // Ignore shutdown failures after a startup connect timeout/failure.
-      }
-    }
-
-    return new NoopCacheClient({
-      status: "down",
-      detail: `Redis unavailable; cache disabled: ${toDependencyDetail(error, "Redis connect failed")}`,
+  void Promise.race([
+    connectPromise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Redis connect timeout after ${REDIS_CONNECT_TIMEOUT_MS}ms`));
+      }, REDIS_CONNECT_TIMEOUT_MS + 100);
+    }),
+  ])
+    .then(() => {
+      cacheClient.markConnected();
+    })
+    .catch(async (error) => {
+      await cacheClient.markStartupFailure(error);
     });
-  }
+
+  return cacheClient;
 }

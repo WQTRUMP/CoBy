@@ -16,6 +16,23 @@ function createRedisStub(overrides: Partial<RedisClientLike> = {}): RedisClientL
   };
 }
 
+async function waitFor<T>(callback: () => Promise<T>, predicate: (value: T) => boolean, timeoutMs = 2_000) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const value = await callback();
+    if (predicate(value)) {
+      return value;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+  }
+
+  return callback();
+}
+
 describe("createCacheClient", () => {
   it("falls back to disabled cache when configured redis is unreachable at startup", async () => {
     const client = await createCacheClient({
@@ -28,10 +45,11 @@ describe("createCacheClient", () => {
         }),
     });
 
+    await waitFor(async () => client.enabled, (enabled) => enabled === false);
     expect(client.enabled).toBe(false);
     expect(await client.get("companies:search")).toBeNull();
     await expect(client.set("companies:search", "payload", 60)).resolves.toBeUndefined();
-    await expect(client.health()).resolves.toMatchObject({
+    await expect(waitFor(() => client.health(), (health) => health.detail.includes("cache disabled"))).resolves.toMatchObject({
       status: "down",
       enabled: false,
       detail: expect.stringContaining("cache disabled"),
@@ -49,6 +67,10 @@ describe("createCacheClient", () => {
       createClient: () => redisStub,
     });
 
+    await expect(waitFor(() => client.health(), (health) => health.status === "up")).resolves.toMatchObject({
+      status: "up",
+      enabled: true,
+    });
     await expect(client.get("graph:stats")).resolves.toBeNull();
     expect(client.enabled).toBe(false);
     await expect(client.set("graph:stats", "payload", 60)).resolves.toBeUndefined();

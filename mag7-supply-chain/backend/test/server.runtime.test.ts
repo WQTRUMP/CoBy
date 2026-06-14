@@ -1,11 +1,13 @@
 import { once } from "node:events";
-import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { execFile, spawn, type ChildProcessByStdio } from "node:child_process";
+import { promisify } from "node:util";
 import type { Readable } from "node:stream";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const backendDir = "/workspace/project/mag7-supply-chain/backend";
 type ServerChildProcess = ChildProcessByStdio<null, Readable, Readable>;
+const execFileAsync = promisify(execFile);
 
 const childProcesses = new Set<ServerChildProcess>();
 
@@ -31,16 +33,23 @@ async function stopProcess(child: ServerChildProcess) {
   }
 }
 
-afterEach(async () => {
+afterAll(async () => {
   await Promise.all([...childProcesses].map((child) => stopProcess(child)));
 });
 
 describe("runtime startup", () => {
+  beforeAll(async () => {
+    await execFileAsync("npm", ["run", "build"], {
+      cwd: backendDir,
+      env: process.env,
+    });
+  }, 30_000);
+
   it(
     "starts listening and reports degraded health when configured redis is unreachable",
     async () => {
       const port = 4311;
-      const child = spawn(process.execPath, ["--import", "tsx", "src/server.ts"], {
+      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
         cwd: backendDir,
         env: {
           ...process.env,
@@ -52,6 +61,7 @@ describe("runtime startup", () => {
         stdio: ["ignore", "pipe", "pipe"],
       });
       childProcesses.add(child);
+      const startedAt = Date.now();
 
       let stdout = "";
       let stderr = "";
@@ -84,6 +94,9 @@ describe("runtime startup", () => {
 
       expect(response, `server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
       expect(response!.status).toBe(200);
+      expect(Date.now() - startedAt, `server startup exceeded budget\nstdout:\n${stdout}\nstderr:\n${stderr}`).toBeLessThan(
+        2_500,
+      );
 
       const payload = (await response!.json()) as {
         status: string;
