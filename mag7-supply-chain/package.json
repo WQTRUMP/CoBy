@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "npm --prefix packages/contracts run build",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "pretest:contracts": "npm --prefix packages/contracts run build",
     "test:contracts": "rm -rf .tmp-contract-tests && npx tsc -p tsconfig.contract-tests.json && mkdir -p .tmp-contract-tests/packages/contracts && ln -s ../../../packages/contracts/node_modules .tmp-contract-tests/packages/contracts/node_modules && node --experimental-specifier-resolution=node --test contract-tests/*.test.mjs"
   },
   "dependencies": {
+    "@mag7/contracts": "file:./packages/contracts",
     "@phosphor-icons/react": "^2.1.10",
     "d3-force": "^3.0.0",
     "d3-scale": "^4.0.2",

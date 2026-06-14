@@ -13,7 +13,6 @@
     "src/adapters/**/*.ts",
     "src/mocks/**/*.ts",
     "src/services/**/*.ts",
-    "src/types/**/*.ts",
-    "packages/contracts/src/**/*.ts"
+    "src/types/**/*.ts"
   ]
 }

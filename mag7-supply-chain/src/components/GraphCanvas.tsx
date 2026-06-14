@@ -12,7 +12,7 @@ interface GraphCanvasProps {
   onZoomChange: (zoom: number) => void;
 }
 
-const relationLabels: Record<GraphRelationViewModel["relationshipType"], string> = {
+const relationLabels: Record<string, string> = {
   component_supply: "Component",
   manufacturing: "Manufacturing",
   cloud_service: "Cloud / Compute",
@@ -23,6 +23,17 @@ const relationLabels: Record<GraphRelationViewModel["relationshipType"], string>
   professional_service: "Professional",
   channel_partner: "Channel",
 };
+
+function getRelationLabel(relationshipType: GraphRelationViewModel["relationshipType"]) {
+  return (
+    relationLabels[relationshipType] ??
+    relationshipType
+      .split("_")
+      .filter(Boolean)
+      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+      .join(" ")
+  );
+}
 
 export function GraphCanvas(props: GraphCanvasProps) {
   const { activeNodeId, activeRelationId, focusNode, graph, onNodeSelect, onRelationSelect, onZoomChange, zoom } = props;
@@ -72,7 +83,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
                     onClick={() => onRelationSelect(relation)}
                   />
                   <text className="graphEdgeLabel" x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 2}>
-                    {relationLabels[relation.relationshipType]}
+                    {getRelationLabel(relation.relationshipType)}
                   </text>
                 </g>
               );

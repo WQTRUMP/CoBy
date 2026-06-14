@@ -3,9 +3,9 @@ import type { FastifyInstance } from "fastify";
 import {
   confidenceSchema,
   importRelationsFieldCatalog,
-  relationshipTypeSchema,
-  sourceTypeSchema,
-} from "../../../../packages/contracts/src/index.js";
+  knownRelationshipTypes,
+  knownSourceTypes,
+} from "@mag7/contracts";
 
 export async function registerSchemaRoutes(app: FastifyInstance) {
   app.get("/api/v1/schema/import-relations", async () => {
@@ -14,9 +14,9 @@ export async function registerSchemaRoutes(app: FastifyInstance) {
       mode: app.graphRepository.source === "mock" ? "mock-ready" : "database-ready",
       fields: importRelationsFieldCatalog,
       enums: {
-        relationship_type: relationshipTypeSchema.options,
+        relationship_type: knownRelationshipTypes,
         confidence_label: confidenceSchema.options,
-        source_type: sourceTypeSchema.options,
+        source_type: knownSourceTypes,
       },
       guidance: {
         requiredEvidenceFields: ["evidence_ids", "primary_evidence_id", "evidence_date", "evidence_excerpt", "source_url"],

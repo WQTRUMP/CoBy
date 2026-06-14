@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   importRelationsFieldCatalog,
   importRelationsRequestSchema,
-} from "../../../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,

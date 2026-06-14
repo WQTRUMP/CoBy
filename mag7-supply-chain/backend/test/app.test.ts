@@ -5,7 +5,7 @@ import { mockSubgraph } from "../src/lib/mock-data.js";
 import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
 import type { CacheClient } from "../src/lib/redis.js";
 import type { GraphRepository, Neo4jHealth } from "../src/lib/neo4j.js";
-import type { CompanyListQuery, GraphNodeDTO } from "../../packages/contracts/src/index.js";
+import type { CompanyListQuery, GraphNodeDTO } from "@mag7/contracts";
 
 const cache = new Map<string, string>();
 

@@ -10,7 +10,7 @@ import type {
   RelationDTO,
   SubgraphDTO,
   SubgraphQuery,
-} from "../../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 import { mockCompanies, mockSubgraph } from "./mock-data.js";
 import type { PreparedNormalizedImport } from "./normalized-package.js";
 
@@ -498,15 +498,22 @@ export class Neo4jGraphRepository implements GraphRepository {
           UNWIND $relations AS relation
           MERGE (r:SupplyRelation {id: relation.id})
           SET r += relation
-          WITH r, relation
-          MATCH (source:Company {id: relation.sourceCompanyId})
-          MATCH (target:Company {id: relation.targetCompanyId})
-          MATCH (snapshot:Snapshot {id: relation.snapshotId})
+          `,
+          { relations: payload.relations },
+        );
+
+        await tx.run(
+          `
+          UNWIND $relationEdges AS edge
+          MATCH (source:Company {id: edge.sourceCompanyId})
+          MATCH (target:Company {id: edge.targetCompanyId})
+          MATCH (snapshot:Snapshot {id: edge.snapshotId})
+          MATCH (r:SupplyRelation {id: edge.relationId})
           MERGE (source)-[:SOURCE_OF]->(r)
           MERGE (r)-[:TARGET_OF]->(target)
           MERGE (snapshot)-[:CONTAINS]->(r)
           `,
-          { relations: payload.relations },
+          { relationEdges: payload.relationEdges },
         );
 
         await tx.run(
@@ -514,11 +521,18 @@ export class Neo4jGraphRepository implements GraphRepository {
           UNWIND $evidence AS evidence
           MERGE (e:Evidence {id: evidence.id})
           SET e += evidence
-          WITH e, evidence
-          MATCH (r:SupplyRelation {id: evidence.relationId})
-          MERGE (r)-[:SUPPORTED_BY]->(e)
           `,
           { evidence: payload.evidence },
+        );
+
+        await tx.run(
+          `
+          UNWIND $evidenceBindings AS binding
+          MATCH (r:SupplyRelation {id: binding.relationId})
+          MATCH (e:Evidence {id: binding.evidenceId})
+          MERGE (r)-[:SUPPORTED_BY]->(e)
+          `,
+          { evidenceBindings: payload.evidenceBindings },
         );
       });
 

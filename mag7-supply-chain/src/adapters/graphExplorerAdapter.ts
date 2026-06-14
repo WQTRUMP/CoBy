@@ -8,7 +8,7 @@ import type {
   RelationDTO,
   RelationEvidenceResponseDTO,
   SubgraphDTO,
-} from "../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 import type {
   CompanyOptionViewModel,
   CompanyOverviewViewModel,

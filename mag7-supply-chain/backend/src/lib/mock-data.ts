@@ -3,7 +3,7 @@ import type {
   EvidenceDTO,
   SnapshotDTO,
   SubgraphDTO,
-} from "../../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 
 const snapshot: SnapshotDTO = {
   id: "snapshot:2026-06-14.1",

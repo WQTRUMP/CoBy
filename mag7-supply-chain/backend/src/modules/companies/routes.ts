@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { companyListQuerySchema } from "../../../../packages/contracts/src/index.js";
+import { companyListQuerySchema } from "@mag7/contracts";
 
 export async function registerCompanyRoutes(app: FastifyInstance) {
   app.get("/api/v1/companies", async (request) => {

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { subgraphQuerySchema } from "../../../../packages/contracts/src/index.js";
+import { subgraphQuerySchema } from "@mag7/contracts";
 
 const CACHE_TTL_SECONDS = 600;
 

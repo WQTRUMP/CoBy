@@ -5,7 +5,7 @@ import {
   relationEvidenceResponseSchema,
   subgraphQuerySchema,
   subgraphSchema,
-} from "../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 import type {
   CompanyDetailResponseDTO,
   CompanyListResponseDTO,
@@ -13,7 +13,7 @@ import type {
   RelationEvidenceResponseDTO,
   SubgraphDTO,
   SubgraphQuery,
-} from "../../packages/contracts/src/index.js";
+} from "@mag7/contracts";
 
 export interface GraphExplorerApi {
   listCompanies(query?: string): Promise<CompanyListResponseDTO>;
