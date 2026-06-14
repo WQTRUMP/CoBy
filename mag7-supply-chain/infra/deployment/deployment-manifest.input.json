@@ -17,7 +17,7 @@
         "image": "neo4j:5.26",
         "ports": [7474, 7687],
         "healthcheck": "cypher-shell RETURN 1",
-        "envBindings": ["NEO4J_USER", "NEO4J_PASSWORD", "NEO4J_DB", "NEO4J_URI"],
+        "envBindings": ["NEO4J_USERNAME", "NEO4J_PASSWORD", "NEO4J_DATABASE", "NEO4J_URI"],
         "paidResourcePolicy": "development-local-only"
       },
       {

@@ -57,7 +57,7 @@
       "real_data_ready": false,
       "real_data_prerequisites": [
         "为静态站点配置同源 `/api` 代理，或提供可达的独立 API 域名并同步 `VITE_GRAPH_API_BASE_URL`。",
-        "将前端部署样例中的 `API_BASE_URL` / `GRAPH_SNAPSHOT_VERSION` 旧变量更新为当前实现口径。"
+        "保持前端部署文档与根 `.env.example` 使用 `VITE_GRAPH_API_BASE_URL` 当前命名。"
       ]
     },
     {
@@ -168,11 +168,8 @@
         "VITE_GRAPH_API_BASE_URL"
       ],
       "optional": [],
-      "documented_but_stale": [
-        "API_BASE_URL",
-        "GRAPH_SNAPSHOT_VERSION"
-      ],
-      "current_behavior": "代码只读取 `VITE_GRAPH_API_BASE_URL`；若未设置，则浏览器请求同源 `/api/v1/*`。仓库根 `.env.example` 仍保留旧变量名称。"
+      "documented_but_stale": [],
+      "current_behavior": "代码只读取 `VITE_GRAPH_API_BASE_URL`；若未设置，则浏览器请求同源 `/api/v1/*`。仓库文档与根 `.env.example` 已同步为当前命名。"
     },
     "api": {
       "required_for_full_mode": [

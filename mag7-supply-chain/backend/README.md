@@ -20,6 +20,15 @@
 - `POST /api/v1/imports/normalized-package` 标准化 JSONL 导入入口
 - `GET /api/v1/schema/import-relations` 标准化入库字段说明
 
+当前已验证运行时口径：
+
+- Node：`v22.22.3`
+- 源码入口：`backend/src/server.ts`
+- 构建产物入口：`backend/dist/backend/src/server.js`
+- 构建命令：`npm run build`
+- 启动命令：`npm start`
+- 健康检查：`GET /api/v1/health`
+
 ## 快速启动
 
 ```bash
@@ -35,6 +44,19 @@ npm run dev
 http://127.0.0.1:4000
 ```
 
+所需环境变量：
+
+```dotenv
+PORT=4000
+HOST=127.0.0.1
+CORS_ORIGIN=http://127.0.0.1:5174
+NEO4J_URI=bolt://127.0.0.1:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=mag7-dev-password
+NEO4J_DATABASE=neo4j
+REDIS_URL=redis://127.0.0.1:6379
+```
+
 ## 本地无数据库模式
 
 如果未配置 `NEO4J_URI` 或 Neo4j / Redis 未启动，服务仍可运行：
@@ -43,6 +65,8 @@ http://127.0.0.1:4000
 - 健康检查会返回 `degraded`，并明确指出哪个依赖未配置或不可达
 - 健康检查同时返回当前 import contract 版本与 mock 边界状态
 - 导入接口会完成文件与 schema 校验，但不会写入真实 Neo4j
+
+这只意味着 `prototype` 可用于演示，不意味着 `real_data_launch` 已通过。真实上线仍要求 live Neo4j / Redis 依赖可达，并完成导入、健康检查和业务接口闭环验收。
 
 ## 关键接口
 

@@ -28,21 +28,61 @@
 
 项目中已安装部分 D3 包，当前实现主要使用自定义坐标与 SVG 路径，后续可接入 D3 force / zoom 做更复杂的图布局。
 
+## 当前实现与验证口径
+
+- 已验证 Node 版本：`v22.22.3`
+- 前端入口：`src/main.tsx`
+- 后端源码入口：`backend/src/server.ts`
+- 后端构建产物入口：`backend/dist/backend/src/server.js`
+- 前端 API 基址变量：`VITE_GRAPH_API_BASE_URL`
+- 后端真实依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
+- 发布约束：`prototype` 允许以 mock / degraded 形态申请部署；`real_data_launch` 仍不通过，原因是 live Neo4j / Redis 导入与运行时闭环未完成
+
 ## 快速开始
 
 ```bash
-cd /Users/xncool/Documents/RReaserch/mag7-supply-chain
+cd /workspace/project/mag7-supply-chain
+npm install
+cp .env.example .env
+cp backend/.env.example backend/.env
+```
+
+当前仓库拆分为前端、后端与本地依赖三部分，建议按顺序启动。
+
+### 1. 启动本地依赖
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+### 2. 启动后端 API
+
+```bash
+cd /workspace/project/mag7-supply-chain/backend
 npm install
 npm run dev
 ```
 
-如果要同时起本地图数据库、缓存和对象存储，先准备开发环境变量：
+默认地址：
 
-```bash
-cp .env.example .env
+```text
+http://127.0.0.1:4000
 ```
 
-当前本地开发服务使用 Vite：
+健康检查：
+
+```bash
+curl http://127.0.0.1:4000/api/v1/health
+```
+
+### 3. 启动前端
+
+```bash
+cd /workspace/project/mag7-supply-chain
+npm run dev
+```
+
+默认地址：
 
 ```text
 http://127.0.0.1:5174/
@@ -50,17 +90,82 @@ http://127.0.0.1:5174/
 
 如果 5174 被占用，Vite 会自动换到其他端口，以终端输出为准。
 
-构建生产版本：
+### 4. 构建生产版本
+
+前端：
 
 ```bash
 npm run build
 ```
 
-预览生产构建：
+后端：
 
 ```bash
-npm run preview
+cd /workspace/project/mag7-supply-chain/backend
+npm run build
+npm start
 ```
+
+## 环境变量
+
+### 根目录 `.env`
+
+根目录 `.env.example` 统一了前端、本地 Compose 以及部署文档口径，不再使用 `API_BASE_URL`、`GRAPH_SNAPSHOT_VERSION`。
+
+```dotenv
+VITE_GRAPH_API_BASE_URL=http://127.0.0.1:4000
+NEO4J_URI=bolt://127.0.0.1:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=mag7-dev-password
+NEO4J_DATABASE=neo4j
+REDIS_URL=redis://127.0.0.1:6379
+PORT=4000
+HOST=127.0.0.1
+CORS_ORIGIN=http://127.0.0.1:5174
+```
+
+说明：
+
+- 前端代码只读取 `VITE_GRAPH_API_BASE_URL`；未设置时会回退到同源 `/api/v1/*`。
+- Compose 与 Neo4j 初始化脚本已统一使用 `NEO4J_USERNAME` / `NEO4J_DATABASE` 命名。
+- `backend/.env.example` 与根目录口径保持一致，便于后端单独运行。
+
+### Backend `.env`
+
+后端本地运行时至少需要以下绑定：
+
+```dotenv
+PORT=4000
+HOST=127.0.0.1
+CORS_ORIGIN=http://127.0.0.1:5174
+NEO4J_URI=bolt://127.0.0.1:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=mag7-dev-password
+NEO4J_DATABASE=neo4j
+REDIS_URL=redis://127.0.0.1:6379
+```
+
+未配置 `NEO4J_URI` 时，后端会进入 mock / degraded 模式；这允许 `prototype` 演示，但不构成真实数据上线验收。
+
+### 前端部署变量
+
+- 同源 `/api` 代理部署：`VITE_GRAPH_API_BASE_URL` 可留空
+- 前后端跨域分离部署：必须显式提供 `VITE_GRAPH_API_BASE_URL=https://<api-domain>`
+
+## 部署与上线约束
+
+当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：
+
+- `prototype`：可发布。允许前端静态站点接独立 API，或后端以 mock / degraded 模式对外演示。
+- `real_data_launch`：不通过。当前仍缺 live Neo4j / Redis 依赖下的导入闭环、健康检查与业务接口验收。
+- 不得把全量包 in-memory real-shape 测试或 mock / degraded 运行结果表述成真实 Neo4j + Redis 验收。
+- Cloudflare、正式域名、付费数据库 / 缓存资源的实际部署必须走 Wanman 审批流，不能直接使用提供商凭据。
+
+推荐部署拆分：
+
+- Web: GitHub Pages / Cloudflare Pages / Vercel
+- API: Railway / Render / Fly.io
+- Stateful: Neo4j 5.x + Redis 7.x
 
 ## 本地基础设施骨架
 
@@ -121,18 +226,23 @@ docker compose -f docker-compose.dev.yml down -v
 
 ### 与后续 deployment manifest 的衔接
 
-`infra/deployment/deployment-manifest.input.json` 不是正式部署清单，而是 DevOps 预留的服务清单输入，供后续在开发任务完成后生成 `wanman.deployment-manifest` 时复用。当前阶段不会触发任何 Cloudflare 或付费资源部署动作。
+`infra/deployment/deployment-manifest.input.json` 不是正式部署清单，而是 DevOps 预留的服务清单输入，供后续在开发任务完成后生成 `wanman.deployment-manifest` 时复用。该输入文件现已与当前实现对齐：前端变量统一为 `VITE_GRAPH_API_BASE_URL`，后端图数据库变量统一为 `NEO4J_USERNAME` / `NEO4J_DATABASE`，并以 `Node v22.22.3` 作为已验证口径。当前阶段不会触发任何 Cloudflare 或付费资源部署动作。
 
 ## 目录结构
 
 ```text
 mag7-supply-chain/
   src/
-    App.jsx                  # 主应用、交互状态、地图、矩阵、证据抽屉
-    main.jsx                 # React 入口
+    App.tsx                  # 主应用、交互状态、地图、矩阵、证据抽屉
+    main.tsx                 # React 入口
     styles.css               # 深色研究终端风格样式
-    data/
-      supplyChain.js         # 公司、节点、关系、矩阵、来源数据
+    services/
+      graphExplorerApi.ts    # 前端 API 客户端
+  backend/
+    src/
+      server.ts              # Fastify 启动入口
+      config/
+        env.ts               # 后端环境变量定义
   public/
     assets/
       dark-world-map.png     # 深色世界地图底图
@@ -142,6 +252,8 @@ mag7-supply-chain/
   design-comparison.png      # 参考图与实现截图对比
   prototype-final.png        # 最终实现截图
   package.json
+  backend/package.json
+  infra/
 ```
 
 ## 数据模型
