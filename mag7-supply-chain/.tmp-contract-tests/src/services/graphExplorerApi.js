@@ -19,13 +19,14 @@ export function createHttpGraphExplorerApi(baseUrl = "") {
     return {
         async listCompanies(query) {
             const normalizedQuery = query?.trim();
-            const isSearch = Boolean(normalizedQuery);
-            const url = new URL(`${baseUrl}${isSearch ? graphApiContract.companySearch : graphApiContract.companies}`, window.location.origin);
             if (normalizedQuery) {
+                const url = new URL(`${baseUrl}${graphApiContract.companySearch}`, window.location.origin);
                 url.searchParams.set("q", normalizedQuery);
                 url.searchParams.set("limit", "10");
+                return request(url, searchCompaniesResponseSchema);
             }
-            return request(url, isSearch ? searchCompaniesResponseSchema : companyListResponseSchema);
+            const url = new URL(`${baseUrl}${graphApiContract.companies}`, window.location.origin);
+            return request(url, companyListResponseSchema);
         },
         async getCompany(companyId) {
             return request(`${baseUrl}${graphApiContract.company.replace(":companyId", encodeURIComponent(companyId))}`, companyDetailResponseSchema);

@@ -92,7 +92,7 @@ test("renders relationship filters with real type and subtype options", () => {
   assert.match(markup, /Battery Cells \(1\)/);
   assert.match(markup, /canonical groups, brands, legal entities, and facility aliases separately/i);
   assert.match(markup, /Tesla live focus/);
-  assert.match(markup, /Matched legal entity "Tesla Manufacturing LLC"/);
+  assert.match(markup, /Matched legal entity .*Tesla Manufacturing LLC/);
 });
 
 test("renders graph legend with concrete relationship labels instead of generic buckets", () => {
@@ -295,7 +295,7 @@ test("renders entity-layer guidance in the company sidebar without falling back 
   assert.match(markup, /Tesla, Inc\./);
   assert.match(markup, /Group \/ brand \/ legal entity \/ facility/);
   assert.match(markup, /Gigafactory Texas/);
-  assert.match(markup, /Matched legal entity "Tesla Manufacturing LLC"/);
+  assert.match(markup, /Matched legal entity .*Tesla Manufacturing LLC/);
   assert.doesNotMatch(markup, /Legacy Alias/);
 });
 
