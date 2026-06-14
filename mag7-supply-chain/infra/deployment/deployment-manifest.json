@@ -103,7 +103,7 @@
           "health_status": "unknown_pending_revalidation",
           "serves_requests": false,
           "observed_in_verification": true,
-          "observed_business_response": "当前环境下服务未完成监听，仍待 api-tester 任务 44234bd0 最终复验"
+          "observed_business_response": "当前环境下服务未完成监听，仍待当前 Redis 复验链路 40ed9896 -> d586a41a 完成最终复验"
         },
         {
           "name": "full_graph_mode",
@@ -257,7 +257,7 @@
           "http_status": null,
           "body_status": null,
           "repositoryMode": null,
-          "observation": "当前环境下未完成监听，仍待任务 44234bd0 最终复验是否可按预期启动并禁用缓存。"
+          "observation": "当前环境下未完成监听，仍待当前 Redis 复验链路 40ed9896 -> d586a41a 最终确认是否可按预期启动并禁用缓存。"
         }
       }
     }
@@ -267,7 +267,7 @@
     "deployment_runner_only": true,
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
-    "summary": "prototype 可单独申请部署审批；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须等待 live 依赖验收闭环。本轮不发送新的 human 部署决策请求。",
+    "summary": "prototype 可单独申请部署审批；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须等待 live 依赖验收闭环。artifact 成功入库后，应向 human 发送仅限 prototype 的部署决策请求，并明确 real_data_launch 仍不通过。",
     "reasons": [
       "真实数据上线依赖 Neo4j 与 Redis 等有状态资源。",
       "Cloudflare 域名、DNS、反向代理与证书变更会影响外部流量。",
@@ -300,7 +300,7 @@
       "blocking_conditions": [
         "当前环境没有完成 live Neo4j/Redis 导入与运行时闭环，`npm run import:normalized` 仍输出 `source: mock`。",
         "虽已验证 Neo4j 不可达时 `/api/v1/health` 为 degraded 且业务接口返回结构化 503，但这不构成 live 图数据库验收通过。",
-        "Redis 不可达时服务在当前环境仍可能无法完成启动，需等待任务 44234bd0 基于 84b78985 的最终复验结论。",
+        "Redis 不可达时服务在当前环境仍可能无法完成启动，需等待当前 Redis 复验链路 40ed9896 -> d586a41a 的最终复验结论。",
         "全量包 in-memory real-shape 测试与 mock/degraded 运行态不能表述成真实 Neo4j+Redis 验收。"
       ]
     }
