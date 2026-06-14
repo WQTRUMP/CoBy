@@ -190,8 +190,7 @@ curl http://127.0.0.1:4173/api/v1/health
 
 当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：
 
-- `prototype`：可发布。允许前端静态站点接独立 API，或后端以 mock / degraded 模式对外演示。
-- 仅当显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许 `repositoryMode=mock` / `source=mock` 的原型演示链路。
+- `prototype`：可发布。允许前端静态站点接独立 API；仅当后端显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许使用 `repositoryMode=mock` / `source=mock` 的原型演示链路。
 - `real_data_launch`：不通过。当前仍缺 live Neo4j / Redis 依赖下的导入闭环、健康检查与业务接口验收。
 - 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。
 - 不得把全量包 in-memory real-shape 测试、prototype/mock 返回或 degraded 运行结果表述成真实 Neo4j + Redis 验收。
