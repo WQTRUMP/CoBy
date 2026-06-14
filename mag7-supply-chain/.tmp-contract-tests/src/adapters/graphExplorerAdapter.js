@@ -298,19 +298,36 @@ function collectRelationshipSubtypeOptions(relations) {
     }));
 }
 function getPreferredDisplayName(company) {
-    return company.displayName ?? company.entityProfile?.displayName ?? company.canonicalName ?? company.name;
+    return (company.displayName ??
+        company.entityProfile?.displayName ??
+        company.canonicalName ??
+        company.name ??
+        normalizeCompanyLabel(company.label) ??
+        "Unknown company");
 }
 function getCanonicalName(company) {
-    return company.canonicalName ?? company.entityProfile?.canonicalName ?? company.name;
+    return (company.canonicalName ??
+        company.entityProfile?.canonicalName ??
+        company.name ??
+        normalizeCompanyLabel(company.secondaryLabel) ??
+        normalizeCompanyLabel(company.label) ??
+        "Unknown company");
 }
 function getBaseCompanyName(company, displayName, canonicalName) {
     if ("name" in company && typeof company.name === "string") {
         return company.name;
     }
     if ("label" in company && typeof company.label === "string" && company.label.trim()) {
-        return company.label.replace(/\s+\([A-Z0-9.-]+\)$/, "");
+        return normalizeCompanyLabel(company.label) ?? displayName ?? canonicalName;
     }
-    return displayName || canonicalName;
+    return displayName ?? canonicalName;
+}
+function normalizeCompanyLabel(value) {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+        return null;
+    }
+    return trimmed.replace(/\s+\([A-Z0-9.-]+\)$/, "");
 }
 function getPreferredNodeLabel(node) {
     if (node.company) {

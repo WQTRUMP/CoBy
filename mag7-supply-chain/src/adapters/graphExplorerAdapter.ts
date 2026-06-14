@@ -449,10 +449,10 @@ function getBaseCompanyName(
   }
 
   if ("label" in company && typeof company.label === "string" && company.label.trim()) {
-    return normalizeCompanyLabel(company.label) ?? displayName || canonicalName;
+    return normalizeCompanyLabel(company.label) ?? displayName ?? canonicalName;
   }
 
-  return displayName || canonicalName;
+  return displayName ?? canonicalName;
 }
 
 function normalizeCompanyLabel(value: string | null | undefined) {

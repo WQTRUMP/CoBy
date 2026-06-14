@@ -95,6 +95,109 @@ test("renders relationship filters with real type and subtype options", () => {
   assert.match(markup, /Matched legal entity .*Tesla Manufacturing LLC/);
 });
 
+test("renders alias-hit explanations for suggest-style quick access items without blank canonical labels", () => {
+  const companies = adaptCompanyOptions({
+    items: [
+      {
+        id: "company:GOOG",
+        label: "Google (GOOG)",
+        secondaryLabel: "Alphabet",
+        ticker: "GOOG",
+        isMag7: true,
+        match: {
+          field: "alias",
+          value: "Google LLC",
+          aliasType: "legal_entity",
+          explanation: 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".',
+        },
+      },
+    ],
+    total: 1,
+    query: "google llc",
+    source: "mock",
+  });
+  const graph = adaptGraphViewModel({
+    company: {
+      item: {
+        ...getCompanyResponse("company:TSLA").item,
+        id: "company:GOOG",
+        ticker: "GOOG",
+        name: "Alphabet",
+        canonicalName: "Alphabet",
+        displayName: "Google",
+        entityProfile: {
+          canonicalName: "Alphabet",
+          displayName: "Google",
+          legalEntities: [
+            {
+              id: "alias:google-llc",
+              name: "Google LLC",
+              normalizedName: "google llc",
+              aliasType: "legal_entity",
+              isPrimary: true,
+            },
+          ],
+          brands: [],
+          aliases: [],
+        },
+      },
+      source: "mock",
+    },
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    focusCompanyOption: companies[0],
+    query: {
+      companyId: "company:GOOG",
+      depth: 2,
+      search: "google llc",
+    },
+  });
+
+  const topBarMarkup = renderToStaticMarkup(
+    React.createElement(TopBar, {
+      companies,
+      depth: 2,
+      filtersOpen: false,
+      graph,
+      onCompanySelect() {},
+      onDepthChange() {},
+      onFiltersClear() {},
+      onFiltersToggle() {},
+      onRelationshipSubtypeChange() {},
+      onRelationshipTypeToggle() {},
+      onSearchChange() {},
+      relationshipSubtype: null,
+      relationshipSubtypeOptions: graph.relationshipSubtypeOptions,
+      relationshipTypes: [],
+      relationTypeOptions: graph.relationTypeOptions,
+      search: "google llc",
+      selectedCompanyId: "company:GOOG",
+    }),
+  );
+
+  const sidebarMarkup = renderToStaticMarkup(
+    React.createElement(CompanySidebar, {
+      activeNode: null,
+      activeRelation: null,
+      activeTab: "overview",
+      company: graph.focusCompany,
+      evidence: [],
+      evidenceSummary: graph.evidenceOverview,
+      onRelationSelect() {},
+      onTabChange() {},
+      relations: graph.relations,
+    }),
+  );
+
+  assert.match(topBarMarkup, />Google</);
+  assert.match(topBarMarkup, />Alphabet</);
+  assert.match(topBarMarkup, /Matched legal entity .*Google LLC/);
+  assert.doesNotMatch(topBarMarkup, />undefined</);
+  assert.match(sidebarMarkup, /<h3>Google<\/h3>/);
+  assert.match(sidebarMarkup, />Alphabet</);
+  assert.match(sidebarMarkup, /Matched legal entity .*Google LLC/);
+});
+
 test("renders graph legend with concrete relationship labels instead of generic buckets", () => {
   const graph = adaptGraphViewModel({
     company: getCompanyResponse("company:TSLA"),
