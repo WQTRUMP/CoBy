@@ -107,3 +107,37 @@ test("maps relation evidence endpoint payloads into evidence cards with relation
     "Official Document",
   );
 });
+
+test("keeps the official_doc contract source type mapped for frontend evidence cards", () => {
+  const evidence = adaptRelationEvidence(
+    {
+      items: [
+        {
+          id: "evidence:official-doc-regression",
+          sourceType: "official_doc",
+          title: "Supplier Due Diligence Statement",
+          publisher: "Tesla",
+          url: "https://www.tesla.com/legal/supply-chain",
+          publishedAt: "2025-11-01T00:00:00.000Z",
+          retrievedAt: "2026-06-14T00:00:00.000Z",
+          excerpt: "Regression fixture for the frontend source type label adapter.",
+          pageRef: "Battery materials due diligence",
+          language: "en",
+          hash: "sha256:official-doc-regression",
+          sourceDomain: "tesla.com",
+          citationText: "Regression fixture for the frontend source type label adapter.",
+          reliabilityTier: 1,
+          licenseNote: null,
+          parserVersion: "contract-test",
+        },
+      ],
+      total: 1,
+      source: "contract-test",
+      generatedAt: "2026-06-14T00:00:00.000Z",
+    },
+    { confidence: "confirmed" },
+  );
+
+  assert.equal(evidence[0]?.sourceType, "official_doc");
+  assert.equal(evidence[0]?.sourceTypeLabel, "Official Document");
+});

@@ -22,7 +22,7 @@ import type {
   GraphViewModel,
 } from "../types/viewModels";
 
-const SOURCE_TYPE_LABELS: Record<EvidenceDTO["sourceType"], string> = {
+const SOURCE_TYPE_LABELS = {
   "10k": "10-K",
   earnings_call: "Earnings Call",
   supplier_report: "Supplier Report",
@@ -30,7 +30,7 @@ const SOURCE_TYPE_LABELS: Record<EvidenceDTO["sourceType"], string> = {
   industry_report: "Industry Report",
   press_release: "Press Release",
   official_doc: "Official Document",
-};
+} satisfies Record<EvidenceDTO["sourceType"], string>;
 
 const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], GraphNodeKind> = {
   Company: "company",
