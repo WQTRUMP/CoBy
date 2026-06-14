@@ -214,6 +214,203 @@ describe("Neo4jGraphRepository", () => {
     expect(subgraph.snapshot.id).toBe("snapshot:2026-06-14.2");
   });
 
+  it("prefers the latest relation snapshot fallback over the first relation when snapshot rows are absent", async () => {
+    const records = [
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:BROADCOM",
+            ticker: "AVGO",
+            name: "Broadcom",
+            canonicalName: "Broadcom",
+            displayName: "Broadcom",
+            entityProfileJson: JSON.stringify({
+              canonicalName: "Broadcom",
+              displayName: "Broadcom",
+              legalEntities: [],
+              brands: [],
+              aliases: [],
+            }),
+            companyType: "supplier",
+            country: "US",
+            isMag7: false,
+            marketCapUsd: 850000000000,
+            description: "Semiconductor supplier",
+            aliases: ["Broadcom Inc."],
+            active: true,
+            importanceScore: 0.82,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "Broadcom summary",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:alphabet:broadcom",
+            relationshipType: "component_supply",
+            tier: 1,
+            depthFromMag7: 1,
+            confidence: "confirmed",
+            confidenceScore: 0.95,
+            summary: "Broadcom supports Alphabet TPU programs.",
+            productScope: ["TPUs"],
+            notes: null,
+            evidenceIds: [],
+            primaryEvidenceId: null,
+            evidenceCount: 0,
+            snapshotId: "snapshot:2026-06-14.1",
+            status: "approved",
+            sourceMethod: "supplier_disclosure",
+            sourceCount: 1,
+            lineageKey: "alphabet-broadcom",
+            lastVerifiedAt: "2026-06-14T00:00:00.000Z",
+            validFrom: "2026-04-06",
+            validTo: null,
+          },
+        },
+        target: {
+          properties: {
+            id: "company:GOOGL",
+            ticker: "GOOGL",
+            name: "Alphabet",
+            canonicalName: "Alphabet",
+            displayName: "Google",
+            entityProfileJson: JSON.stringify({
+              canonicalName: "Alphabet",
+              displayName: "Google",
+              legalEntities: [],
+              brands: [],
+              aliases: [],
+            }),
+            companyType: "public_company",
+            country: "US",
+            isMag7: true,
+            marketCapUsd: 2200000000000,
+            description: "Alphabet",
+            aliases: ["Alphabet Inc.", "Google"],
+            active: true,
+            importanceScore: 1,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Alphabet summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        evidence: [],
+        snapshot: null,
+      }),
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:CISCO",
+            ticker: "CSCO",
+            name: "Cisco",
+            canonicalName: "Cisco",
+            displayName: "Cisco",
+            entityProfileJson: JSON.stringify({
+              canonicalName: "Cisco",
+              displayName: "Cisco",
+              legalEntities: [],
+              brands: [],
+              aliases: [],
+            }),
+            companyType: "service_provider",
+            country: "US",
+            isMag7: false,
+            marketCapUsd: 250000000000,
+            description: "Networking supplier",
+            aliases: ["Cisco Systems, Inc."],
+            active: true,
+            importanceScore: 0.71,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Cisco summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:alphabet:cisco",
+            relationshipType: "cloud_service",
+            tier: 1,
+            depthFromMag7: 1,
+            confidence: "strong_evidence",
+            confidenceScore: 0.87,
+            summary: "Cisco supports Google Cloud WAN integration.",
+            productScope: ["Cloud WAN"],
+            notes: null,
+            evidenceIds: [],
+            primaryEvidenceId: null,
+            evidenceCount: 0,
+            snapshotId: "snapshot:2026-06-14.3",
+            status: "approved",
+            sourceMethod: "partner_disclosure",
+            sourceCount: 1,
+            lineageKey: "alphabet-cisco",
+            lastVerifiedAt: "2026-06-14T03:05:00.000Z",
+            validFrom: "2026-06-01",
+            validTo: null,
+          },
+        },
+        target: {
+          properties: {
+            id: "company:GOOGL",
+            ticker: "GOOGL",
+            name: "Alphabet",
+            canonicalName: "Alphabet",
+            displayName: "Google",
+            entityProfileJson: JSON.stringify({
+              canonicalName: "Alphabet",
+              displayName: "Google",
+              legalEntities: [],
+              brands: [],
+              aliases: [],
+            }),
+            companyType: "public_company",
+            country: "US",
+            isMag7: true,
+            marketCapUsd: 2200000000000,
+            description: "Alphabet",
+            aliases: ["Alphabet Inc.", "Google"],
+            active: true,
+            importanceScore: 1,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Alphabet summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        evidence: [],
+        snapshot: null,
+      }),
+    ];
+
+    const session = {
+      async run() {
+        return { records };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const subgraph = await repository.getSubgraph({
+      companyId: "company:GOOGL",
+      depth: 3,
+      snapshot: "published",
+      includeEvidence: false,
+    });
+
+    expect(subgraph.snapshot.id).toBe("snapshot:2026-06-14.3");
+    expect(subgraph.snapshot.version).toBe("2026.06.14.3");
+  });
+
   it("counts overview metrics from published snapshot relations touching the company on either side", async () => {
     let capturedQuery = "";
 
@@ -625,5 +822,96 @@ describe("Neo4jGraphRepository", () => {
       version: "2026.06.14.3",
     });
     expect(stats.relationCount).toBe(2);
+  });
+
+  it("returns canonical/display names and alias match explanations for company search", async () => {
+    const session = {
+      async run() {
+        return {
+          records: [
+            new FakeRecord({
+              company: {
+                id: "company:GOOGL",
+                ticker: "GOOGL",
+                name: "Alphabet",
+                canonicalName: "Alphabet",
+                displayName: "Google",
+                entityType: "Company",
+                companyType: "public_company",
+                country: "US",
+                isMag7: true,
+                marketCapUsd: 2200000000000,
+                description: "Alphabet",
+                aliases: ["Alphabet Inc.", "Google", "Google LLC"],
+                entityProfileJson: JSON.stringify({
+                  canonicalName: "Alphabet",
+                  displayName: "Google",
+                  legalEntities: [
+                    {
+                      id: "alias:alphabet:google-llc",
+                      name: "Google LLC",
+                      normalizedName: "googlellc",
+                      aliasType: "legal_entity",
+                      isPrimary: true,
+                    },
+                  ],
+                  brands: [
+                    {
+                      id: "alias:alphabet:google-cloud",
+                      name: "Google Cloud",
+                      normalizedName: "googlecloud",
+                      aliasType: "brand",
+                      isPrimary: false,
+                    },
+                  ],
+                  aliases: [
+                    {
+                      id: "alias:alphabet:google",
+                      name: "Google",
+                      normalizedName: "google",
+                      aliasType: "short_name",
+                      isPrimary: true,
+                    },
+                  ],
+                }),
+                active: true,
+                importanceScore: 1,
+                primaryRegion: "US",
+                activeSnapshotId: "snapshot:2026-06-14.3",
+                summary: "Alphabet summary",
+                lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+                searchAliases: ["Google Cloud", "Google LLC"],
+              },
+            }),
+          ],
+        };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const results = await repository.searchCompanies({
+      q: "google cloud",
+      limit: 5,
+      isMag7: true,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      id: "company:GOOGL",
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      match: {
+        field: "alias",
+        aliasType: "brand",
+        value: "Google Cloud",
+      },
+    });
   });
 });

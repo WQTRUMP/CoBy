@@ -6,7 +6,7 @@ import { mockSubgraph } from "../src/lib/mock-data.js";
 import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
 import type { CacheClient } from "../src/lib/redis.js";
 import type { GraphRepository, Neo4jHealth } from "../src/lib/neo4j.js";
-import type { CompanyListQuery, GraphNodeDTO } from "@mag7/contracts";
+import type { CompanyListQuery, GraphNodeDTO, SearchCompaniesQuery, SuggestCompaniesQuery } from "@mag7/contracts";
 
 const cache = new Map<string, string>();
 
@@ -59,6 +59,58 @@ const graphRepository: GraphRepository = {
         primaryRegion: company.primaryRegion,
         activeSnapshotId: company.activeSnapshotId,
       }));
+  },
+  async searchCompanies(query: SearchCompaniesQuery) {
+    const items = mockSubgraph.nodes
+      .filter((node: GraphNodeDTO) => node.entityType === "Company" && Boolean(node.company))
+      .map((node: GraphNodeDTO) => node.company!)
+      .filter((company) => company.displayName?.toLowerCase().includes(query.q.toLowerCase()) ?? false)
+      .slice(0, query.limit);
+
+    return items.map((company) => ({
+      id: company.id,
+      ticker: company.ticker,
+      name: company.name,
+      isMag7: company.isMag7,
+      marketCapUsd: company.marketCapUsd,
+      primaryRegion: company.primaryRegion,
+      activeSnapshotId: company.activeSnapshotId,
+      canonicalName: company.canonicalName,
+      displayName: company.displayName,
+      entityProfile: company.entityProfile,
+      match: {
+        field: "displayName" as const,
+        value: company.displayName ?? company.name,
+        explanation: `Matched display name "${company.displayName ?? company.name}" under canonical "${company.canonicalName ?? company.name}".`,
+      },
+    }));
+  },
+  async suggestCompanies(query: SuggestCompaniesQuery) {
+    const company = mockSubgraph.nodes
+      .filter((node: GraphNodeDTO) => node.entityType === "Company" && Boolean(node.company))
+      .map((node: GraphNodeDTO) => node.company!)
+      .find((item) => item.displayName?.toLowerCase().includes(query.q.toLowerCase()) ?? false);
+
+    return company
+      ? [{
+          id: company.id,
+          label: `${company.displayName ?? company.name} (${company.ticker})`,
+          secondaryLabel:
+            company.canonicalName && company.canonicalName !== company.displayName
+              ? company.canonicalName
+              : undefined,
+          ticker: company.ticker,
+          isMag7: company.isMag7,
+          canonicalName: company.canonicalName,
+          displayName: company.displayName,
+          entityProfile: company.entityProfile,
+          match: {
+            field: "displayName" as const,
+            value: company.displayName ?? company.name,
+            explanation: `Matched display name "${company.displayName ?? company.name}" under canonical "${company.canonicalName ?? company.name}".`,
+          },
+        }]
+      : [];
   },
   async getCompany(companyId) {
     return (
@@ -215,6 +267,13 @@ describe("backend app", () => {
       query: "app",
       source: "mock",
     });
+    expect(searchResponse.json().items[0]).toMatchObject({
+      canonicalName: "Apple",
+      displayName: "Apple",
+      match: {
+        field: "displayName",
+      },
+    });
 
     expect(suggestResponse.statusCode).toBe(200);
     expect(suggestResponse.json()).toMatchObject({
@@ -225,6 +284,11 @@ describe("backend app", () => {
     expect(suggestResponse.json().items[0]).toMatchObject({
       id: "company:AAPL",
       label: "Apple (AAPL)",
+      canonicalName: "Apple",
+      displayName: "Apple",
+      match: {
+        field: "displayName",
+      },
     });
   });
 
@@ -307,6 +371,20 @@ describe("backend app", () => {
         ...graphRepository,
         source: "neo4j",
         async listCompanies() {
+          throw new DependencyUnavailableError(
+            "neo4j",
+            "connect ECONNREFUSED 127.0.0.1:7687",
+            "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+          );
+        },
+        async searchCompanies() {
+          throw new DependencyUnavailableError(
+            "neo4j",
+            "connect ECONNREFUSED 127.0.0.1:7687",
+            "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+          );
+        },
+        async suggestCompanies() {
           throw new DependencyUnavailableError(
             "neo4j",
             "connect ECONNREFUSED 127.0.0.1:7687",

@@ -11,6 +11,7 @@ import type { GraphRepository, Neo4jHealth } from "../src/lib/neo4j.js";
 import type {
   CompanyDetailDTO,
   CompanyListQuery,
+  CompanySearchMatchDTO,
   CompanyOverviewDTO,
   EvidenceDTO,
   GraphNodeDTO,
@@ -21,6 +22,8 @@ import type {
   SnapshotDTO,
   SubgraphDTO,
   SubgraphQuery,
+  SearchCompaniesQuery,
+  SuggestCompaniesQuery,
 } from "@mag7/contracts";
 
 const FULL_PACKAGE_DIR = "/workspace/agents/evidence-collector/output/mag7-full-package";
@@ -78,6 +81,83 @@ function compareSnapshotRecency(
 
 function pickLatestSnapshot(snapshots: SnapshotDTO[]): SnapshotDTO | null {
   return [...snapshots].sort(compareSnapshotRecency)[0] ?? null;
+}
+
+function normalizeSearchValue(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function buildSearchMatch(company: CompanyDetailDTO, query: string): CompanySearchMatchDTO | undefined {
+  const normalizedQuery = normalizeSearchValue(query);
+  const directCandidates: Array<{ field: CompanySearchMatchDTO["field"]; value?: string }> = [
+    { field: "ticker", value: company.ticker },
+    { field: "displayName", value: company.displayName },
+    { field: "canonicalName", value: company.canonicalName },
+    { field: "name", value: company.name },
+  ];
+
+  for (const candidate of directCandidates) {
+    if (candidate.value && normalizeSearchValue(candidate.value).includes(normalizedQuery)) {
+      return {
+        field: candidate.field,
+        value: candidate.value,
+        explanation: `Matched ${candidate.field} "${candidate.value}".`,
+      };
+    }
+  }
+
+  const aliasRecords = [
+    ...(company.entityProfile?.aliases ?? []),
+    ...(company.entityProfile?.legalEntities ?? []),
+    ...(company.entityProfile?.brands ?? []),
+  ];
+
+  for (const alias of aliasRecords) {
+    if (normalizeSearchValue(alias.normalizedName || alias.name).includes(normalizedQuery)) {
+      return {
+        field: "alias",
+        value: alias.name,
+        aliasType: alias.aliasType,
+        explanation: `Matched ${alias.aliasType} alias "${alias.name}" for canonical "${company.canonicalName ?? company.name}".`,
+      };
+    }
+  }
+
+  for (const alias of company.aliases) {
+    if (normalizeSearchValue(alias).includes(normalizedQuery)) {
+      return {
+        field: "alias",
+        value: alias,
+        explanation: `Matched legacy alias "${alias}" for canonical "${company.canonicalName ?? company.name}".`,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function sortCompaniesForSearch(left: CompanyDetailDTO, right: CompanyDetailDTO, query: string) {
+  const priority = ["ticker", "displayName", "canonicalName", "name", "alias"];
+  const leftPriority = priority.indexOf(buildSearchMatch(left, query)?.field ?? "alias");
+  const rightPriority = priority.indexOf(buildSearchMatch(right, query)?.field ?? "alias");
+
+  return (
+    leftPriority - rightPriority ||
+    Number(right.isMag7) - Number(left.isMag7) ||
+    (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0) ||
+    (left.displayName ?? left.name).localeCompare(right.displayName ?? right.name)
+  );
+}
+
+function pickLatestRelationSnapshotId(relations: Array<Pick<RelationDTO, "snapshotId" | "lastVerifiedAt">>): string | null {
+  return (
+    [...relations]
+      .sort(
+        (left, right) =>
+          (right.lastVerifiedAt ?? "").localeCompare(left.lastVerifiedAt ?? "") ||
+          right.snapshotId.localeCompare(left.snapshotId),
+      )[0]?.snapshotId ?? null
+  );
 }
 
 function buildCompanyDetails(prepared: PreparedNormalizedImport) {
@@ -161,8 +241,10 @@ function buildSubgraph(
   return {
     snapshot:
       snapshot ?? {
-        id: relations[0]?.snapshotId ?? "snapshot:published",
-        version: (relations[0]?.snapshotId ?? "snapshot:published").replace("snapshot:", "").replace(/-/g, "."),
+        id: pickLatestRelationSnapshotId(relations) ?? "snapshot:published",
+        version: (pickLatestRelationSnapshotId(relations) ?? "snapshot:published")
+          .replace("snapshot:", "")
+          .replace(/-/g, "."),
         status: "published" as const,
         publishedAt: null,
         scope: [],
@@ -253,6 +335,48 @@ class RealSampleGraphRepository implements GraphRepository {
         marketCapUsd: company.marketCapUsd,
         primaryRegion: company.primaryRegion,
         activeSnapshotId: company.activeSnapshotId,
+      }));
+  }
+
+  async searchCompanies(query: SearchCompaniesQuery) {
+    return [...this.companyById.values()]
+      .filter((company) => (query.isMag7 === undefined ? true : company.isMag7 === query.isMag7))
+      .filter((company) => Boolean(buildSearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => ({
+        id: company.id,
+        ticker: company.ticker,
+        name: company.name,
+        isMag7: company.isMag7,
+        marketCapUsd: company.marketCapUsd,
+        primaryRegion: company.primaryRegion,
+        activeSnapshotId: company.activeSnapshotId,
+        canonicalName: company.canonicalName,
+        displayName: company.displayName,
+        entityProfile: company.entityProfile,
+        match: buildSearchMatch(company, query.q),
+      }));
+  }
+
+  async suggestCompanies(query: SuggestCompaniesQuery) {
+    return [...this.companyById.values()]
+      .filter((company) => Boolean(buildSearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => ({
+        id: company.id,
+        label: company.ticker ? `${company.displayName ?? company.name} (${company.ticker})` : (company.displayName ?? company.name),
+        secondaryLabel:
+          company.canonicalName && company.canonicalName !== company.displayName
+            ? company.canonicalName
+            : undefined,
+        ticker: company.ticker,
+        isMag7: company.isMag7,
+        canonicalName: company.canonicalName,
+        displayName: company.displayName,
+        entityProfile: company.entityProfile,
+        match: buildSearchMatch(company, query.q),
       }));
   }
 
@@ -526,9 +650,21 @@ describe("full package app", () => {
 
     expect(search.statusCode).toBe(200);
     expect(search.json().items.some((item: { id: string }) => item.id === "company:AMZN")).toBe(true);
+    expect(search.json().items[0]).toMatchObject({
+      canonicalName: "Amazon",
+      displayName: "Amazon",
+      match: {
+        field: expect.any(String),
+      },
+    });
 
     expect(suggest.statusCode).toBe(200);
     expect(suggest.json().items.some((item: { id: string }) => item.id === "company:TSLA")).toBe(true);
+    expect(suggest.json().items[0]).toMatchObject({
+      match: {
+        field: expect.any(String),
+      },
+    });
 
     expect(path.statusCode).toBe(200);
     expect(path.json().relations[0].id).toBe("rel:apple:tsmc:manufacturing:apple-silicon");

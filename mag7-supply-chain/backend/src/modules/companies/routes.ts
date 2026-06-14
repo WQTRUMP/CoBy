@@ -28,12 +28,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
       return JSON.parse(cached);
     }
 
-    const items = (await app.graphRepository.listCompanies({
-      q: query.q,
-      isMag7: query.isMag7,
-      page: 1,
-      pageSize: query.limit,
-    })).slice(0, query.limit);
+    const items = await app.graphRepository.searchCompanies(query);
     const payload = {
       items,
       total: items.length,
@@ -56,18 +51,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
       return JSON.parse(cached);
     }
 
-    const items = (await app.graphRepository.listCompanies({
-      q: query.q,
-      page: 1,
-      pageSize: query.limit,
-    }))
-      .slice(0, query.limit)
-      .map((company) => ({
-        id: company.id,
-        label: company.ticker ? `${company.name} (${company.ticker})` : company.name,
-        ticker: company.ticker,
-        isMag7: company.isMag7,
-      }));
+    const items = await app.graphRepository.suggestCompanies(query);
     const payload = {
       items,
       total: items.length,

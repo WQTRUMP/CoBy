@@ -6,13 +6,18 @@ import type {
   CompanyListItemDTO,
   CompanyListQuery,
   CompanyOverviewDTO,
+  CompanySearchMatchDTO,
+  CompanySearchResultItemDTO,
+  CompanySuggestItemDTO,
   EvidenceDTO,
   GraphPathQuery,
   GraphStatsDTO,
   GraphStatsQuery,
   RelationDTO,
+  SearchCompaniesQuery,
   SubgraphDTO,
   SubgraphQuery,
+  SuggestCompaniesQuery,
 } from "@mag7/contracts";
 import { mockCompanies, mockSubgraph } from "./mock-data.js";
 import type { PreparedNormalizedImport } from "./normalized-package.js";
@@ -32,6 +37,8 @@ export interface Neo4jHealth {
 export interface GraphRepository {
   source: "neo4j" | "mock";
   listCompanies(query: CompanyListQuery): Promise<CompanyListItemDTO[]>;
+  searchCompanies(query: SearchCompaniesQuery): Promise<CompanySearchResultItemDTO[]>;
+  suggestCompanies(query: SuggestCompaniesQuery): Promise<CompanySuggestItemDTO[]>;
   getCompany(companyId: string): Promise<CompanyDetailDTO | null>;
   getCompanyOverview(companyId: string): Promise<CompanyOverviewDTO | null>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
@@ -244,6 +251,165 @@ function toCompanyListItem(company: CompanyDetailDTO): CompanyListItemDTO {
   };
 }
 
+function normalizeSearchValue(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function buildAliasExplanation(
+  aliasType: CompanySearchMatchDTO["aliasType"],
+  aliasValue: string,
+  company: CompanyDetailDTO,
+) {
+  const aliasLabel =
+    aliasType === "legal_entity"
+      ? "legal entity"
+      : aliasType === "brand"
+        ? "brand"
+        : aliasType === "facility"
+          ? "facility"
+          : aliasType === "historical"
+            ? "historical alias"
+            : aliasType === "search_hint"
+              ? "search hint"
+              : aliasType === "short_name"
+                ? "short name"
+                : "alias";
+
+  return `Matched ${aliasLabel} "${aliasValue}" for canonical "${company.canonicalName ?? company.name}" and display "${company.displayName ?? company.name}".`;
+}
+
+function buildCompanySearchMatch(company: CompanyDetailDTO, query: string): CompanySearchMatchDTO | undefined {
+  const normalizedQuery = normalizeSearchValue(query);
+  if (!normalizedQuery) {
+    return undefined;
+  }
+
+  const simpleCandidates: Array<{
+    field: CompanySearchMatchDTO["field"];
+    value: string | undefined;
+    explanation: string;
+  }> = [
+    {
+      field: "ticker",
+      value: company.ticker,
+      explanation: `Matched ticker "${company.ticker}".`,
+    },
+    {
+      field: "displayName",
+      value: company.displayName,
+      explanation: `Matched display name "${company.displayName ?? company.name}" under canonical "${company.canonicalName ?? company.name}".`,
+    },
+    {
+      field: "canonicalName",
+      value: company.canonicalName,
+      explanation: `Matched canonical entity "${company.canonicalName ?? company.name}".`,
+    },
+    {
+      field: "name",
+      value: company.name,
+      explanation: `Matched company name "${company.name}".`,
+    },
+  ];
+
+  for (const candidate of simpleCandidates) {
+    if (!candidate.value) {
+      continue;
+    }
+
+    if (normalizeSearchValue(candidate.value).includes(normalizedQuery)) {
+      return {
+        field: candidate.field,
+        value: candidate.value,
+        explanation: candidate.explanation,
+      };
+    }
+  }
+
+  const aliasRecords = [
+    ...(company.entityProfile?.aliases ?? []),
+    ...(company.entityProfile?.legalEntities ?? []),
+    ...(company.entityProfile?.brands ?? []),
+  ];
+
+  for (const alias of aliasRecords) {
+    if (normalizeSearchValue(alias.normalizedName || alias.name).includes(normalizedQuery)) {
+      return {
+        field: "alias",
+        value: alias.name,
+        aliasType: alias.aliasType,
+        explanation: buildAliasExplanation(alias.aliasType, alias.name, company),
+      };
+    }
+  }
+
+  for (const alias of company.aliases) {
+    if (normalizeSearchValue(alias).includes(normalizedQuery)) {
+      return {
+        field: "alias",
+        value: alias,
+        aliasType: null,
+        explanation: `Matched legacy alias "${alias}" for canonical "${company.canonicalName ?? company.name}".`,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function toCompanySearchResultItem(company: CompanyDetailDTO, query: string): CompanySearchResultItemDTO {
+  return {
+    ...toCompanyListItem(company),
+    canonicalName: company.canonicalName,
+    displayName: company.displayName,
+    entityProfile: company.entityProfile,
+    match: buildCompanySearchMatch(company, query),
+  };
+}
+
+function toCompanySuggestItem(company: CompanyDetailDTO, query: string): CompanySuggestItemDTO {
+  const displayName = company.displayName ?? company.name;
+  const canonicalName = company.canonicalName ?? company.name;
+
+  return {
+    id: company.id,
+    label: company.ticker ? `${displayName} (${company.ticker})` : displayName,
+    secondaryLabel: canonicalName === displayName ? undefined : canonicalName,
+    ticker: company.ticker,
+    isMag7: company.isMag7,
+    canonicalName,
+    displayName,
+    entityProfile: company.entityProfile,
+    match: buildCompanySearchMatch(company, query),
+  };
+}
+
+function sortCompaniesForSearch(left: CompanyDetailDTO, right: CompanyDetailDTO, query: string) {
+  const leftMatch = buildCompanySearchMatch(left, query);
+  const rightMatch = buildCompanySearchMatch(right, query);
+  const priority = ["ticker", "displayName", "canonicalName", "name", "alias"];
+
+  const leftPriority = leftMatch ? priority.indexOf(leftMatch.field) : priority.length;
+  const rightPriority = rightMatch ? priority.indexOf(rightMatch.field) : priority.length;
+
+  return (
+    leftPriority - rightPriority ||
+    Number(right.isMag7) - Number(left.isMag7) ||
+    (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0) ||
+    (left.displayName ?? left.name).localeCompare(right.displayName ?? right.name)
+  );
+}
+
+function pickLatestRelationSnapshotId(relations: Array<Pick<RelationDTO, "snapshotId" | "lastVerifiedAt">>): string | null {
+  return (
+    [...relations]
+      .sort(
+        (left, right) =>
+          (right.lastVerifiedAt ?? "").localeCompare(left.lastVerifiedAt ?? "") ||
+          right.snapshotId.localeCompare(left.snapshotId),
+      )[0]?.snapshotId ?? null
+  );
+}
+
 function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO {
   return {
     id: String(properties.id),
@@ -300,6 +466,23 @@ class MockGraphRepository implements GraphRepository {
         );
       })
       .map(toCompanyListItem);
+  }
+
+  async searchCompanies(query: SearchCompaniesQuery) {
+    return mockCompanies
+      .filter((company) => (query.isMag7 === undefined ? true : company.isMag7 === query.isMag7))
+      .filter((company) => Boolean(buildCompanySearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => toCompanySearchResultItem(company, query.q));
+  }
+
+  async suggestCompanies(query: SuggestCompaniesQuery) {
+    return mockCompanies
+      .filter((company) => Boolean(buildCompanySearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => toCompanySuggestItem(company, query.q));
   }
 
   async getCompany(companyId: string) {
@@ -421,7 +604,7 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   constructor(private readonly driver: Driver, private readonly database: string) {}
 
-  async listCompanies(query: CompanyListQuery) {
+  private async queryPublishedCompanies(query: string | null, isMag7?: boolean | null) {
     const session = this.driver.session({ database: this.database });
 
     try {
@@ -452,22 +635,51 @@ export class Neo4jGraphRepository implements GraphRepository {
           canonicalName: coalesce(c.canonicalName, c.name),
           displayName: coalesce(c.displayName, c.name),
           entityProfileJson: c.entityProfileJson,
-          searchAliases: coalesce(c.searchAliases, [])
+          searchAliases: coalesce(c.searchAliases, []),
+          summary: coalesce(c.summary, c.description)
         } AS company
-        ORDER BY c.isMag7 DESC,
-                 head([snapshot IN publishedSnapshots | snapshot.publishedAt]) DESC,
-                 c.marketCapUsd DESC,
-                 c.name ASC
         `,
-        { query: query.q ?? null, isMag7: query.isMag7 ?? null },
+        { query, isMag7: isMag7 ?? null },
       );
 
-      return result.records
-        .map((record) => mapCompanyNode(record.get("company") as Record<string, unknown>))
-        .map(toCompanyListItem);
+      return result.records.map((record) => mapCompanyNode(record.get("company") as Record<string, unknown>));
     } finally {
       await session.close();
     }
+  }
+
+  async listCompanies(query: CompanyListQuery) {
+    const companies = await this.queryPublishedCompanies(query.q ?? null, query.isMag7 ?? null);
+
+    return companies
+      .sort(
+        (left, right) =>
+          Number(right.isMag7) - Number(left.isMag7) ||
+          (right.lastUpdatedAt ?? "").localeCompare(left.lastUpdatedAt ?? "") ||
+          (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0) ||
+          left.name.localeCompare(right.name),
+      )
+      .map(toCompanyListItem);
+  }
+
+  async searchCompanies(query: SearchCompaniesQuery) {
+    const companies = await this.queryPublishedCompanies(query.q, query.isMag7 ?? null);
+
+    return companies
+      .filter((company) => Boolean(buildCompanySearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => toCompanySearchResultItem(company, query.q));
+  }
+
+  async suggestCompanies(query: SuggestCompaniesQuery) {
+    const companies = await this.queryPublishedCompanies(query.q, null);
+
+    return companies
+      .filter((company) => Boolean(buildCompanySearchMatch(company, query.q)))
+      .sort((left, right) => sortCompaniesForSearch(left, right, query.q))
+      .slice(0, query.limit)
+      .map((company) => toCompanySuggestItem(company, query.q));
   }
 
   async getCompany(companyId: string) {
@@ -626,7 +838,9 @@ export class Neo4jGraphRepository implements GraphRepository {
       );
 
       return {
-        snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
+        snapshot:
+          snapshotNode ??
+          createSnapshotFallback(query.snapshot, pickLatestRelationSnapshotId(relations)),
         nodes: [...companyMap.values()],
         relations,
       };
@@ -733,7 +947,9 @@ export class Neo4jGraphRepository implements GraphRepository {
       );
 
       return {
-        snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
+        snapshot:
+          snapshotNode ??
+          createSnapshotFallback(query.snapshot, pickLatestRelationSnapshotId(relations)),
         nodes: [...companyMap.values()],
         relations,
       };
