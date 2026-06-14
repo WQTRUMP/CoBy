@@ -125,7 +125,54 @@ describe("@mag7/contracts", () => {
 
     expect(parsed.evidence_date_resolution).toBe("published_at");
     expect(parsed.evidence_date_is_normalized).toBe(false);
-    expect(parsed.evidence_date_normalized).toBeUndefined();
+    expect(parsed.evidence_date_normalized).toBeNull();
+  });
+
+  it("coalesces retrieved_at_only into canonical undated without treating it as published_at", () => {
+    const parsed = standardizedImportEvidenceRecordSchema.parse({
+      evidence_id: "evidence:tesla:nvidia:1",
+      relation_id: "rel:tesla:nvidia:component_supply:autopilot-platform",
+      source_type: "official_doc",
+      title: "Tesla Additional Resources",
+      publisher: "Tesla",
+      source_url: "https://example.com/tesla-additional-resources",
+      source_domain: "example.com",
+      published_at: "2026-06-14",
+      published_at_resolution: "retrieved_at_only",
+      retrieved_at: "2026-06-14T20:03:15.002Z",
+      excerpt: "Autopilot Nvidia kernel.",
+      citation_text: "Autopilot Nvidia kernel.",
+      reliability_tier: 1,
+      parser_version: "manual-normalization-v3",
+      source_report_path: "output/evidence/tesla-nvidia.json",
+    });
+
+    expect(parsed.published_at_resolution).toBe("undated");
+    expect(parsed.published_at_resolution).not.toBe("published_at");
+  });
+
+  it("accepts newly promoted supplier and authoritative source types from full.8 evidence packages", () => {
+    for (const sourceType of ["supplier_page", "supplier_blog", "authoritative_media"] as const) {
+      const parsed = standardizedImportEvidenceRecordSchema.parse({
+        evidence_id: `evidence:test:${sourceType}`,
+        relation_id: "rel:test",
+        source_type: sourceType,
+        title: "Test evidence",
+        publisher: "Example",
+        source_url: "https://example.com/source",
+        source_domain: "example.com",
+        published_at: "2026-06-14",
+        published_at_resolution: "published_at",
+        retrieved_at: "2026-06-14T00:00:00.000Z",
+        excerpt: "Example excerpt.",
+        citation_text: "Example excerpt.",
+        reliability_tier: 1,
+        parser_version: "manual-normalization-v3",
+        source_report_path: "output/evidence/test.json",
+      });
+
+      expect(parsed.source_type).toBe(sourceType);
+    }
   });
 
   it("accepts v3 company alias profiles and evidence coverage fields", () => {

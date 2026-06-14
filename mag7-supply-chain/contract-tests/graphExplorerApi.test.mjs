@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createHttpGraphExplorerApi, graphApiContract } from "../.tmp-contract-tests/src/services/graphExplorerApi.js";
+import {
+  ApiPayloadError,
+  createHttpGraphExplorerApi,
+  graphApiContract,
+} from "../.tmp-contract-tests/src/services/graphExplorerApi.js";
 import {
   getCompaniesResponse,
   getCompanyOverviewResponse,
@@ -101,11 +105,42 @@ test("uses the plain companies list endpoint when no search query is provided", 
 
 function response(payload) {
   return {
+    headers: {
+      get(name) {
+        return name.toLowerCase() === "content-type" ? "application/json" : null;
+      },
+    },
     ok: true,
     status: 200,
     statusText: "OK",
-    async json() {
-      return payload;
+    async text() {
+      return JSON.stringify(payload);
     },
   };
 }
+
+test("raises an actionable error when /api resolves to an HTML document instead of JSON", async () => {
+  const api = createHttpGraphExplorerApi("");
+
+  globalThis.fetch = async () => ({
+    headers: {
+      get(name) {
+        return name.toLowerCase() === "content-type" ? "text/html; charset=utf-8" : null;
+      },
+    },
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    async text() {
+      return "<!doctype html><html><body>preview fallback</body></html>";
+    },
+  });
+
+  await assert.rejects(() => api.listCompanies(), (error) => {
+    assert.ok(error instanceof ApiPayloadError);
+    assert.match(error.message, /Expected JSON/);
+    assert.match(error.message, /index\.html/);
+    assert.match(error.message, /VITE_GRAPH_API_BASE_URL/);
+    return true;
+  });
+});

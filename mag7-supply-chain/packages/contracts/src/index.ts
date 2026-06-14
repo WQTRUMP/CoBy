@@ -27,7 +27,10 @@ export const knownSourceTypes = [
   "10k",
   "earnings_call",
   "supplier_report",
+  "supplier_page",
+  "supplier_blog",
   "media",
+  "authoritative_media",
   "industry_report",
   "press_release",
   "official_doc",
@@ -344,11 +347,13 @@ export const relationEvidenceResponseSchema = z.object({
 const legacyDateResolutionAliases = {
   "month-normalized": "month",
   metadata_date_published: "published_at",
+  retrieved_at_only: "undated",
 } as const;
 
 const legacyDateResolutionAliasSchema = z.enum([
   "month-normalized",
   "metadata_date_published",
+  "retrieved_at_only",
 ]);
 
 const dateResolutionCompatSchema = z

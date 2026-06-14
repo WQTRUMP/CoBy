@@ -108,6 +108,8 @@
 
 - `standardizedImportRelationRecordSchema` accepts both `v2`-style and `v3`-style payloads and returns the canonical `v3`-shaped object.
 - `standardizedImportEvidenceRecordSchema` accepts legacy `month-normalized` resolution values and normalizes them to `month`.
+- `metadata_date_published` is normalized to canonical `published_at` because the source still exposes a publication timestamp, even if it came from metadata rather than visible page chrome.
+- `retrieved_at_only` is normalized to canonical `undated`, not `published_at`, because the stored date is only a retrieval-time surrogate and must not be rendered as a source-published timestamp.
 - Existing API consumers that only read `aliases[]`, `validFrom`, or `validTo` continue to parse successfully.
 - New consumers should prefer:
   - `displayName` over `aliases[0]`

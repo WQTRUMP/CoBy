@@ -710,6 +710,28 @@ describe("full package app", () => {
     });
   });
 
+  it("coalesces retrieved_at_only evidence into undated semantics in the full package API", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/relations/rel:tesla:nvidia:component_supply:autopilot-hw2-hw25-compute-platform/evidence",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      relationId: "rel:tesla:nvidia:component_supply:autopilot-hw2-hw25-compute-platform",
+      total: 1,
+      source: "neo4j",
+      items: [
+        expect.objectContaining({
+          publishedAt: "2026-06-14",
+          publishedAtResolution: "undated",
+          retrievedAt: expect.any(String),
+        }),
+      ],
+    });
+    expect(response.json().items[0].publishedAtResolution).not.toBe("published_at");
+  });
+
   it("reuses Redis-style cache keys for companies list/detail/overview/search/suggest and graph queries", async () => {
     const requests = [
       "/api/v1/companies?isMag7=true&page=1&pageSize=7",

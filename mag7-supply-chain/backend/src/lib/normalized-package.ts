@@ -692,6 +692,10 @@ function normalizeLegacyResolutionValue(value: unknown) {
     return "published_at";
   }
 
+  if (value === "retrieved_at_only") {
+    return "undated";
+  }
+
   if (value === "reported_period_end") {
     return "filing_period";
   }

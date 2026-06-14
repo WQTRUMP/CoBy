@@ -90,6 +90,13 @@ http://127.0.0.1:5174/
 
 如果 5174 被占用，Vite 会自动换到其他端口，以终端输出为准。
 
+本地 API 接线有两种可执行模式：
+
+- 显式后端基址：保留 `.env` 中的 `VITE_GRAPH_API_BASE_URL=http://127.0.0.1:4000`，前端会直接请求真实后端。
+- 同源 `/api` 代理：把 `VITE_GRAPH_API_BASE_URL` 留空，`vite dev` / `vite preview` 会自动把 `/api/*` 代理到 `HOST:PORT`（默认 `http://127.0.0.1:4000`）。
+
+如果预览环境误把 `/api` 回退成前端 `index.html`，前端现在会抛出带诊断提示的错误，明确提示检查 `VITE_GRAPH_API_BASE_URL` 或 Vite `/api` 代理。
+
 ### 4. 构建生产版本
 
 前端：
@@ -151,6 +158,19 @@ REDIS_URL=redis://127.0.0.1:6379
 
 - 同源 `/api` 代理部署：`VITE_GRAPH_API_BASE_URL` 可留空
 - 前后端跨域分离部署：必须显式提供 `VITE_GRAPH_API_BASE_URL=https://<api-domain>`
+
+### 本地 preview smoke
+
+构建产物本地预览时，建议至少验证一次 API 闭环：
+
+```bash
+cd /workspace/project/mag7-supply-chain
+npm run build
+VITE_GRAPH_API_BASE_URL= npm run preview -- --port 4173
+curl http://127.0.0.1:4173/api/v1/health
+```
+
+预期返回 JSON 健康检查结果；如果后端未启动，预览代理会返回明确的代理失败，而不是静态 `index.html`。
 
 ## 部署与上线约束
 
