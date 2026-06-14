@@ -325,4 +325,71 @@ describe("prepareNormalizedImport", () => {
     });
     expect(prepared.evidence[0].publishedAtResolution).not.toBe("published_at");
   });
+
+  it("coalesces legacy retrieved_at_surrogate into the same undated boundary without treating it as published_at", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:tesla:nvidia:component_supply:autopilot-platform-legacy",
+          snapshot_id: "snapshot:2026-06-14.full.8",
+          company: "Tesla",
+          company_slug: "tesla",
+          supplier: "NVIDIA",
+          supplier_slug: "nvidia",
+          tier: 2,
+          depth_from_mag7: 2,
+          relationship_type: "component_supply",
+          relationship_subtype: "supports_autopilot_compute_platform",
+          product_scope: ["Tesla HW2 / HW2.5 Autopilot platform"],
+          evidence_ids: ["evidence:tesla:nvidia:legacy"],
+          primary_evidence_id: "evidence:tesla:nvidia:legacy",
+          evidence_date: "2026-06-14",
+          evidence_date_resolution: "retrieved_at_surrogate" as never,
+          evidence_excerpt: "Autopilot Nvidia kernel.",
+          source_url: "https://example.com/tesla-additional-resources",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.84,
+          source_method: "direct_disclosure",
+          source_count: 1,
+          status: "approved",
+          summary: "Tesla discloses Nvidia kernel usage for early Autopilot compute.",
+          lineage_key: "Tesla|NVIDIA|supports_autopilot_compute_platform|HW2-legacy",
+          source_report_path: "output/evidence/tesla-nvidia.json",
+          last_verified_at: "2026-06-14T20:03:15.002Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:tesla:nvidia:legacy",
+          relation_id: "rel:tesla:nvidia:component_supply:autopilot-platform-legacy",
+          source_type: "official_doc",
+          title: "Tesla Additional Resources",
+          publisher: "Tesla",
+          source_url: "https://example.com/tesla-additional-resources",
+          source_domain: "example.com",
+          published_at: "2026-06-14",
+          published_at_resolution: "retrieved_at_surrogate" as never,
+          retrieved_at: "2026-06-14T20:03:15.002Z",
+          excerpt: "Autopilot Nvidia kernel.",
+          citation_text: "Autopilot Nvidia kernel.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/tesla-nvidia.json",
+        },
+      ],
+    });
+
+    expect(prepared.relations[0]).toMatchObject({
+      evidenceDate: "2026-06-14",
+      evidenceDateResolution: "undated",
+    });
+    expect(prepared.relations[0].evidenceDateResolution).not.toBe("published_at");
+
+    expect(prepared.evidence[0]).toMatchObject({
+      publishedAt: "2026-06-14",
+      publishedAtResolution: "undated",
+      retrievedAt: "2026-06-14T20:03:15.002Z",
+    });
+    expect(prepared.evidence[0].publishedAtResolution).not.toBe("published_at");
+  });
 });
