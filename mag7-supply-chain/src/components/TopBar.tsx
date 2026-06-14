@@ -189,7 +189,7 @@ export function TopBar(props: TopBarProps) {
             type="button"
           >
             <strong>{company.displayName}</strong>
-            <span>{company.canonicalName !== company.displayName ? company.canonicalName : company.ticker}</span>
+            <span>{company.canonicalName && company.canonicalName !== company.displayName ? company.canonicalName : company.ticker}</span>
             <small>{company.aliasHitExplanation ?? company.hierarchySummary}</small>
           </button>
         ))}

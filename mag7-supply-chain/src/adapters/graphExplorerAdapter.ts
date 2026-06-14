@@ -36,7 +36,9 @@ import {
 } from "../utils/relationSemantics.js";
 
 type DisplayNameAwareCompany = {
-  name: string;
+  name?: string;
+  label?: string;
+  secondaryLabel?: string;
   canonicalName?: string;
   displayName?: string;
   entityProfile?: CompanyDetailDTO["entityProfile"];
@@ -416,11 +418,25 @@ function collectRelationshipSubtypeOptions(relations: RelationDTO[]): RelationFi
 }
 
 function getPreferredDisplayName(company: DisplayNameAwareCompany) {
-  return company.displayName ?? company.entityProfile?.displayName ?? company.canonicalName ?? company.name;
+  return (
+    company.displayName ??
+    company.entityProfile?.displayName ??
+    company.canonicalName ??
+    company.name ??
+    normalizeCompanyLabel(company.label) ??
+    "Unknown company"
+  );
 }
 
 function getCanonicalName(company: DisplayNameAwareCompany) {
-  return company.canonicalName ?? company.entityProfile?.canonicalName ?? company.name;
+  return (
+    company.canonicalName ??
+    company.entityProfile?.canonicalName ??
+    company.name ??
+    normalizeCompanyLabel(company.secondaryLabel) ??
+    normalizeCompanyLabel(company.label) ??
+    "Unknown company"
+  );
 }
 
 function getBaseCompanyName(
@@ -433,10 +449,19 @@ function getBaseCompanyName(
   }
 
   if ("label" in company && typeof company.label === "string" && company.label.trim()) {
-    return company.label.replace(/\s+\([A-Z0-9.-]+\)$/, "");
+    return normalizeCompanyLabel(company.label) ?? displayName || canonicalName;
   }
 
   return displayName || canonicalName;
+}
+
+function normalizeCompanyLabel(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.replace(/\s+\([A-Z0-9.-]+\)$/, "");
 }
 
 function getPreferredNodeLabel(node: SubgraphDTO["nodes"][number]) {

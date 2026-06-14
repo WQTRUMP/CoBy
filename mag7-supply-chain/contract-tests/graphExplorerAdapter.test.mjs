@@ -125,6 +125,34 @@ test("preserves alias-hit explanations from search results while keeping display
   assert.equal(companies[0]?.searchMatch?.field, "alias");
 });
 
+test("keeps suggest results stable when only label and secondaryLabel are present", () => {
+  const companies = adaptCompanyOptions({
+    items: [
+      {
+        id: "company:GOOG",
+        label: "Google (GOOG)",
+        secondaryLabel: "Alphabet",
+        ticker: "GOOG",
+        isMag7: true,
+        match: {
+          field: "alias",
+          value: "Google LLC",
+          aliasType: "legal_entity",
+          explanation: 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".',
+        },
+      },
+    ],
+    total: 1,
+    query: "google llc",
+    source: "mock",
+  });
+
+  assert.equal(companies[0]?.name, "Google");
+  assert.equal(companies[0]?.displayName, "Google");
+  assert.equal(companies[0]?.canonicalName, "Alphabet");
+  assert.equal(companies[0]?.aliasHitExplanation, 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".');
+});
+
 test("prefers displayName and canonical entity profile fields over aliases for company presentation", () => {
   const company = adaptCompanyProfile(
     {
