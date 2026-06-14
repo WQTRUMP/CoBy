@@ -19,6 +19,8 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
           <div className="metaGrid compact">
             <span>Relationship</span>
             <strong>{relation.relationshipSemanticLabel}</strong>
+            <span>Type</span>
+            <strong>{relation.relationshipTypeLabel}</strong>
             <span>Subtype</span>
             <strong>{relation.relationshipSubtypeLabel ?? "Not specified"}</strong>
             <span>Source method</span>

@@ -3,6 +3,25 @@ import { z } from "zod";
 export const backendSourceSchema = z.enum(["neo4j", "mock"]);
 export const confidenceSchema = z.enum(["confirmed", "strong_evidence", "inferred"]);
 export const relationStatusSchema = z.enum(["draft", "approved", "deprecated", "disputed"]);
+export const dateResolutionSchema = z.enum([
+  "year",
+  "quarter",
+  "month",
+  "day",
+  "datetime",
+  "published_at",
+  "filing_period",
+  "undated",
+]);
+export const aliasTypeSchema = z.enum([
+  "canonical",
+  "legal_entity",
+  "brand",
+  "facility",
+  "historical",
+  "short_name",
+  "search_hint",
+]);
 
 export const knownSourceTypes = [
   "10k",
@@ -45,10 +64,35 @@ export const knownEntityTypes = [
 
 export const entityTypeSchema = z.enum(knownEntityTypes);
 
+export const entityAliasRecordSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  normalizedName: z.string(),
+  aliasType: aliasTypeSchema,
+  language: z.string().nullable().optional(),
+  isPrimary: z.boolean().default(false),
+  validFrom: z.string().nullable().optional(),
+  validTo: z.string().nullable().optional(),
+  validFromResolution: dateResolutionSchema.nullable().optional(),
+  validToResolution: dateResolutionSchema.nullable().optional(),
+  source: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+export const entityProfileSchema = z.object({
+  canonicalName: z.string(),
+  displayName: z.string(),
+  legalEntities: z.array(entityAliasRecordSchema).default([]),
+  brands: z.array(entityAliasRecordSchema).default([]),
+  aliases: z.array(entityAliasRecordSchema).default([]),
+});
+
 export const companySchema = z.object({
   id: z.string(),
   ticker: z.string().optional(),
   name: z.string(),
+  canonicalName: z.string().optional(),
+  displayName: z.string().optional(),
   entityType: z.literal("Company"),
   companyType: z.enum([
     "public_company",
@@ -63,6 +107,7 @@ export const companySchema = z.object({
   marketCapUsd: z.number().nullable(),
   description: z.string().nullable().optional(),
   aliases: z.array(z.string()).default([]),
+  entityProfile: entityProfileSchema.optional(),
   active: z.boolean().default(true),
   importanceScore: z.number().min(0).max(1).optional(),
 });
@@ -99,6 +144,11 @@ export const evidenceSchema = z.object({
   publisher: z.string(),
   url: z.string().url(),
   publishedAt: z.string(),
+  publishedAtResolution: dateResolutionSchema.default("published_at"),
+  coverageStart: z.string().nullable().optional(),
+  coverageEnd: z.string().nullable().optional(),
+  coverageStartResolution: dateResolutionSchema.nullable().optional(),
+  coverageEndResolution: dateResolutionSchema.nullable().optional(),
   retrievedAt: z.string(),
   excerpt: z.string(),
   pageRef: z.string().nullable().optional(),
@@ -175,12 +225,18 @@ export const relationSchema = z.object({
   snapshotId: z.string(),
   status: relationStatusSchema,
   sourceMethod: z.string().nullable().optional(),
-  evidenceDateResolution: z.string().nullable().optional(),
+  evidenceDate: z.string().nullable().optional(),
+  evidenceDateResolution: dateResolutionSchema.nullable().optional(),
+  evidenceDateNormalized: z.string().nullable().optional(),
+  evidenceDateIsNormalized: z.boolean().optional(),
   sourceCount: z.number().int().min(0).optional(),
   lineageKey: z.string().nullable().optional(),
   lastVerifiedAt: z.string().nullable().optional(),
   validFrom: z.string().nullable().optional(),
+  validFromResolution: dateResolutionSchema.nullable().optional(),
   validTo: z.string().nullable().optional(),
+  validToResolution: dateResolutionSchema.nullable().optional(),
+  validityNote: z.string().nullable().optional(),
   evidence: z.array(evidenceSchema).optional(),
 });
 
@@ -266,7 +322,16 @@ export const relationEvidenceResponseSchema = z.object({
   source: backendSourceSchema,
 });
 
-export const standardizedImportRelationRecordSchema = z.object({
+const monthNormalizedResolutionLiteral = z.literal("month-normalized");
+const dateResolutionCompatSchema = z.union([dateResolutionSchema, monthNormalizedResolutionLiteral]);
+
+export const importEntityRefSchema = z.object({
+  entity_id: z.string(),
+  display_name: z.string(),
+  legal_entity_name: z.string().nullable().optional(),
+});
+
+const standardizedImportRelationRecordBaseSchema = z.object({
   relation_id: z.string(),
   snapshot_id: z.string(),
   company: z.string(),
@@ -281,7 +346,9 @@ export const standardizedImportRelationRecordSchema = z.object({
   evidence_ids: z.array(z.string()).min(1),
   primary_evidence_id: z.string(),
   evidence_date: z.string(),
-  evidence_date_resolution: z.string(),
+  evidence_date_resolution: dateResolutionCompatSchema,
+  evidence_date_normalized: z.string().nullable().optional(),
+  evidence_date_is_normalized: z.boolean().optional(),
   evidence_excerpt: z.string(),
   source_url: z.string().url(),
   confidence_label: confidenceSchema,
@@ -296,6 +363,68 @@ export const standardizedImportRelationRecordSchema = z.object({
   last_verified_at: z.string(),
 });
 
+const standardizedImportRelationRecordV2Schema = standardizedImportRelationRecordBaseSchema.extend({
+  company_entity_ref: importEntityRefSchema.optional(),
+  supplier_entity_ref: importEntityRefSchema.optional(),
+  valid_from: z.string().nullable().optional(),
+  valid_from_resolution: dateResolutionCompatSchema.nullable().optional(),
+  valid_to: z.string().nullable().optional(),
+  valid_to_resolution: dateResolutionCompatSchema.nullable().optional(),
+  validity_note: z.string().nullable().optional(),
+});
+
+const standardizedImportRelationRecordV3Schema = standardizedImportRelationRecordBaseSchema.extend({
+  company_entity_ref: importEntityRefSchema,
+  supplier_entity_ref: importEntityRefSchema,
+  valid_from: z.string().nullable().optional(),
+  valid_from_resolution: dateResolutionCompatSchema.nullable().optional(),
+  valid_to: z.string().nullable().optional(),
+  valid_to_resolution: dateResolutionCompatSchema.nullable().optional(),
+  validity_note: z.string().nullable().optional(),
+});
+
+export const standardizedImportRelationRecordSchema = z
+  .union([standardizedImportRelationRecordV2Schema, standardizedImportRelationRecordV3Schema])
+  .transform((record) => {
+    const evidenceDateIsMonthNormalized = record.evidence_date_resolution === "month-normalized";
+    const validFromIsMonthNormalized = record.valid_from_resolution === "month-normalized";
+    const validToIsMonthNormalized = record.valid_to_resolution === "month-normalized";
+
+    return {
+      ...record,
+      company_entity_ref:
+        record.company_entity_ref ?? {
+          entity_id: `company:${record.company_slug}`,
+          display_name: record.company,
+          legal_entity_name: record.company,
+        },
+      supplier_entity_ref:
+        record.supplier_entity_ref ?? {
+          entity_id: `company:${record.supplier_slug}`,
+          display_name: record.supplier,
+          legal_entity_name: record.supplier,
+        },
+      evidence_date_resolution: evidenceDateIsMonthNormalized ? "month" : record.evidence_date_resolution,
+      evidence_date_normalized:
+        record.evidence_date_normalized ??
+        (evidenceDateIsMonthNormalized ? record.evidence_date : null),
+      evidence_date_is_normalized:
+        record.evidence_date_is_normalized ?? evidenceDateIsMonthNormalized,
+      valid_from_resolution:
+        record.valid_from_resolution == null
+          ? null
+          : validFromIsMonthNormalized
+            ? "month"
+            : record.valid_from_resolution,
+      valid_to_resolution:
+        record.valid_to_resolution == null
+          ? null
+          : validToIsMonthNormalized
+            ? "month"
+            : record.valid_to_resolution,
+    };
+  });
+
 export const standardizedImportEvidenceRecordSchema = z.object({
   evidence_id: z.string(),
   relation_id: z.string(),
@@ -305,7 +434,11 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   source_url: z.string().url(),
   source_domain: z.string(),
   published_at: z.string(),
-  published_at_resolution: z.string(),
+  published_at_resolution: dateResolutionCompatSchema,
+  coverage_start: z.string().nullable().optional(),
+  coverage_end: z.string().nullable().optional(),
+  coverage_start_resolution: dateResolutionSchema.nullable().optional(),
+  coverage_end_resolution: dateResolutionSchema.nullable().optional(),
   retrieved_at: z.string(),
   excerpt: z.string(),
   citation_text: z.string(),
@@ -316,9 +449,16 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   license_note: z.string().optional(),
   source_report_path: z.string(),
   notes: z.string().optional(),
-});
+}).transform((record) => ({
+  ...record,
+  published_at_resolution:
+    record.published_at_resolution === "month-normalized"
+      ? "month"
+      : record.published_at_resolution,
+}));
 
 export const standardizedImportPackageSchema = z.object({
+  schemaVersion: z.string().default("mag7-supply-chain.import-relations.v3"),
   relations: z.array(standardizedImportRelationRecordSchema).min(1),
   evidence: z.array(standardizedImportEvidenceRecordSchema).min(1),
 });
@@ -327,7 +467,7 @@ export const importRelationsRequestSchema = z.object({
   requestId: z.string(),
   source: z.string(),
   dataVersion: z.string(),
-  schemaVersion: z.string().default("mag7-supply-chain.import-relations.v2"),
+  schemaVersion: z.string().default("mag7-supply-chain.import-relations.v3"),
   relations: z.array(standardizedImportRelationRecordSchema).min(1),
 });
 
@@ -411,16 +551,40 @@ export const importRelationsFieldCatalog = [
     description: "Primary evidence identifier for summary and ranking.",
   },
   {
+    name: "company_entity_ref",
+    type: "object",
+    required: true,
+    description: "Canonical downstream entity reference with display and legal naming context.",
+  },
+  {
+    name: "supplier_entity_ref",
+    type: "object",
+    required: true,
+    description: "Canonical upstream entity reference with display and legal naming context.",
+  },
+  {
     name: "evidence_date",
     type: "string",
     required: true,
-    description: "Canonical evidence date in ISO-8601 string form.",
+    description: "Evidence time anchor or covered period string; not necessarily a day-level date.",
   },
   {
     name: "evidence_date_resolution",
-    type: "string",
+    type: "enum",
     required: true,
-    description: "How the evidence date was resolved during normalization.",
+    description: "Explicit date precision for the evidence time anchor.",
+  },
+  {
+    name: "evidence_date_normalized",
+    type: "string",
+    required: false,
+    description: "Optional ISO day-level anchor derived for sorting or bucketing when the evidence date is coarser than a day.",
+  },
+  {
+    name: "evidence_date_is_normalized",
+    type: "boolean",
+    required: false,
+    description: "True when the normalized anchor is system-derived and must not be treated as original day-level evidence.",
   },
   {
     name: "evidence_excerpt",
@@ -445,6 +609,36 @@ export const importRelationsFieldCatalog = [
     type: "number",
     required: true,
     description: "Continuous confidence score between 0 and 1.",
+  },
+  {
+    name: "valid_from",
+    type: "string",
+    required: false,
+    description: "When the relation is believed to start being effective, distinct from evidence publication time.",
+  },
+  {
+    name: "valid_from_resolution",
+    type: "enum",
+    required: false,
+    description: "Explicit precision for valid_from.",
+  },
+  {
+    name: "valid_to",
+    type: "string",
+    required: false,
+    description: "When the relation is believed to stop being effective, if known.",
+  },
+  {
+    name: "valid_to_resolution",
+    type: "enum",
+    required: false,
+    description: "Explicit precision for valid_to.",
+  },
+  {
+    name: "validity_note",
+    type: "string",
+    required: false,
+    description: "Optional explanation for inferred or quarter/month-level validity bounds.",
   },
   {
     name: "source_method",
@@ -497,6 +691,8 @@ export const importRelationsFieldCatalog = [
 ] as const;
 
 export type BackendSource = z.infer<typeof backendSourceSchema>;
+export type DateResolution = z.infer<typeof dateResolutionSchema>;
+export type AliasType = z.infer<typeof aliasTypeSchema>;
 export type CompanyDTO = z.infer<typeof companySchema>;
 export type CompanyListItemDTO = z.infer<typeof companyListItemSchema>;
 export type CompanyListQuery = z.infer<typeof companyListQuerySchema>;
@@ -504,6 +700,8 @@ export type CompanyListResponseDTO = z.infer<typeof companyListResponseSchema>;
 export type CompanyDetailDTO = z.infer<typeof companyDetailSchema>;
 export type CompanyDetailResponseDTO = z.infer<typeof companyDetailResponseSchema>;
 export type CompanyOverviewDTO = z.infer<typeof companyOverviewSchema>;
+export type EntityAliasRecord = z.infer<typeof entityAliasRecordSchema>;
+export type EntityProfile = z.infer<typeof entityProfileSchema>;
 export type EvidenceDTO = z.infer<typeof evidenceSchema>;
 export type GraphNodeDTO = z.infer<typeof graphNodeSchema>;
 export type GraphPathQuery = z.infer<typeof graphPathQuerySchema>;
@@ -518,6 +716,7 @@ export type SuggestCompaniesResponseDTO = z.infer<typeof suggestCompaniesRespons
 export type SubgraphDTO = z.infer<typeof subgraphSchema>;
 export type SubgraphQuery = z.infer<typeof subgraphQuerySchema>;
 export type RelationEvidenceResponseDTO = z.infer<typeof relationEvidenceResponseSchema>;
+export type ImportEntityRef = z.infer<typeof importEntityRefSchema>;
 export type StandardizedImportRelationRecord = z.infer<typeof standardizedImportRelationRecordSchema>;
 export type StandardizedImportEvidenceRecord = z.infer<typeof standardizedImportEvidenceRecordSchema>;
 export type StandardizedImportPackage = z.infer<typeof standardizedImportPackageSchema>;

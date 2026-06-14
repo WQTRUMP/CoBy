@@ -1,6 +1,6 @@
 import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
 import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
-import { getRelationshipTypeLabel } from "../utils/relationSemantics";
+import { getRelationshipTypeLabel } from "../utils/relationSemantics.js";
 
 interface GraphCanvasProps {
   activeNodeId: string | null;

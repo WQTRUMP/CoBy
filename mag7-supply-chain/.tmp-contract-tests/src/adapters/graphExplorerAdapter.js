@@ -1,4 +1,4 @@
-import { formatDateResolution, formatRelationshipSubtype, formatSourceMethod, formatValidityLabel, getRelationshipSemanticLabel, getRelationshipTypeLabel, } from "../utils/relationSemantics";
+import { formatDateResolution, formatRelationshipSubtype, formatSourceMethod, formatValidityLabel, getRelationshipSemanticLabel, getRelationshipTypeLabel, } from "../utils/relationSemantics.js";
 const SOURCE_TYPE_LABELS = {
     "10k": "10-K",
     earnings_call: "Earnings Call",

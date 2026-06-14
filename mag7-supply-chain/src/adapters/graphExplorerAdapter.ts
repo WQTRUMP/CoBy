@@ -29,7 +29,7 @@ import {
   formatValidityLabel,
   getRelationshipSemanticLabel,
   getRelationshipTypeLabel,
-} from "../utils/relationSemantics";
+} from "../utils/relationSemantics.js";
 
 const SOURCE_TYPE_LABELS = {
   "10k": "10-K",
