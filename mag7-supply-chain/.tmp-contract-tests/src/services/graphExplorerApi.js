@@ -12,7 +12,7 @@ export class ApiRequestError extends Error {
     url;
     contentType;
     constructor(status, statusText, options) {
-        super(buildRequestErrorMessage(statusText, options));
+        super(buildRequestErrorMessage(status, statusText, options));
         this.name = "ApiRequestError";
         this.status = status;
         this.url = options.url;
@@ -86,7 +86,6 @@ async function request(input, schema) {
     };
     if (!response.ok) {
         throw new ApiRequestError(response.status, response.statusText, {
-            status: response.status,
             ...diagnostics,
             rawText,
         });
@@ -119,15 +118,15 @@ function buildPayloadErrorMessage(rawText, diagnostics) {
         : `Response preview: ${truncateSnippet(rawText)}`;
     return `Expected JSON from ${diagnostics.url} but received ${responseType} (status ${diagnostics.status}, content-type ${diagnostics.contentType ?? "unknown"}). ${hint}`;
 }
-function buildRequestErrorMessage(statusText, diagnostics) {
+function buildRequestErrorMessage(status, statusText, diagnostics) {
     const maybeHtml = isProbablyHtmlDocument(diagnostics.rawText, diagnostics.contentType);
     if (maybeHtml) {
-        return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. The response was HTML instead of JSON, which usually means the frontend served index.html for /api. Set VITE_GRAPH_API_BASE_URL to the backend origin or use the built-in /api proxy in Vite dev/preview.`;
+        return `API request failed: ${status} ${statusText} for ${diagnostics.url}. The response was HTML instead of JSON, which usually means the frontend served index.html for /api. Set VITE_GRAPH_API_BASE_URL to the backend origin or use the built-in /api proxy in Vite dev/preview.`;
     }
-    if (isLikelyLocalProxyFailure(diagnostics.url, diagnostics.status)) {
-        return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. The request hit the local /api proxy, but the upstream backend was unreachable or returned a server error. Start the backend on the proxy target or set VITE_GRAPH_API_BASE_URL to a reachable API origin. Diagnose with curl ${diagnostics.url} and curl http://127.0.0.1:4000/api/v1/health. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
+    if (isLikelyLocalProxyFailure(diagnostics.url, status)) {
+        return `API request failed: ${status} ${statusText} for ${diagnostics.url}. The request hit the local /api proxy, but the upstream backend was unreachable or returned a server error. Start the backend on the proxy target or set VITE_GRAPH_API_BASE_URL to a reachable API origin. Diagnose with curl ${diagnostics.url} and curl http://127.0.0.1:4000/api/v1/health. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
     }
-    return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
+    return `API request failed: ${status} ${statusText} for ${diagnostics.url}. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
 }
 function isProbablyHtmlDocument(rawText, contentType) {
     const normalized = rawText.trimStart().toLowerCase();
