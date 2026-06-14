@@ -57,6 +57,29 @@ function matchesSnapshot(snapshotId: string, snapshotQuery: string) {
   return snapshotQuery === "published" ? true : snapshotId === snapshotQuery;
 }
 
+function compareSnapshotRecency(
+  left: Pick<SnapshotDTO, "publishedAt" | "id"> | null,
+  right: Pick<SnapshotDTO, "publishedAt" | "id"> | null,
+) {
+  if (!left && !right) {
+    return 0;
+  }
+
+  if (!left) {
+    return 1;
+  }
+
+  if (!right) {
+    return -1;
+  }
+
+  return (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || right.id.localeCompare(left.id);
+}
+
+function pickLatestSnapshot(snapshots: SnapshotDTO[]): SnapshotDTO | null {
+  return [...snapshots].sort(compareSnapshotRecency)[0] ?? null;
+}
+
 function buildCompanyDetails(prepared: PreparedNormalizedImport) {
   const byId = new Map<string, CompanyDetailDTO>();
   const relationByCompany = new Map<string, { snapshotId: string; lastVerifiedAt: string | null }>();
@@ -67,10 +90,18 @@ function buildCompanyDetails(prepared: PreparedNormalizedImport) {
       continue;
     }
 
-    relationByCompany.set(edge.targetCompanyId, {
+    const current = relationByCompany.get(edge.targetCompanyId);
+    const next = {
       snapshotId: edge.snapshotId,
       lastVerifiedAt: relation.lastVerifiedAt,
-    });
+    };
+
+    if (!current || compareSnapshotRecency(
+      { id: next.snapshotId, publishedAt: next.lastVerifiedAt },
+      { id: current.snapshotId, publishedAt: current.lastVerifiedAt },
+    ) < 0) {
+      relationByCompany.set(edge.targetCompanyId, next);
+    }
   }
 
   for (const company of prepared.companies) {
@@ -346,13 +377,14 @@ class RealSampleGraphRepository implements GraphRepository {
       }
     }
 
-    const snapshotId = scopedRelations[0]?.snapshotId ?? null;
+    const snapshot = pickLatestSnapshot(
+      scopedRelations
+        .map((relation) => this.prepared.snapshots.find((snapshotItem) => snapshotItem.id === relation.snapshotId) ?? null)
+        .filter((snapshot): snapshot is SnapshotDTO => Boolean(snapshot)),
+    );
 
     return {
-      snapshot:
-        snapshotId
-          ? ((this.prepared.snapshots.find((snapshot) => snapshot.id === snapshotId) ?? null) as SnapshotDTO | null)
-          : null,
+      snapshot,
       companyCount: companyIds.size,
       relationCount: scopedRelations.length,
       evidenceCount: evidenceIds.size,
@@ -433,6 +465,25 @@ describe("full package app", () => {
       expect(subgraph.json().relations.length).toBeGreaterThan(0);
       expect(stats.json().relationCount).toBeGreaterThan(0);
     }
+  });
+
+  it("keeps Alphabet detail, overview, and stats pinned to the latest published snapshot", async () => {
+    const [detail, overview, stats] = await Promise.all([
+      app.inject({ method: "GET", url: "/api/v1/companies/company:GOOGL" }),
+      app.inject({ method: "GET", url: "/api/v1/companies/company:GOOGL/overview" }),
+      app.inject({ method: "GET", url: "/api/v1/graph/stats?snapshot=published&companyId=company:GOOGL" }),
+    ]);
+
+    expect(detail.statusCode).toBe(200);
+    expect(overview.statusCode).toBe(200);
+    expect(stats.statusCode).toBe(200);
+
+    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.3");
+    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.3");
+    expect(stats.json().snapshot).toMatchObject({
+      id: "snapshot:2026-06-14.3",
+      version: "2026.06.14.3",
+    });
   });
 
   it("serves real search, suggest, path, stats, and evidence payloads from the full package", async () => {

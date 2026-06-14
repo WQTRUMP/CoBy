@@ -446,4 +446,184 @@ describe("Neo4jGraphRepository", () => {
     );
     expect(path.snapshot.id).toBe("snapshot:2026-06-14.1");
   });
+
+  it("prefers the most recent snapshot in graph stats when mixed published snapshots touch the same company", async () => {
+    const records = [
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:BROADCOM",
+            ticker: "AVGO",
+            name: "Broadcom",
+            companyType: "supplier",
+            country: "US",
+            isMag7: false,
+            marketCapUsd: 850000000000,
+            description: "Semiconductor supplier",
+            aliases: ["Broadcom Inc."],
+            active: true,
+            importanceScore: 0.82,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "Broadcom summary",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        target: {
+          properties: {
+            id: "company:GOOGL",
+            ticker: "GOOGL",
+            name: "Alphabet",
+            companyType: "public_company",
+            country: "US",
+            isMag7: true,
+            marketCapUsd: 2200000000000,
+            description: "Alphabet",
+            aliases: ["Alphabet Inc.", "Google"],
+            active: true,
+            importanceScore: 1,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Alphabet summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:alphabet:broadcom",
+            relationshipType: "component_supply",
+            tier: 1,
+            depthFromMag7: 1,
+            confidence: "confirmed",
+            confidenceScore: 0.95,
+            summary: "Broadcom supports Alphabet TPU programs.",
+            productScope: ["TPUs"],
+            notes: null,
+            evidenceIds: ["evidence:alphabet:broadcom"],
+            primaryEvidenceId: "evidence:alphabet:broadcom",
+            evidenceCount: 1,
+            snapshotId: "snapshot:2026-06-14.1",
+            status: "approved",
+            sourceMethod: "supplier_disclosure",
+            sourceCount: 1,
+            lineageKey: "alphabet-broadcom",
+            lastVerifiedAt: "2026-06-14T00:00:00.000Z",
+            validFrom: "2026-04-06",
+            validTo: null,
+          },
+        },
+        evidence: [],
+        snapshot: {
+          properties: {
+            id: "snapshot:2026-06-14.1",
+            version: "2026.06.14.1",
+            status: "published",
+            publishedAt: "2026-06-14T00:00:00.000Z",
+            scope: ["company:GOOGL"],
+            notes: "older snapshot",
+          },
+        },
+      }),
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:CISCO",
+            ticker: "CSCO",
+            name: "Cisco",
+            companyType: "service_provider",
+            country: "US",
+            isMag7: false,
+            marketCapUsd: 250000000000,
+            description: "Networking supplier",
+            aliases: ["Cisco Systems, Inc."],
+            active: true,
+            importanceScore: 0.71,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Cisco summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        target: {
+          properties: {
+            id: "company:GOOGL",
+            ticker: "GOOGL",
+            name: "Alphabet",
+            companyType: "public_company",
+            country: "US",
+            isMag7: true,
+            marketCapUsd: 2200000000000,
+            description: "Alphabet",
+            aliases: ["Alphabet Inc.", "Google"],
+            active: true,
+            importanceScore: 1,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.3",
+            summary: "Alphabet summary",
+            lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:alphabet:cisco",
+            relationshipType: "cloud_service",
+            tier: 1,
+            depthFromMag7: 1,
+            confidence: "strong_evidence",
+            confidenceScore: 0.87,
+            summary: "Cisco supports Google Cloud WAN integration.",
+            productScope: ["Cloud WAN"],
+            notes: null,
+            evidenceIds: ["evidence:alphabet:cisco"],
+            primaryEvidenceId: "evidence:alphabet:cisco",
+            evidenceCount: 1,
+            snapshotId: "snapshot:2026-06-14.3",
+            status: "approved",
+            sourceMethod: "partner_disclosure",
+            sourceCount: 1,
+            lineageKey: "alphabet-cisco",
+            lastVerifiedAt: "2026-06-14T03:05:00.000Z",
+            validFrom: "2026-06-01",
+            validTo: null,
+          },
+        },
+        evidence: [],
+        snapshot: {
+          properties: {
+            id: "snapshot:2026-06-14.3",
+            version: "2026.06.14.3",
+            status: "published",
+            publishedAt: "2026-06-14T03:05:00.000Z",
+            scope: ["company:GOOGL"],
+            notes: "latest snapshot",
+          },
+        },
+      }),
+    ];
+
+    const session = {
+      async run() {
+        return { records };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const stats = await repository.getGraphStats({
+      snapshot: "published",
+      companyId: "company:GOOGL",
+    });
+
+    expect(stats.snapshot).toMatchObject({
+      id: "snapshot:2026-06-14.3",
+      version: "2026.06.14.3",
+    });
+    expect(stats.relationCount).toBe(2);
+  });
 });

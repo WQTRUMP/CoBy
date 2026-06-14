@@ -111,6 +111,15 @@ function sortSnapshotsByRecency<
   return (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || right.id.localeCompare(left.id);
 }
 
+function pickLatestSnapshot(
+  snapshots: Array<{ properties?: Record<string, unknown> } | null>,
+): SubgraphDTO["snapshot"] | null {
+  return snapshots
+    .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+    .map((item) => mapSnapshotProperties(item.properties))
+    .sort(sortSnapshotsByRecency)[0] ?? null;
+}
+
 function mapRelationRecord(
   resultRecord: { get: (key: string) => unknown },
   companyMap: Map<string, SubgraphDTO["nodes"][number]>,
@@ -554,11 +563,9 @@ export class Neo4jGraphRepository implements GraphRepository {
         };
       }
 
-      const snapshotNode = result.records
-        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
-        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
-        .map((item) => mapSnapshotProperties(item.properties))
-        .sort(sortSnapshotsByRecency)[0] ?? null;
+      const snapshotNode = pickLatestSnapshot(
+        result.records.map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null),
+      );
 
       return {
         snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
@@ -663,11 +670,9 @@ export class Neo4jGraphRepository implements GraphRepository {
         };
       }
 
-      const snapshotNode = result.records
-        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
-        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
-        .map((item) => mapSnapshotProperties(item.properties))
-        .sort(sortSnapshotsByRecency)[0] ?? null;
+      const snapshotNode = pickLatestSnapshot(
+        result.records.map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null),
+      );
 
       return {
         snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
@@ -730,11 +735,9 @@ export class Neo4jGraphRepository implements GraphRepository {
         }
       }
 
-      const snapshotNode = result.records
-        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
-        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
-        .map((item) => mapSnapshotProperties(item.properties))
-        .sort(sortSnapshotsByRecency)[0] ?? null;
+      const snapshotNode = pickLatestSnapshot(
+        result.records.map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null),
+      );
 
       return {
         snapshot: snapshotNode,
