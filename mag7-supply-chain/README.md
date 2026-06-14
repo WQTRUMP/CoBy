@@ -172,6 +172,13 @@ curl http://127.0.0.1:4173/api/v1/health
 
 预期返回 JSON 健康检查结果；如果后端未启动，预览代理会返回明确的代理失败，而不是静态 `index.html`。
 
+无 `VITE_GRAPH_API_BASE_URL` 时的默认行为与失败模式：
+
+- 默认接线：前端请求同源 `/api/v1/*`，`vite dev` / `vite preview` 自动把 `/api/*` 代理到 `http://127.0.0.1:4000`，除非你显式改了 `HOST` / `PORT` 或设置了 `VITE_GRAPH_API_BASE_URL`。
+- 后端已启动：`curl http://127.0.0.1:4173/api/v1/health` 应返回 JSON；这表示 preview/default 下的真实 API 接线已闭环，不会回退 `index.html`。
+- 后端未启动或代理目标不可达：浏览器会收到 `500` 级错误，前端 UI 会提示“local /api proxy”与 `VITE_GRAPH_API_BASE_URL` 诊断信息。先检查 `curl http://127.0.0.1:4173/api/v1/health`，再检查 `curl http://127.0.0.1:4000/api/v1/health`。
+- 若仍收到 HTML：说明当前环境没有命中 Vite `/api` 代理，而是把 `/api` 回退成了静态站点。此时必须显式设置 `VITE_GRAPH_API_BASE_URL=http://127.0.0.1:4000`，或修复部署层的同源 `/api` 代理。
+
 ## 部署与上线约束
 
 当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：

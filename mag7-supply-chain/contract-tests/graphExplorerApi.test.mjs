@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  ApiRequestError,
   ApiPayloadError,
   createHttpGraphExplorerApi,
   graphApiContract,
@@ -141,6 +142,32 @@ test("raises an actionable error when /api resolves to an HTML document instead 
     assert.match(error.message, /Expected JSON/);
     assert.match(error.message, /index\.html/);
     assert.match(error.message, /VITE_GRAPH_API_BASE_URL/);
+    return true;
+  });
+});
+
+test("raises an actionable error when the local /api proxy cannot reach the backend", async () => {
+  const api = createHttpGraphExplorerApi("");
+
+  globalThis.fetch = async () => ({
+    headers: {
+      get(name) {
+        return name.toLowerCase() === "content-type" ? "text/plain; charset=utf-8" : null;
+      },
+    },
+    ok: false,
+    status: 500,
+    statusText: "Internal Server Error",
+    async text() {
+      return "";
+    },
+  });
+
+  await assert.rejects(() => api.listCompanies(), (error) => {
+    assert.ok(error instanceof ApiRequestError);
+    assert.match(error.message, /local \/api proxy/);
+    assert.match(error.message, /VITE_GRAPH_API_BASE_URL/);
+    assert.match(error.message, /127\.0\.0\.1:4000\/api\/v1\/health/);
     return true;
   });
 });

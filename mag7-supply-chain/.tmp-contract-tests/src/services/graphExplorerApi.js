@@ -9,10 +9,14 @@ export const graphApiContract = {
 };
 export class ApiRequestError extends Error {
     status;
-    constructor(status, statusText) {
-        super(`API request failed: ${status} ${statusText}`);
+    url;
+    contentType;
+    constructor(status, statusText, options) {
+        super(buildRequestErrorMessage(statusText, options));
         this.name = "ApiRequestError";
         this.status = status;
+        this.url = options.url;
+        this.contentType = options.contentType;
     }
 }
 export class ApiPayloadError extends Error {
@@ -68,20 +72,26 @@ export function createHttpGraphExplorerApi(baseUrl = "") {
     };
 }
 async function request(input, schema) {
+    const url = String(input);
     const response = await fetch(input, {
         headers: {
             Accept: "application/json",
         },
     });
-    if (!response.ok) {
-        throw new ApiRequestError(response.status, response.statusText);
-    }
     const rawText = await response.text();
-    const payload = parseJsonPayload(rawText, {
+    const diagnostics = {
         contentType: getResponseHeader(response, "content-type"),
         status: response.status,
-        url: String(input),
-    });
+        url,
+    };
+    if (!response.ok) {
+        throw new ApiRequestError(response.status, response.statusText, {
+            status: response.status,
+            ...diagnostics,
+            rawText,
+        });
+    }
+    const payload = parseJsonPayload(rawText, diagnostics);
     return schema.parse(payload);
 }
 function normalizeBaseUrl(baseUrl) {
@@ -109,9 +119,28 @@ function buildPayloadErrorMessage(rawText, diagnostics) {
         : `Response preview: ${truncateSnippet(rawText)}`;
     return `Expected JSON from ${diagnostics.url} but received ${responseType} (status ${diagnostics.status}, content-type ${diagnostics.contentType ?? "unknown"}). ${hint}`;
 }
+function buildRequestErrorMessage(statusText, diagnostics) {
+    const maybeHtml = isProbablyHtmlDocument(diagnostics.rawText, diagnostics.contentType);
+    if (maybeHtml) {
+        return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. The response was HTML instead of JSON, which usually means the frontend served index.html for /api. Set VITE_GRAPH_API_BASE_URL to the backend origin or use the built-in /api proxy in Vite dev/preview.`;
+    }
+    if (isLikelyLocalProxyFailure(diagnostics.url, diagnostics.status)) {
+        return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. The request hit the local /api proxy, but the upstream backend was unreachable or returned a server error. Start the backend on the proxy target or set VITE_GRAPH_API_BASE_URL to a reachable API origin. Diagnose with curl ${diagnostics.url} and curl http://127.0.0.1:4000/api/v1/health. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
+    }
+    return `API request failed: ${diagnostics.status} ${statusText} for ${diagnostics.url}. Response preview: ${truncateSnippet(diagnostics.rawText)}`;
+}
 function isProbablyHtmlDocument(rawText, contentType) {
     const normalized = rawText.trimStart().toLowerCase();
     return (contentType ?? "").includes("text/html") || normalized.startsWith("<!doctype html") || normalized.startsWith("<html");
+}
+function isLikelyLocalProxyFailure(url, status) {
+    if (status < 500) {
+        return false;
+    }
+    if (typeof window === "undefined" || !window.location?.origin) {
+        return false;
+    }
+    return url.startsWith(`${window.location.origin}/api/`);
 }
 function truncateSnippet(rawText) {
     const snippet = rawText.replace(/\s+/g, " ").trim();
