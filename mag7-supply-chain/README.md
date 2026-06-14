@@ -36,6 +36,12 @@ npm install
 npm run dev
 ```
 
+如果要同时起本地图数据库、缓存和对象存储，先准备开发环境变量：
+
+```bash
+cp .env.example .env
+```
+
 当前本地开发服务使用 Vite：
 
 ```text
@@ -55,6 +61,67 @@ npm run build
 ```bash
 npm run preview
 ```
+
+## 本地基础设施骨架
+
+按照 CTO 技术蓝图，Phase 0 本地开发环境固定为：
+
+- `Neo4j 5.26`：图数据库，开发时带 APOC
+- `Redis 7.4`：查询缓存
+- `MinIO`：S3 兼容对象存储，用于原始证据、整理后数据和导出文件
+
+已补齐的基础设施文件：
+
+```text
+docker-compose.dev.yml
+infra/
+  docker/
+    docker-compose.dev.yml
+  neo4j/
+    apply.sh
+    constraints.cypher
+    indexes.cypher
+    seed.cypher
+  redis/
+    redis.conf
+  minio/
+    init.sh
+  deployment/
+    deployment-manifest.input.json
+```
+
+### 启动本地依赖
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Compose 会启动并初始化：
+
+- `neo4j`：开放 `7474`（HTTP）和 `7687`（Bolt）
+- `redis`：开放 `6379`
+- `minio`：开放 `9000`（API）和 `9001`（Console）
+- `neo4j-init`：自动执行约束、索引和种子数据
+- `minio-init`：自动创建 `mag7-raw`、`mag7-curated`、`mag7-exports` bucket
+
+### 常用访问地址
+
+- Neo4j Browser: `http://127.0.0.1:7474`
+- Neo4j Bolt: `bolt://127.0.0.1:7687`
+- Redis: `redis://127.0.0.1:6379`
+- MinIO API: `http://127.0.0.1:9000`
+- MinIO Console: `http://127.0.0.1:9001`
+
+### 关闭与清理
+
+```bash
+docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml down -v
+```
+
+### 与后续 deployment manifest 的衔接
+
+`infra/deployment/deployment-manifest.input.json` 不是正式部署清单，而是 DevOps 预留的服务清单输入，供后续在开发任务完成后生成 `wanman.deployment-manifest` 时复用。当前阶段不会触发任何 Cloudflare 或付费资源部署动作。
 
 ## 目录结构
 

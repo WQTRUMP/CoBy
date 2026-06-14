@@ -1,0 +1,34 @@
+{
+  "requestId": "import-2026-06-14-aapl-sample",
+  "source": "research_batch:aapl-2026q2",
+  "dataVersion": "2026.06.14-01",
+  "relations": [
+    {
+      "sourceCompanyId": "company:TSMC",
+      "targetCompanyId": "company:AAPL",
+      "relationshipType": "manufacturing",
+      "tier": 1,
+      "depthFromMag7": 1,
+      "confidence": "strong_evidence",
+      "confidenceScore": 0.88,
+      "summary": "TSMC 为 Apple 提供先进制程晶圆代工能力。",
+      "lineageKey": "company:TSMC|company:AAPL|manufacturing|advanced-silicon",
+      "snapshotId": "snapshot:2026-06-14.1",
+      "evidence": [
+        {
+          "id": "evidence:tsmc-annual-2026",
+          "sourceType": "supplier_report",
+          "title": "TSMC Annual Report 2025",
+          "publisher": "TSMC",
+          "url": "https://investor.tsmc.com/english/annual-reports",
+          "publishedAt": "2026-04-19T00:00:00.000Z",
+          "retrievedAt": "2026-06-14T00:00:00.000Z",
+          "excerpt": "Leading-edge smartphone customers continued to rely on our advanced nodes.",
+          "pageRef": "Annual report",
+          "language": "en",
+          "hash": "sha256:tsmc-annual-2026"
+        }
+      ]
+    }
+  ]
+}
