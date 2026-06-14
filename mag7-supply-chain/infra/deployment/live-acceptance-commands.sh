@@ -14,6 +14,7 @@ API_BASE="${API_BASE:-http://127.0.0.1:4000}"
 
 export PORT="${PORT:-4000}"
 export HOST="${HOST:-127.0.0.1}"
+export GRAPH_RUNTIME_MODE="${GRAPH_RUNTIME_MODE:-live}"
 export NEO4J_URI="${NEO4J_URI:-bolt://127.0.0.1:7687}"
 export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
 export NEO4J_PASSWORD="${NEO4J_PASSWORD:-mag7-dev-password}"
@@ -26,6 +27,7 @@ node -v
 docker --version
 docker compose version
 jq --version
+test "$GRAPH_RUNTIME_MODE" = "live"
 test -f "$PACKAGE_DIR/relations.jsonl"
 test -f "$PACKAGE_DIR/evidence.jsonl"
 wc -l "$PACKAGE_DIR/relations.jsonl" "$PACKAGE_DIR/evidence.jsonl"
