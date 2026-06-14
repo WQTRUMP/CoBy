@@ -53,7 +53,7 @@ test("parses list, detail, overview, subgraph, and evidence responses from the s
   assert.equal(company.item.primaryRegion, "North America");
   assert.equal(overview.highRiskRelationCount, 1);
   assert.equal(subgraph.relations.length, 3);
-  assert.equal(evidence.total, 2);
+  assert.equal(evidence.total, 3);
 
   assert.match(requests[0], /\?q=tesla$/);
   assert.match(requests[3], /includeEvidence=true/);

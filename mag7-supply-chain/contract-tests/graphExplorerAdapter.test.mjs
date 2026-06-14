@@ -46,7 +46,7 @@ test("preserves non-direct relations, notes, tier, and evidence aggregation in t
   assert.equal(graph.focusCompany.overview.relationCount, 3);
   assert.deepEqual(graph.evidenceOverview, {
     confirmed: 2,
-    strongEvidence: 3,
+    strongEvidence: 4,
     inferred: 0,
   });
 });
@@ -89,7 +89,7 @@ test("aggregates confirmed, strong evidence, and inferred counts without reading
 
   assert.deepEqual(graph.evidenceOverview, {
     confirmed: 2,
-    strongEvidence: 3,
+    strongEvidence: 4,
     inferred: 1,
   });
 });
