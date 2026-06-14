@@ -70,10 +70,22 @@ grep -q '404' /tmp/mag7-preview-api.headers
 grep -qi '^content-type: application/json' /tmp/mag7-preview-api.headers
 jq . /tmp/mag7-preview-api.json
 
-echo "== 2.1 preview/default mock 基线记录 =="
-curl -fsS "http://127.0.0.1:4173/api/v1/companies?isMag7=true&page=1&pageSize=2" | tee /tmp/mag7-preview-companies.json | jq .
+echo "== 2.1 preview/default live 失败语义记录 =="
 jq -e '
-  .source == "mock"
+  .runtimeMode == "live" and
+  .repositoryMode == "neo4j" and
+  .contracts.mockGraphBoundary == false and
+  (.dependencies.neo4j.status == "not_configured" or .dependencies.neo4j.status == "down") and
+  (.dependencies.redis.status == "not_configured" or .dependencies.redis.status == "down")
+' /tmp/mag7-preview-health.json >/dev/null
+
+PREVIEW_STATUS="$(curl -sS -o /tmp/mag7-preview-companies.json -w '%{http_code}' "http://127.0.0.1:4173/api/v1/companies?isMag7=true&page=1&pageSize=2")"
+test "$PREVIEW_STATUS" = "503"
+cat /tmp/mag7-preview-companies.json | jq .
+jq -e '
+  .error == "dependency_unavailable" and
+  .dependency == "neo4j" and
+  (.detail | contains("GRAPH_RUNTIME_MODE=live"))
 ' /tmp/mag7-preview-companies.json >/dev/null
 
 cleanup_preview
