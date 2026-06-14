@@ -116,8 +116,11 @@ export const companyListItemSchema = z.object({
   id: z.string(),
   ticker: z.string().optional(),
   name: z.string(),
+  canonicalName: z.string().optional(),
+  displayName: z.string().optional(),
   isMag7: z.boolean(),
   marketCapUsd: z.number().nullable(),
+  entityProfile: entityProfileSchema.optional(),
   primaryRegion: z.string(),
   activeSnapshotId: z.string().nullable(),
 });
@@ -130,9 +133,6 @@ export const companySearchMatchSchema = z.object({
 });
 
 export const companySearchResultItemSchema = companyListItemSchema.extend({
-  canonicalName: z.string().optional(),
-  displayName: z.string().optional(),
-  entityProfile: entityProfileSchema.optional(),
   match: companySearchMatchSchema.optional(),
 });
 
