@@ -21,6 +21,11 @@ interface ValidationLikeError {
   statusCode?: number;
   message?: string;
   validation?: unknown[];
+  issues?: Array<{
+    path?: Array<string | number>;
+    code?: string;
+    message?: string;
+  }>;
 }
 
 function formatValidationDetails(error: ZodError) {
@@ -38,6 +43,7 @@ function isValidationLikeError(error: unknown): error is ValidationLikeError {
 
   const candidate = error as ValidationLikeError;
   return (
+    Array.isArray(candidate.issues) ||
     Array.isArray(candidate.validation) ||
     (typeof candidate.statusCode === "number" &&
       candidate.statusCode >= 400 &&
@@ -70,8 +76,15 @@ export async function buildApp(options: AppOptions) {
     if (isValidationLikeError(error)) {
       return reply.code(error.statusCode ?? 400).send({
         error: "bad_request",
-        message: error.message || "Invalid request parameters.",
-        details: error.validation ?? [],
+        message: "Invalid request parameters.",
+        details:
+          error.issues?.map((issue) => ({
+            path: issue.path?.join(".") || "request",
+            code: issue.code ?? "invalid_request",
+            message: issue.message ?? "Invalid request parameter.",
+          })) ??
+          error.validation ??
+          [],
       });
     }
 
