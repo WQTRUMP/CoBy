@@ -1,4 +1,9 @@
-import type { CompanyDTO, EvidenceDTO, SnapshotDTO, SubgraphDTO } from "@mag7/contracts";
+import type {
+  CompanyDTO,
+  EvidenceDTO,
+  SnapshotDTO,
+  SubgraphDTO,
+} from "../../../packages/contracts/src/index.js";
 
 const snapshot: SnapshotDTO = {
   id: "snapshot:2026-06-14.1",

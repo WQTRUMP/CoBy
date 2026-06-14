@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { subgraphQuerySchema } from "@mag7/contracts";
+import { subgraphQuerySchema } from "../../../../packages/contracts/src/index.js";
 
 const CACHE_TTL_SECONDS = 600;
 

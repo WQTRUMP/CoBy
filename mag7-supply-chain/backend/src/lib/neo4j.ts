@@ -1,7 +1,7 @@
 import neo4j, { type Driver } from "neo4j-driver";
 
 import { env } from "../config/env.js";
-import type { SubgraphDTO, SubgraphQuery } from "@mag7/contracts";
+import type { SubgraphDTO, SubgraphQuery } from "../../../packages/contracts/src/index.js";
 import { mockCompanies, mockSubgraph } from "./mock-data.js";
 
 export type DependencyStatus = "up" | "down" | "not_configured";

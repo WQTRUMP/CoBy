@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { importRelationsRequestSchema } from "@mag7/contracts";
+import { importRelationsRequestSchema } from "../../../../packages/contracts/src/index.js";
 
 export async function registerImportRoutes(app: FastifyInstance) {
   app.post("/api/v1/imports/relations", async (request, reply) => {
