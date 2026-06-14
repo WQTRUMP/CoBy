@@ -10,7 +10,7 @@
 
 ## 2. 当前结论
 
-- `prototype`：已具备发布条件，但仅覆盖显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路；只有这一模式允许 `mock`，不能用默认 live 缺依赖时的降级结果替代。
+- `prototype`：已具备发布条件，但仅覆盖显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路；只有这一模式允许 `mock`，默认 `live` 缺依赖时出现的 `degraded`/`503 dependency_unavailable` 仍属于 live 失败语义，不能折算为 `prototype`。
 - `real_data_launch`：截至 `2026-06-14` 仍未通过，唯一保留阻塞是缺少一次可复验的 live `Neo4j/Redis` 导入与 HTTP 闭环。
 - `preview/default` 的 `/api` 代理：截至 `2026-06-14` 已修复为返回后端 JSON，不再回退 `index.html`；并且默认运行态已是 `GRAPH_RUNTIME_MODE=live`。如果依赖未就绪，正确结果应是 `health=degraded` 与业务接口显式 `503 dependency_unavailable`，而不是静默回退 `mock`。
 - 当前工作机不能执行这套 live 闭环，原因见第 10 节。
@@ -120,19 +120,18 @@ CORS_ORIGIN=http://127.0.0.1:5174
 
 满足以下任一组合即可：
 
-1. 前端和后端可构建，并且在显式 `GRAPH_RUNTIME_MODE=prototype` 下后端 `GET /api/v1/health` 返回 `200`。
+1. 前端和后端可构建，并且仅在显式 `GRAPH_RUNTIME_MODE=prototype` 下后端 `GET /api/v1/health` 返回 `200`；默认 `live` 缺依赖时即使同样返回 `200`，只要 `status=degraded` 仍属于 live 失败语义，不能计入 `prototype` 通过证据。
 2. Vite `preview/default` 下 `/api` 返回 JSON，而非 `index.html`。
-3. 后端在显式 `GRAPH_RUNTIME_MODE=prototype` 时能返回结构化接口数据；此时若响应带 `source`，允许为 `mock`。
+3. 后端在显式 `GRAPH_RUNTIME_MODE=prototype` 时能返回结构化接口数据；此时若响应带 `source`，允许为 `mock`，但不包含任何默认 `live` 依赖缺失导致的降级返回。
 
 以下情况都不能升级为 `real_data_launch`；其中前两项属于显式 `prototype` 的允许现象，后五项属于默认 `live` 模式下的依赖未就绪/降级信号，不应归类为 `prototype`：
 
 - 显式 `GRAPH_RUNTIME_MODE=prototype` 时的 `repositoryMode=mock`
 - 显式 `GRAPH_RUNTIME_MODE=prototype` 时导入命令输出 `source: "mock"`
-- `preview/default` 的 `/api` 虽已返回 JSON，但默认 `live` 模式下 `health.status=degraded` 或业务接口返回 `503 dependency_unavailable`；这属于 live 依赖未就绪/降级信号，不属于 `prototype` 通过证据
-- 默认 `live` 模式下 `health.status=degraded`
-- 默认 `live` 模式下 `dependencies.neo4j.status != "up"`
-- 默认 `live` 模式下 `dependencies.redis.status != "up"`
-- 默认 `live` 模式下业务接口返回 `503 dependency_unavailable`
+- `preview/default` 的 `/api` 虽已返回 JSON，但只要未显式设置 `GRAPH_RUNTIME_MODE=prototype`，其默认运行态仍是 `live`
+- 默认 `live` 模式下 `health.status=degraded` 只表示 live 依赖未就绪/降级，不属于 `prototype` 通过证据
+- 默认 `live` 模式下 `dependencies.neo4j.status != "up"` 或 `dependencies.redis.status != "up"` 只属于 live 失败语义
+- 默认 `live` 模式下业务接口只能返回 `503 dependency_unavailable`，不能再用 `mock` 或其它 `200` 成功响应伪装为 `prototype`
 
 ### 6.2 `real_data_launch` 通过门槛
 
