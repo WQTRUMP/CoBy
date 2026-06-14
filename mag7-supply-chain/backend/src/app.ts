@@ -10,7 +10,7 @@ import { registerImportRoutes } from "./modules/imports/routes.js";
 import { registerSchemaRoutes } from "./modules/schema/routes.js";
 import type { GraphRepository, Neo4jHealth, RuntimeMode } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
-import { isDependencyUnavailableError } from "./lib/dependency-failures.js";
+import { DependencyUnavailableError, isDependencyUnavailableError } from "./lib/dependency-failures.js";
 import { toRequestValidationError } from "./lib/request-validation.js";
 
 export interface AppOptions {
@@ -30,6 +30,13 @@ interface ValidationLikeError {
     message?: string;
   }>;
 }
+
+const liveDependencyProtectedPrefixes = [
+  "/api/v1/companies",
+  "/api/v1/graph",
+  "/api/v1/relations",
+  "/api/v1/imports/normalized-package",
+];
 
 function formatValidationDetails(error: ZodError) {
   return error.issues.map((issue) => ({
@@ -54,6 +61,11 @@ function isValidationLikeError(error: unknown): error is ValidationLikeError {
   );
 }
 
+function routeRequiresLiveDependencies(url: string) {
+  const pathname = url.split("?", 1)[0];
+  return liveDependencyProtectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export async function buildApp(options: AppOptions) {
   const app = Fastify({
     logger: false,
@@ -67,6 +79,30 @@ export async function buildApp(options: AppOptions) {
   app.decorate("graphRepository", options.graphRepository);
   app.decorate("neo4jHealth", options.neo4jHealth);
   app.decorate("runtimeMode", options.runtimeMode);
+
+  app.addHook("preHandler", async (request) => {
+    if (options.runtimeMode !== "live" || !routeRequiresLiveDependencies(request.url)) {
+      return;
+    }
+
+    const neo4j = await options.neo4jHealth();
+    if (neo4j.status !== "up") {
+      throw new DependencyUnavailableError(
+        "neo4j",
+        neo4j.detail,
+        "Live graph mode requires a reachable Neo4j dependency.",
+      );
+    }
+
+    const redis = await options.cacheClient.health();
+    if (redis.required && redis.status !== "up") {
+      throw new DependencyUnavailableError(
+        "redis",
+        redis.detail,
+        "Live graph mode requires a reachable Redis dependency.",
+      );
+    }
+  });
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {

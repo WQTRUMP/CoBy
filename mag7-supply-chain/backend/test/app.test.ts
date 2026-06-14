@@ -450,6 +450,87 @@ describe("backend app", () => {
     }
   });
 
+  it("returns structured 503 when live mode requires Redis but Redis is unavailable", async () => {
+    const redisUnavailableApp = await buildApp({
+      cacheClient: {
+        ...cacheClient,
+        enabled: false,
+        async health() {
+          return {
+            status: "down" as const,
+            enabled: false,
+            detail: "Redis unavailable; cache disabled: connect ECONNREFUSED 127.0.0.1:6379",
+            required: true,
+          };
+        },
+      },
+      graphRepository: {
+        ...graphRepository,
+        source: "neo4j",
+      },
+      neo4jHealth: async () => ({
+        status: "up",
+        detail: "Neo4j connection healthy",
+        required: true,
+      }),
+      runtimeMode: "live",
+    });
+
+    try {
+      const [healthResponse, companiesResponse, importResponse] = await Promise.all([
+        redisUnavailableApp.inject({
+          method: "GET",
+          url: "/api/v1/health",
+        }),
+        redisUnavailableApp.inject({
+          method: "GET",
+          url: "/api/v1/companies/search?q=apple&limit=5",
+        }),
+        redisUnavailableApp.inject({
+          method: "POST",
+          url: "/api/v1/imports/normalized-package",
+          payload: {
+            requestId: "redis-live-guard",
+            relationFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl",
+            evidenceFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl",
+          },
+        }),
+      ]);
+
+      expect(healthResponse.statusCode).toBe(200);
+      expect(healthResponse.json()).toMatchObject({
+        status: "degraded",
+        runtimeMode: "live",
+        repositoryMode: "neo4j",
+        dependencies: {
+          neo4j: {
+            status: "up",
+            required: true,
+          },
+          redis: {
+            status: "down",
+            required: true,
+            enabled: false,
+          },
+        },
+      });
+
+      for (const response of [companiesResponse, importResponse]) {
+        expect(response.statusCode).toBe(503);
+        expect(response.json()).toMatchObject({
+          error: "dependency_unavailable",
+          dependency: "redis",
+          message: "Live graph mode requires a reachable Redis dependency.",
+          detail: expect.stringContaining("cache disabled"),
+        });
+      }
+    } finally {
+      await redisUnavailableApp.close();
+    }
+  });
+
   it("maps query validation failures to 400 responses", async () => {
     const [searchResponse, suggestResponse, subgraphResponse, pathResponse] = await Promise.all([
       app.inject({
