@@ -86,6 +86,26 @@ function createSnapshotFallback(snapshot: string, fallbackId: string | null): Su
   };
 }
 
+function mapSnapshotProperties(properties: Record<string, unknown>): SubgraphDTO["snapshot"] {
+  return {
+    id: String(properties.id),
+    version: String(properties.version),
+    status: String(properties.status) as SubgraphDTO["snapshot"]["status"],
+    publishedAt: typeof properties.publishedAt === "string" ? properties.publishedAt : null,
+    scope: toStringArray(properties.scope),
+    notes: typeof properties.notes === "string" ? properties.notes : null,
+  };
+}
+
+function sortSnapshotsByRecency<
+  T extends {
+    publishedAt: string | null;
+    id: string;
+  },
+>(left: T, right: T) {
+  return (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || right.id.localeCompare(left.id);
+}
+
 function mapRelationRecord(
   resultRecord: { get: (key: string) => unknown },
   companyMap: Map<string, SubgraphDTO["nodes"][number]>,
@@ -349,17 +369,27 @@ export class Neo4jGraphRepository implements GraphRepository {
         MATCH (c:Company)
         WHERE ($query IS NULL
           OR toLower(c.name) CONTAINS toLower($query)
-          OR toLower(coalesce(c.ticker, "")) CONTAINS toLower($query))
+          OR toLower(coalesce(c.ticker, "")) CONTAINS toLower($query)
+          OR any(alias IN coalesce(c.aliases, []) WHERE toLower(alias) CONTAINS toLower($query)))
           AND ($isMag7 IS NULL OR c.isMag7 = $isMag7)
-        OPTIONAL MATCH (c)<-[:TARGET_OF]-(targetRel:SupplyRelation)<-[:CONTAINS]-(targetSnapshot:Snapshot)
-        OPTIONAL MATCH (c)-[:SOURCE_OF]->(sourceRel:SupplyRelation)<-[:CONTAINS]-(sourceSnapshot:Snapshot)
+        OPTIONAL MATCH (c)<-[:TARGET_OF|SOURCE_OF]-(rel:SupplyRelation)<-[:CONTAINS]-(snapshot:Snapshot)
+        WHERE snapshot.status = 'published'
+        WITH c, snapshot
+        ORDER BY snapshot.publishedAt DESC, snapshot.id DESC
+        WITH c, collect(snapshot) AS snapshots
+        WITH c, [snapshot IN snapshots WHERE snapshot IS NOT NULL] AS publishedSnapshots
+        WHERE size(publishedSnapshots) > 0
         RETURN c {
           .*,
           primaryRegion: coalesce(c.primaryRegion, c.country),
-          activeSnapshotId: coalesce(head(collect(DISTINCT targetSnapshot.id)), head(collect(DISTINCT sourceSnapshot.id))),
-          lastUpdatedAt: coalesce(max(targetSnapshot.publishedAt), max(sourceSnapshot.publishedAt))
+          activeSnapshotId: head([snapshot IN publishedSnapshots | snapshot.id]),
+          lastUpdatedAt: head([snapshot IN publishedSnapshots | snapshot.publishedAt]),
+          aliases: coalesce(c.aliases, [])
         } AS company
-        ORDER BY c.isMag7 DESC, c.marketCapUsd DESC, c.name ASC
+        ORDER BY c.isMag7 DESC,
+                 head([snapshot IN publishedSnapshots | snapshot.publishedAt]) DESC,
+                 c.marketCapUsd DESC,
+                 c.name ASC
         `,
         { query: query.q ?? null, isMag7: query.isMag7 ?? null },
       );
@@ -379,13 +409,18 @@ export class Neo4jGraphRepository implements GraphRepository {
       const result = await session.run(
         `
         MATCH (c:Company {id: $companyId})
-        OPTIONAL MATCH (c)<-[:TARGET_OF]-(targetRel:SupplyRelation)<-[:CONTAINS]-(targetSnapshot:Snapshot)
-        OPTIONAL MATCH (c)-[:SOURCE_OF]->(sourceRel:SupplyRelation)<-[:CONTAINS]-(sourceSnapshot:Snapshot)
+        OPTIONAL MATCH (c)<-[:TARGET_OF|SOURCE_OF]-(rel:SupplyRelation)<-[:CONTAINS]-(snapshot:Snapshot)
+        WHERE snapshot.status = 'published'
+        WITH c, snapshot
+        ORDER BY snapshot.publishedAt DESC, snapshot.id DESC
+        WITH c, collect(snapshot) AS snapshots
+        WITH c, [snapshot IN snapshots WHERE snapshot IS NOT NULL] AS publishedSnapshots
         RETURN c {
           .*,
           primaryRegion: coalesce(c.primaryRegion, c.country),
-          activeSnapshotId: coalesce(head(collect(DISTINCT targetSnapshot.id)), head(collect(DISTINCT sourceSnapshot.id))),
-          lastUpdatedAt: coalesce(max(targetSnapshot.publishedAt), max(sourceSnapshot.publishedAt)),
+          activeSnapshotId: head([snapshot IN publishedSnapshots | snapshot.id]),
+          lastUpdatedAt: head([snapshot IN publishedSnapshots | snapshot.publishedAt]),
+          aliases: coalesce(c.aliases, []),
           summary: coalesce(c.summary, c.description)
         } AS company
         LIMIT 1
@@ -407,17 +442,39 @@ export class Neo4jGraphRepository implements GraphRepository {
       const result = await session.run(
         `
         MATCH (c:Company {id: $companyId})
-        OPTIONAL MATCH (supplier:Company)-[:SOURCE_OF]->(rel:SupplyRelation)-[:TARGET_OF]->(c)
+        OPTIONAL MATCH (c)<-[:TARGET_OF|SOURCE_OF]-(rel:SupplyRelation)
+        MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        WHERE snapshot.status = 'published'
+        MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
         OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
-        OPTIONAL MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        WITH c, rel, snapshot, source, target, collect(DISTINCT e) AS evidence
+        ORDER BY snapshot.publishedAt DESC, snapshot.id DESC
+        WITH c, collect(DISTINCT {
+          relationId: rel.id,
+          tier: rel.tier,
+          confidence: rel.confidence,
+          sourceId: source.id,
+          targetId: target.id,
+          evidenceCount: size(evidence)
+        }) AS relationRows,
+        collect(snapshot) AS snapshots
         RETURN c.name AS companyName,
-               head(collect(DISTINCT snapshot.id)) AS activeSnapshotId,
-               count(DISTINCT rel) AS totalRelations,
-               count(DISTINCT CASE WHEN rel.tier = 1 THEN supplier END) AS tier1SupplierCount,
-               count(DISTINCT supplier) AS supplierCount,
-               count(DISTINCT CASE WHEN rel.confidence <> 'confirmed' THEN rel END) AS highRiskRelationCount,
-               count(DISTINCT e) AS evidenceCount,
-               max(rel.lastVerifiedAt) AS lastUpdatedAt
+               head([snapshot IN snapshots | snapshot.id]) AS activeSnapshotId,
+               size(relationRows) AS totalRelations,
+               size([row IN relationRows WHERE row.tier = 1]) AS tier1SupplierCount,
+               size(
+                 reduce(
+                   supplierIds = [],
+                   supplierId IN [row IN relationRows WHERE row.targetId = $companyId | row.sourceId] |
+                     CASE
+                       WHEN supplierId IN supplierIds THEN supplierIds
+                       ELSE supplierIds + supplierId
+                     END
+                 )
+               ) AS supplierCount,
+               size([row IN relationRows WHERE row.confidence <> 'confirmed']) AS highRiskRelationCount,
+               reduce(total = 0, row IN relationRows | total + row.evidenceCount) AS evidenceCount,
+               head([snapshot IN snapshots | snapshot.publishedAt]) AS lastUpdatedAt
         `,
         { companyId },
       );
@@ -492,24 +549,14 @@ export class Neo4jGraphRepository implements GraphRepository {
         };
       }
 
-      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
-        | { properties?: Record<string, unknown> }
-        | null;
+      const snapshotNode = result.records
+        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
+        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+        .map((item) => mapSnapshotProperties(item.properties))
+        .sort(sortSnapshotsByRecency)[0] ?? null;
 
       return {
-        snapshot: snapshotNode?.properties
-          ? {
-              id: String(snapshotNode.properties.id),
-              version: String(snapshotNode.properties.version),
-              status: String(snapshotNode.properties.status) as SubgraphDTO["snapshot"]["status"],
-              publishedAt:
-                typeof snapshotNode.properties.publishedAt === "string"
-                  ? snapshotNode.properties.publishedAt
-                  : null,
-              scope: toStringArray(snapshotNode.properties.scope),
-              notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
-            }
-          : createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
+        snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
         nodes: [...companyMap.values()],
         relations,
       };
@@ -524,10 +571,6 @@ export class Neo4jGraphRepository implements GraphRepository {
     try {
       const result = await session.run(
         `
-        MATCH (start:Company {id: $sourceCompanyId}), (finish:Company {id: $targetCompanyId})
-        OPTIONAL MATCH path = shortestPath((start)-[:TARGET_OF|SOURCE_OF*1..8]-(finish))
-        WITH [node IN nodes(path) WHERE node:SupplyRelation] AS relationsInPath
-        UNWIND relationsInPath AS rel
         MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
         MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
         WHERE rel.depthFromMag7 <= $maxDepth
@@ -545,9 +588,56 @@ export class Neo4jGraphRepository implements GraphRepository {
       );
 
       const companyMap = new Map<string, SubgraphDTO["nodes"][number]>();
-      const relations = result.records.map((resultRecord) =>
+      const allRelations = result.records.map((resultRecord) =>
         mapRelationRecord(resultRecord, companyMap, query.includeEvidence),
       );
+      const adjacency = new Map<string, Array<{ relation: RelationDTO; nextCompanyId: string }>>();
+
+      for (const relation of allRelations) {
+        const forward = adjacency.get(relation.sourceId) ?? [];
+        forward.push({ relation, nextCompanyId: relation.targetId });
+        adjacency.set(relation.sourceId, forward);
+
+        const backward = adjacency.get(relation.targetId) ?? [];
+        backward.push({ relation, nextCompanyId: relation.sourceId });
+        adjacency.set(relation.targetId, backward);
+      }
+
+      const queue: Array<{ companyId: string; relationIds: string[] }> = [
+        { companyId: query.sourceCompanyId, relationIds: [] },
+      ];
+      const seenCompanies = new Set<string>([query.sourceCompanyId]);
+      let pathRelationIds: string[] | null = query.sourceCompanyId === query.targetCompanyId ? [] : null;
+
+      while (queue.length > 0 && pathRelationIds === null) {
+        const current = queue.shift();
+        if (!current) {
+          break;
+        }
+
+        for (const edge of adjacency.get(current.companyId) ?? []) {
+          if (seenCompanies.has(edge.nextCompanyId)) {
+            continue;
+          }
+
+          const nextRelationIds = [...current.relationIds, edge.relation.id];
+          if (edge.nextCompanyId === query.targetCompanyId) {
+            pathRelationIds = nextRelationIds;
+            break;
+          }
+
+          seenCompanies.add(edge.nextCompanyId);
+          queue.push({
+            companyId: edge.nextCompanyId,
+            relationIds: nextRelationIds,
+          });
+        }
+      }
+
+      const relationOrder = new Map((pathRelationIds ?? []).map((relationId, index) => [relationId, index]));
+      const relations = allRelations
+        .filter((relation) => relationOrder.has(relation.id))
+        .sort((left, right) => (relationOrder.get(left.id) ?? 0) - (relationOrder.get(right.id) ?? 0));
 
       if (relations.length === 0) {
         const [sourceCompany, targetCompany] = await Promise.all([
@@ -568,24 +658,14 @@ export class Neo4jGraphRepository implements GraphRepository {
         };
       }
 
-      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
-        | { properties?: Record<string, unknown> }
-        | null;
+      const snapshotNode = result.records
+        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
+        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+        .map((item) => mapSnapshotProperties(item.properties))
+        .sort(sortSnapshotsByRecency)[0] ?? null;
 
       return {
-        snapshot: snapshotNode?.properties
-          ? {
-              id: String(snapshotNode.properties.id),
-              version: String(snapshotNode.properties.version),
-              status: String(snapshotNode.properties.status) as SubgraphDTO["snapshot"]["status"],
-              publishedAt:
-                typeof snapshotNode.properties.publishedAt === "string"
-                  ? snapshotNode.properties.publishedAt
-                  : null,
-              scope: toStringArray(snapshotNode.properties.scope),
-              notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
-            }
-          : createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
+        snapshot: snapshotNode ?? createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
         nodes: [...companyMap.values()],
         relations,
       };
@@ -645,24 +725,14 @@ export class Neo4jGraphRepository implements GraphRepository {
         }
       }
 
-      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
-        | { properties?: Record<string, unknown> }
-        | null;
+      const snapshotNode = result.records
+        .map((item) => item.get("snapshot") as { properties?: Record<string, unknown> } | null)
+        .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+        .map((item) => mapSnapshotProperties(item.properties))
+        .sort(sortSnapshotsByRecency)[0] ?? null;
 
       return {
-        snapshot: snapshotNode?.properties
-          ? {
-              id: String(snapshotNode.properties.id),
-              version: String(snapshotNode.properties.version),
-              status: String(snapshotNode.properties.status) as SubgraphDTO["snapshot"]["status"],
-              publishedAt:
-                typeof snapshotNode.properties.publishedAt === "string"
-                  ? snapshotNode.properties.publishedAt
-                  : null,
-              scope: toStringArray(snapshotNode.properties.scope),
-              notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
-            }
-          : null,
+        snapshot: snapshotNode,
         companyCount: companyIds.size,
         relationCount: result.records.length,
         evidenceCount: evidenceIds.size,

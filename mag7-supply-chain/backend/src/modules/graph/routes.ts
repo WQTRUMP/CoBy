@@ -23,8 +23,10 @@ export async function registerGraphRoutes(app: FastifyInstance) {
 
     const cached = await app.cacheClient.get(cacheKey);
     if (cached) {
+      const payload = JSON.parse(cached);
       reply.header("x-cache", "hit");
-      return JSON.parse(cached);
+      reply.header("x-snapshot-version", payload.snapshot.version);
+      return payload;
     }
 
     const subgraph = await app.graphRepository.getSubgraph(query);
@@ -48,8 +50,10 @@ export async function registerGraphRoutes(app: FastifyInstance) {
     ].join(":");
     const cached = await app.cacheClient.get(cacheKey);
     if (cached) {
+      const payload = JSON.parse(cached);
       reply.header("x-cache", "hit");
-      return JSON.parse(cached);
+      reply.header("x-snapshot-version", payload.snapshot.version);
+      return payload;
     }
 
     const payload = await app.graphRepository.getPath(query);
@@ -65,8 +69,12 @@ export async function registerGraphRoutes(app: FastifyInstance) {
     const cacheKey = ["graph", "stats", query.snapshot, query.companyId ?? "all"].join(":");
     const cached = await app.cacheClient.get(cacheKey);
     if (cached) {
+      const payload = JSON.parse(cached);
       reply.header("x-cache", "hit");
-      return JSON.parse(cached);
+      if (payload.snapshot) {
+        reply.header("x-snapshot-version", payload.snapshot.version);
+      }
+      return payload;
     }
 
     const payload = await app.graphRepository.getGraphStats(query);

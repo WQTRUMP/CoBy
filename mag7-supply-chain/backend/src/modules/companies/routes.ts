@@ -12,7 +12,14 @@ const CACHE_TTL_SECONDS = 300;
 export async function registerCompanyRoutes(app: FastifyInstance) {
   app.get("/api/v1/companies/search", async (request, reply) => {
     const query = searchCompaniesQuerySchema.parse(request.query);
-    const cacheKey = ["companies", "search", query.q.toLowerCase(), query.limit, query.isMag7 ?? "all"].join(":");
+    const cacheKey = [
+      "companies",
+      "search",
+      app.graphRepository.source,
+      query.q.toLowerCase(),
+      query.limit,
+      query.isMag7 ?? "all",
+    ].join(":");
     const cached = await app.cacheClient.get(cacheKey);
 
     if (cached) {
@@ -40,7 +47,7 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
 
   app.get("/api/v1/companies/suggest", async (request, reply) => {
     const query = suggestCompaniesQuerySchema.parse(request.query);
-    const cacheKey = ["companies", "suggest", query.q.toLowerCase(), query.limit].join(":");
+    const cacheKey = ["companies", "suggest", app.graphRepository.source, query.q.toLowerCase(), query.limit].join(":");
     const cached = await app.cacheClient.get(cacheKey);
 
     if (cached) {
@@ -72,23 +79,51 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
     return payload;
   });
 
-  app.get("/api/v1/companies", async (request) => {
+  app.get("/api/v1/companies", async (request, reply) => {
     const query = companyListQuerySchema.parse(request.query);
+    const cacheKey = [
+      "companies",
+      "list",
+      app.graphRepository.source,
+      query.q?.toLowerCase() ?? "all",
+      query.isMag7 ?? "all",
+      query.page,
+      query.pageSize,
+    ].join(":");
+    const cached = await app.cacheClient.get(cacheKey);
+
+    if (cached) {
+      reply.header("x-cache", "hit");
+      return JSON.parse(cached);
+    }
+
     const items = await app.graphRepository.listCompanies(query);
     const start = (query.page - 1) * query.pageSize;
     const pagedItems = items.slice(start, start + query.pageSize);
 
-    return {
+    const payload = {
       items: pagedItems,
       page: query.page,
       pageSize: query.pageSize,
       total: items.length,
       source: app.graphRepository.source,
     };
+
+    await app.cacheClient.set(cacheKey, JSON.stringify(payload), CACHE_TTL_SECONDS);
+    reply.header("x-cache", "miss");
+    return payload;
   });
 
   app.get("/api/v1/companies/:companyId", async (request, reply) => {
     const params = z.object({ companyId: z.string() }).parse(request.params);
+    const cacheKey = ["companies", "detail", app.graphRepository.source, params.companyId].join(":");
+    const cached = await app.cacheClient.get(cacheKey);
+
+    if (cached) {
+      reply.header("x-cache", "hit");
+      return JSON.parse(cached);
+    }
+
     const company = await app.graphRepository.getCompany(params.companyId);
 
     if (!company) {
@@ -99,14 +134,26 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
       };
     }
 
-    return {
+    const payload = {
       item: company,
       source: app.graphRepository.source,
     };
+
+    await app.cacheClient.set(cacheKey, JSON.stringify(payload), CACHE_TTL_SECONDS);
+    reply.header("x-cache", "miss");
+    return payload;
   });
 
   app.get("/api/v1/companies/:companyId/overview", async (request, reply) => {
     const params = z.object({ companyId: z.string() }).parse(request.params);
+    const cacheKey = ["companies", "overview", app.graphRepository.source, params.companyId].join(":");
+    const cached = await app.cacheClient.get(cacheKey);
+
+    if (cached) {
+      reply.header("x-cache", "hit");
+      return JSON.parse(cached);
+    }
+
     const overview = await app.graphRepository.getCompanyOverview(params.companyId);
 
     if (!overview) {
@@ -117,6 +164,8 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
       };
     }
 
+    await app.cacheClient.set(cacheKey, JSON.stringify(overview), CACHE_TTL_SECONDS);
+    reply.header("x-cache", "miss");
     return overview;
   });
 }
