@@ -93,6 +93,41 @@ describe("@mag7/contracts", () => {
     expect(parsed.company_entity_ref.entity_id).toBe("company:alphabet");
   });
 
+  it("coalesces metadata_date_published into canonical published_at date resolution", () => {
+    const parsed = standardizedImportRelationRecordSchema.parse({
+      relation_id: "rel:meta:lumus:component_supply:ray-ban-display-waveguide",
+      snapshot_id: "snapshot:2026-06-14.full.7",
+      company: "Meta",
+      company_slug: "meta",
+      supplier: "Lumus",
+      supplier_slug: "lumus",
+      tier: 1,
+      depth_from_mag7: 1,
+      relationship_type: "component_supply",
+      relationship_subtype: "AR display waveguide",
+      product_scope: ["waveguide"],
+      evidence_ids: ["evidence:meta:lumus:1"],
+      primary_evidence_id: "evidence:meta:lumus:1",
+      evidence_date: "2025-03-15",
+      evidence_date_resolution: "metadata_date_published",
+      evidence_excerpt: "Published metadata timestamp anchors the relation date.",
+      source_url: "https://example.com/meta-lumus",
+      confidence_label: "strong_evidence",
+      confidence_score: 0.8,
+      source_method: "metadata_anchor",
+      source_count: 1,
+      status: "approved",
+      summary: "Lumus supplies AR display waveguide components to Meta.",
+      lineage_key: "Meta|Lumus|component_supply|waveguide",
+      source_report_path: "output/evidence/meta-lumus.json",
+      last_verified_at: "2026-06-14T00:00:00.000Z",
+    });
+
+    expect(parsed.evidence_date_resolution).toBe("published_at");
+    expect(parsed.evidence_date_is_normalized).toBe(false);
+    expect(parsed.evidence_date_normalized).toBeUndefined();
+  });
+
   it("accepts v3 company alias profiles and evidence coverage fields", () => {
     const company = companySchema.parse({
       id: "company:GOOGL",

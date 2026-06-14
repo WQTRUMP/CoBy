@@ -203,4 +203,65 @@ describe("prepareNormalizedImport", () => {
       coverageEndResolution: "month",
     });
   });
+
+  it("coalesces metadata_date_published into published_at for importer compatibility", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:meta:lumus:component_supply:ray-ban-display-waveguide",
+          snapshot_id: "snapshot:2026-06-14.full.7",
+          company: "Meta",
+          company_slug: "meta",
+          supplier: "Lumus",
+          supplier_slug: "lumus",
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "component_supply",
+          relationship_subtype: "AR display waveguide",
+          product_scope: ["waveguide"],
+          evidence_ids: ["evidence:meta:lumus:1"],
+          primary_evidence_id: "evidence:meta:lumus:1",
+          evidence_date: "2025-03-15",
+          evidence_date_resolution: "metadata_date_published",
+          evidence_excerpt: "Published metadata timestamp anchors the relation date.",
+          source_url: "https://example.com/meta-lumus",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.8,
+          source_method: "metadata_anchor",
+          source_count: 1,
+          status: "approved",
+          summary: "Lumus supplies AR display waveguide components to Meta.",
+          lineage_key: "Meta|Lumus|component_supply|waveguide",
+          source_report_path: "output/evidence/meta-lumus.json",
+          last_verified_at: "2026-06-14T00:00:00.000Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:meta:lumus:1",
+          relation_id: "rel:meta:lumus:component_supply:ray-ban-display-waveguide",
+          source_type: "media",
+          title: "Meta device supply chain note",
+          publisher: "Example",
+          source_url: "https://example.com/meta-lumus",
+          source_domain: "example.com",
+          published_at: "2025-03-15",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-14T00:00:00.000Z",
+          excerpt: "Lumus components were identified in Meta smart glasses coverage.",
+          citation_text: "Lumus components were identified in Meta smart glasses coverage.",
+          reliability_tier: 2,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/meta-lumus.json",
+        },
+      ],
+    });
+
+    expect(prepared.relations[0]).toMatchObject({
+      evidenceDate: "2025-03-15",
+      evidenceDateResolution: "published_at",
+      evidenceDateNormalized: null,
+      evidenceDateIsNormalized: false,
+    });
+  });
 });

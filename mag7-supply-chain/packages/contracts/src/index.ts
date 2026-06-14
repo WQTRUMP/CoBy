@@ -341,8 +341,19 @@ export const relationEvidenceResponseSchema = z.object({
   source: backendSourceSchema,
 });
 
-const monthNormalizedResolutionLiteral = z.literal("month-normalized");
-const dateResolutionCompatSchema = z.union([dateResolutionSchema, monthNormalizedResolutionLiteral]);
+const legacyDateResolutionAliases = {
+  "month-normalized": "month",
+  metadata_date_published: "published_at",
+} as const;
+
+const legacyDateResolutionAliasSchema = z.enum([
+  "month-normalized",
+  "metadata_date_published",
+]);
+
+const dateResolutionCompatSchema = z
+  .union([dateResolutionSchema, legacyDateResolutionAliasSchema])
+  .transform((value) => legacyDateResolutionAliases[value as keyof typeof legacyDateResolutionAliases] ?? value);
 
 export const importEntityRefSchema = z.object({
   entity_id: z.string(),
@@ -405,9 +416,9 @@ const standardizedImportRelationRecordV3Schema = standardizedImportRelationRecor
 export const standardizedImportRelationRecordSchema = z
   .union([standardizedImportRelationRecordV2Schema, standardizedImportRelationRecordV3Schema])
   .transform((record) => {
-    const evidenceDateIsMonthNormalized = record.evidence_date_resolution === "month-normalized";
-    const validFromIsMonthNormalized = record.valid_from_resolution === "month-normalized";
-    const validToIsMonthNormalized = record.valid_to_resolution === "month-normalized";
+    const evidenceDateIsMonthNormalized = record.evidence_date_resolution === "month";
+    const validFromIsMonthNormalized = record.valid_from_resolution === "month";
+    const validToIsMonthNormalized = record.valid_to_resolution === "month";
 
     return {
       ...record,
@@ -423,7 +434,7 @@ export const standardizedImportRelationRecordSchema = z
           display_name: record.supplier,
           legal_entity_name: record.supplier,
         },
-      evidence_date_resolution: evidenceDateIsMonthNormalized ? "month" : record.evidence_date_resolution,
+      evidence_date_resolution: record.evidence_date_resolution,
       evidence_date_normalized:
         record.evidence_date_normalized ??
         (evidenceDateIsMonthNormalized ? record.evidence_date : null),
@@ -432,15 +443,11 @@ export const standardizedImportRelationRecordSchema = z
       valid_from_resolution:
         record.valid_from_resolution == null
           ? null
-          : validFromIsMonthNormalized
-            ? "month"
-            : record.valid_from_resolution,
+          : record.valid_from_resolution,
       valid_to_resolution:
         record.valid_to_resolution == null
           ? null
-          : validToIsMonthNormalized
-            ? "month"
-            : record.valid_to_resolution,
+          : record.valid_to_resolution,
     };
   });
 
@@ -470,10 +477,7 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   notes: z.string().nullable().optional(),
 }).transform((record) => ({
   ...record,
-  published_at_resolution:
-    record.published_at_resolution === "month-normalized"
-      ? "month"
-      : record.published_at_resolution,
+  published_at_resolution: record.published_at_resolution,
 }));
 
 export const standardizedImportPackageSchema = z.object({

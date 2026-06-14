@@ -688,6 +688,10 @@ function normalizeLegacyResolutionValue(value: unknown) {
     return "month";
   }
 
+  if (value === "metadata_date_published") {
+    return "published_at";
+  }
+
   if (value === "reported_period_end") {
     return "filing_period";
   }
