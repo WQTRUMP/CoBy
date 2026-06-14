@@ -2,33 +2,29 @@
   "requestId": "import-2026-06-14-aapl-sample",
   "source": "research_batch:aapl-2026q2",
   "dataVersion": "2026.06.14-01",
+  "schemaVersion": "mag7-supply-chain.import-relations.v1",
   "relations": [
     {
-      "sourceCompanyId": "company:TSMC",
-      "targetCompanyId": "company:AAPL",
-      "relationshipType": "manufacturing",
+      "company": "Apple",
+      "supplier": "TSMC",
       "tier": 1,
-      "depthFromMag7": 1,
-      "confidence": "strong_evidence",
-      "confidenceScore": 0.88,
-      "summary": "TSMC 为 Apple 提供先进制程晶圆代工能力。",
-      "lineageKey": "company:TSMC|company:AAPL|manufacturing|advanced-silicon",
-      "snapshotId": "snapshot:2026-06-14.1",
-      "evidence": [
-        {
-          "id": "evidence:tsmc-annual-2026",
-          "sourceType": "supplier_report",
-          "title": "TSMC Annual Report 2025",
-          "publisher": "TSMC",
-          "url": "https://investor.tsmc.com/english/annual-reports",
-          "publishedAt": "2026-04-19T00:00:00.000Z",
-          "retrievedAt": "2026-06-14T00:00:00.000Z",
-          "excerpt": "Leading-edge smartphone customers continued to rely on our advanced nodes.",
-          "pageRef": "Annual report",
-          "language": "en",
-          "hash": "sha256:tsmc-annual-2026"
-        }
-      ]
+      "relationship_type": "manufacturing",
+      "product_scope": "advanced silicon manufacturing",
+      "evidence_date": "2026-04-19T00:00:00.000Z",
+      "evidence_excerpt": "Leading-edge smartphone customers continued to rely on our advanced nodes.",
+      "source_url": "https://investor.tsmc.com/english/annual-reports",
+      "confidence_label": "strong_evidence",
+      "confidence_score": 0.88,
+      "notes": "Primary manufacturing inference reserved for normalized ingestion.",
+      "source_type": "supplier_report",
+      "source_title": "TSMC Annual Report 2025",
+      "source_publisher": "TSMC",
+      "evidence_page_ref": "Annual report",
+      "source_domain": "tsmc.com",
+      "parser_version": "manual-v1",
+      "reliability_tier": 1,
+      "depth_from_mag7": 1,
+      "snapshot_id": "snapshot:2026-06-14.1"
     }
   ]
 }

@@ -33,3 +33,7 @@ REQUIRE n.hash IS UNIQUE;
 CREATE CONSTRAINT snapshot_id IF NOT EXISTS
 FOR (n:Snapshot)
 REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT supply_relation_id IF NOT EXISTS
+FOR (n:SupplyRelation)
+REQUIRE n.id IS UNIQUE;

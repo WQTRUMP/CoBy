@@ -189,6 +189,8 @@ class Neo4jGraphRepository implements GraphRepository {
             confidence: String(relation.confidence) as SubgraphDTO["relations"][number]["confidence"],
             confidenceScore: Number(relation.confidenceScore),
             summary: String(relation.summary),
+            productScope: typeof relation.productScope === "string" ? relation.productScope : null,
+            notes: typeof relation.notes === "string" ? relation.notes : null,
             evidenceCount: Number(relation.evidenceCount ?? items.length),
             snapshotId: String(relation.snapshotId),
             status: String(relation.status) as SubgraphDTO["relations"][number]["status"],
@@ -207,6 +209,11 @@ class Neo4jGraphRepository implements GraphRepository {
                   pageRef: typeof evidence.pageRef === "string" ? evidence.pageRef : null,
                   language: String(evidence.language ?? "en"),
                   hash: String(evidence.hash),
+                  sourceDomain: String(evidence.sourceDomain ?? ""),
+                  citationText: String(evidence.citationText ?? evidence.excerpt ?? ""),
+                  reliabilityTier: Number(evidence.reliabilityTier ?? 4),
+                  licenseNote: typeof evidence.licenseNote === "string" ? evidence.licenseNote : null,
+                  parserVersion: String(evidence.parserVersion ?? "neo4j"),
                 }))
               : undefined,
           };

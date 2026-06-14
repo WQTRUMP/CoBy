@@ -68,6 +68,10 @@ describe("backend app", () => {
     expect(response.json()).toMatchObject({
       status: "degraded",
       service: "mag7-backend",
+      contracts: {
+        importSchemaVersion: "mag7-supply-chain.import-relations.v1",
+        mockGraphBoundary: true,
+      },
     });
   });
 
@@ -90,33 +94,21 @@ describe("backend app", () => {
         requestId: "import-test",
         source: "unit-test",
         dataVersion: "2026.06.14-01",
+        schemaVersion: "mag7-supply-chain.import-relations.v1",
         relations: [
           {
-            sourceCompanyId: "company:TSMC",
-            targetCompanyId: "company:AAPL",
-            relationshipType: "manufacturing",
+            company: "Apple",
+            supplier: "TSMC",
             tier: 1,
-            depthFromMag7: 1,
-            confidence: "strong_evidence",
-            confidenceScore: 0.88,
-            summary: "TSMC -> Apple",
-            lineageKey: "a",
-            snapshotId: "snapshot:2026-06-14.1",
-            evidence: [
-              {
-                id: "evidence:1",
-                sourceType: "supplier_report",
-                title: "Report",
-                publisher: "TSMC",
-                url: "https://example.com/report",
-                publishedAt: "2026-06-14T00:00:00.000Z",
-                retrievedAt: "2026-06-14T00:00:00.000Z",
-                excerpt: "Evidence",
-                pageRef: "1",
-                language: "en",
-                hash: "hash",
-              },
-            ],
+            relationship_type: "manufacturing",
+            product_scope: "advanced silicon manufacturing",
+            evidence_date: "2026-06-14T00:00:00.000Z",
+            evidence_excerpt: "Evidence",
+            source_url: "https://example.com/report",
+            confidence_label: "strong_evidence",
+            confidence_score: 0.88,
+            notes: "TSMC -> Apple",
+            source_type: "supplier_report",
           },
         ],
       },
@@ -126,6 +118,20 @@ describe("backend app", () => {
     expect(response.json()).toMatchObject({
       accepted: true,
       relationCount: 1,
+      schemaVersion: "mag7-supply-chain.import-relations.v1",
+    });
+  });
+
+  it("returns standardized import schema metadata", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/schema/import-relations",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schemaVersion: "mag7-supply-chain.import-relations.v1",
+      mode: "mock-ready",
     });
   });
 });

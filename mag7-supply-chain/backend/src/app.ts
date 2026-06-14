@@ -6,6 +6,7 @@ import { registerCompanyRoutes } from "./modules/companies/routes.js";
 import { registerGraphRoutes } from "./modules/graph/routes.js";
 import { registerHealthRoutes } from "./modules/health/routes.js";
 import { registerImportRoutes } from "./modules/imports/routes.js";
+import { registerSchemaRoutes } from "./modules/schema/routes.js";
 import type { GraphRepository, Neo4jHealth } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
 
@@ -32,6 +33,7 @@ export async function buildApp(options: AppOptions) {
   await registerCompanyRoutes(app);
   await registerGraphRoutes(app);
   await registerImportRoutes(app);
+  await registerSchemaRoutes(app);
 
   return app;
 }

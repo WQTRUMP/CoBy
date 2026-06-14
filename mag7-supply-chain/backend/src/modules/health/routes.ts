@@ -12,6 +12,10 @@ export async function registerHealthRoutes(app: FastifyInstance) {
       service: "mag7-backend",
       time: new Date().toISOString(),
       repositoryMode: app.graphRepository.source,
+      contracts: {
+        importSchemaVersion: "mag7-supply-chain.import-relations.v1",
+        mockGraphBoundary: app.graphRepository.source === "mock",
+      },
       dependencies: {
         neo4j,
         redis,

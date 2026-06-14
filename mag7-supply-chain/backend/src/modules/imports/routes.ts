@@ -10,9 +10,23 @@ export async function registerImportRoutes(app: FastifyInstance) {
     return {
       accepted: true,
       requestId: payload.requestId,
+      schemaVersion: payload.schemaVersion,
       relationCount: payload.relations.length,
       storageMode: "reserved",
-      nextStep: "persist to Neo4j/Object Storage pipeline",
+      reservedFields: [
+        "company",
+        "supplier",
+        "tier",
+        "relationship_type",
+        "product_scope",
+        "evidence_date",
+        "evidence_excerpt",
+        "source_url",
+        "confidence_label",
+        "confidence_score",
+        "notes",
+      ],
+      nextStep: "persist standardized package to Neo4j/Object Storage pipeline",
     };
   });
 }
