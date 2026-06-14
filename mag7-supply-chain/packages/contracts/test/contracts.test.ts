@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  companyListItemSchema,
+  companySearchResultItemSchema,
+  companySuggestItemSchema,
   companySchema,
   relationSchema,
   standardizedImportEvidenceRecordSchema,
@@ -161,6 +164,85 @@ describe("@mag7/contracts", () => {
     expect(company.displayName).toBe("Google");
     expect(company.entityProfile?.brands[0]?.aliasType).toBe("brand");
     expect(evidence.coverage_start_resolution).toBe("quarter");
+  });
+
+  it("preserves display-name semantics across company list, search, and suggest DTOs", () => {
+    const entityProfile = {
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      legalEntities: [
+        {
+          id: "alias:alphabet:google-llc",
+          name: "Google LLC",
+          normalizedName: "google llc",
+          aliasType: "legal_entity" as const,
+          isPrimary: true,
+        },
+      ],
+      brands: [
+        {
+          id: "alias:alphabet:google-cloud",
+          name: "Google Cloud",
+          normalizedName: "google cloud",
+          aliasType: "brand" as const,
+          isPrimary: true,
+        },
+      ],
+      aliases: [
+        {
+          id: "alias:alphabet:google",
+          name: "Google",
+          normalizedName: "google",
+          aliasType: "short_name" as const,
+          isPrimary: true,
+        },
+      ],
+    };
+
+    const listItem = companyListItemSchema.parse({
+      id: "company:GOOGL",
+      ticker: "GOOGL",
+      name: "Alphabet",
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      isMag7: true,
+      marketCapUsd: 2200000000000,
+      entityProfile,
+      primaryRegion: "US",
+      activeSnapshotId: "snapshot:2026-06-14.3",
+    });
+
+    const searchItem = companySearchResultItemSchema.parse({
+      ...listItem,
+      match: {
+        field: "alias",
+        value: "Google Cloud",
+        aliasType: "brand",
+        explanation: 'Matched brand "Google Cloud" for canonical "Alphabet" and display "Google".',
+      },
+    });
+
+    const suggestItem = companySuggestItemSchema.parse({
+      id: "company:GOOGL",
+      label: "Google",
+      secondaryLabel: "Alphabet",
+      ticker: "GOOGL",
+      isMag7: true,
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      entityProfile,
+      match: {
+        field: "alias",
+        value: "Google LLC",
+        aliasType: "legal_entity",
+        explanation: 'Matched legal entity "Google LLC" for canonical "Alphabet" and display "Google".',
+      },
+    });
+
+    expect(listItem.displayName).toBe("Google");
+    expect(listItem.entityProfile?.canonicalName).toBe("Alphabet");
+    expect(searchItem.match?.aliasType).toBe("brand");
+    expect(suggestItem.match?.explanation).toContain('display "Google"');
   });
 
   it("preserves relation evidence bindings in canonical DTOs", () => {
