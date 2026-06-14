@@ -283,7 +283,7 @@ describe("prepareNormalizedImport", () => {
           evidence_ids: ["evidence:tesla:nvidia:1"],
           primary_evidence_id: "evidence:tesla:nvidia:1",
           evidence_date: "2026-06-14",
-          evidence_date_resolution: "retrieved_at_surrogate",
+          evidence_date_resolution: "retrieved_at_only",
           evidence_excerpt: "Autopilot Nvidia kernel.",
           source_url: "https://example.com/tesla-additional-resources",
           confidence_label: "strong_evidence",
