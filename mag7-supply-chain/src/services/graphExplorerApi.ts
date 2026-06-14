@@ -1,26 +1,26 @@
 import {
-  companiesResponseSchema,
+  companyDetailResponseSchema,
+  companyListResponseSchema,
   companyOverviewSchema,
-  companyResponseSchema,
   relationEvidenceResponseSchema,
   subgraphQuerySchema,
-  subgraphResponseSchema,
-} from "../contracts/api";
+  subgraphSchema,
+} from "../../packages/contracts/src/index";
 import type {
-  CompanyDetailResponse,
-  CompanyListResponse,
+  CompanyDetailResponseDTO,
+  CompanyListResponseDTO,
   CompanyOverviewDTO,
-  RelationEvidenceResponse,
+  RelationEvidenceResponseDTO,
   SubgraphDTO,
   SubgraphQuery,
-} from "../contracts/api";
+} from "../../packages/contracts/src/index";
 
 export interface GraphExplorerApi {
-  listCompanies(query?: string): Promise<CompanyListResponse>;
-  getCompany(companyId: string): Promise<CompanyDetailResponse>;
+  listCompanies(query?: string): Promise<CompanyListResponseDTO>;
+  getCompany(companyId: string): Promise<CompanyDetailResponseDTO>;
   getCompanyOverview(companyId: string): Promise<CompanyOverviewDTO>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
-  getRelationEvidence(relationId: string): Promise<RelationEvidenceResponse>;
+  getRelationEvidence(relationId: string): Promise<RelationEvidenceResponseDTO>;
 }
 
 export const graphApiContract = {
@@ -39,12 +39,12 @@ export function createHttpGraphExplorerApi(baseUrl = ""): GraphExplorerApi {
         url.searchParams.set("q", query.trim());
       }
 
-      return request(url, companiesResponseSchema);
+      return request(url, companyListResponseSchema);
     },
     async getCompany(companyId) {
       return request(
         `${baseUrl}${graphApiContract.company.replace(":companyId", encodeURIComponent(companyId))}`,
-        companyResponseSchema,
+        companyDetailResponseSchema,
       );
     },
     async getCompanyOverview(companyId) {
@@ -68,7 +68,7 @@ export function createHttpGraphExplorerApi(baseUrl = ""): GraphExplorerApi {
         url.searchParams.append("relationshipTypes", relationshipType);
       }
 
-      return request(url, subgraphResponseSchema);
+      return request(url, subgraphSchema);
     },
     async getRelationEvidence(relationId) {
       return request(

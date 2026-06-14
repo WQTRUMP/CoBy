@@ -1,15 +1,15 @@
 import type {
   CompanyDetailDTO,
-  CompanyDetailResponse,
   CompanyListItemDTO,
-  CompanyListResponse,
+  CompanyListResponseDTO,
   CompanyOverviewDTO,
+  CompanyDetailResponseDTO,
   EvidenceDTO,
   RelationDTO,
-  RelationEvidenceResponse,
+  RelationEvidenceResponseDTO,
   SnapshotDTO,
   SubgraphDTO,
-} from "../contracts/api";
+} from "../../packages/contracts/src/index";
 
 const snapshot: SnapshotDTO = {
   id: "snapshot:2026-06-14.1",
@@ -271,7 +271,7 @@ const overviewByCompanyId: Record<string, CompanyOverviewDTO> = {
   },
 };
 
-export function getCompaniesResponse(query?: string): CompanyListResponse {
+export function getCompaniesResponse(query?: string): CompanyListResponseDTO {
   const normalized = query?.trim().toLowerCase();
   const items = normalized
     ? companyListItems.filter(
@@ -290,7 +290,7 @@ export function getCompaniesResponse(query?: string): CompanyListResponse {
   };
 }
 
-export function getCompanyResponse(companyId: string): CompanyDetailResponse {
+export function getCompanyResponse(companyId: string): CompanyDetailResponseDTO {
   return {
     item: getCompany(companyId),
     source: "mock",
@@ -319,7 +319,7 @@ export function getSubgraphResponse(companyId: string, depth: number, includeEvi
   };
 }
 
-export function getRelationEvidenceResponse(relationId: string): RelationEvidenceResponse {
+export function getRelationEvidenceResponse(relationId: string): RelationEvidenceResponseDTO {
   const relation = subgraph.relations.find((item) => item.id === relationId);
 
   return {

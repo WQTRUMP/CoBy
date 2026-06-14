@@ -29,6 +29,11 @@
    - schema version moved from `mag7-supply-chain.import-relations.v1` to `mag7-supply-chain.import-relations.v2`.
    - `product_scope` is now a required array.
    - normalized relation records preserve `relation_id`, `evidence_ids`, `primary_evidence_id`, `relationship_subtype`, `source_method`, `source_count`, `status`, `summary`, `lineage_key`, `source_report_path`, and `last_verified_at`.
+   - `relationship_type` is intentionally open-string in the shared contract so newly promoted edge categories do not get blocked by stale frontend/backend enums.
+
+6. Package consumption
+   - frontend and backend must import contracts via `@mag7/contracts`, not `packages/contracts/src/index`.
+   - Neo4j persistence should bind companies and evidence through `SOURCE_OF`, `TARGET_OF`, and `SUPPORTED_BY` edges; do not depend on mirrored join fields in API DTOs or query consumers.
 
 ## Frontend Follow-up
 

@@ -18,7 +18,7 @@ export function StatusStrip({ graph }: StatusStripProps) {
       <div className="statusCard light">
         <Graph size={18} />
         <div>
-          <strong>{graph.company.stats.supplierCount}</strong>
+          <strong>{graph.focusCompany.overview.supplierCount}</strong>
           <span>Suppliers mapped</span>
         </div>
       </div>
@@ -32,7 +32,7 @@ export function StatusStrip({ graph }: StatusStripProps) {
       <div className="statusCard light">
         <GlobeHemisphereWest size={18} />
         <div>
-          <strong>{graph.company.primaryRegion}</strong>
+          <strong>{graph.focusCompany.primaryRegion}</strong>
           <span>Current focus region</span>
         </div>
       </div>

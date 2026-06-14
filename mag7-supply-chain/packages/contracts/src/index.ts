@@ -4,16 +4,18 @@ export const backendSourceSchema = z.enum(["neo4j", "mock"]);
 export const confidenceSchema = z.enum(["confirmed", "strong_evidence", "inferred"]);
 export const relationStatusSchema = z.enum(["draft", "approved", "deprecated", "disputed"]);
 
-export const sourceTypeSchema = z.enum([
+export const knownSourceTypes = [
   "10k",
   "earnings_call",
   "supplier_report",
   "media",
   "industry_report",
   "press_release",
-]);
+ ] as const;
 
-export const relationshipTypeSchema = z.enum([
+export const sourceTypeSchema = z.enum(knownSourceTypes);
+
+export const knownRelationshipTypes = [
   "component_supply",
   "raw_material_supply",
   "manufacturing",
@@ -23,11 +25,13 @@ export const relationshipTypeSchema = z.enum([
   "equipment_supply",
   "software_dependency",
   "channel_partner",
-]);
+ ] as const;
+
+export const relationshipTypeSchema = z.string().min(1);
 
 export const snapshotStatusSchema = z.enum(["draft", "review", "published", "archived"]);
 
-export const entityTypeSchema = z.enum([
+export const knownEntityTypes = [
   "Company",
   "Facility",
   "Product",
@@ -36,7 +40,9 @@ export const entityTypeSchema = z.enum([
   "SupplyRelation",
   "Evidence",
   "Snapshot",
-]);
+] as const;
+
+export const entityTypeSchema = z.enum(knownEntityTypes);
 
 export const companySchema = z.object({
   id: z.string(),
@@ -318,9 +324,9 @@ export const importRelationsFieldCatalog = [
   },
   {
     name: "relationship_type",
-    type: "enum",
+    type: "string",
     required: true,
-    description: "Normalized supply-chain relationship type.",
+    description: "Normalized supply-chain relationship type. Open string to avoid blocking newly promoted edge categories.",
   },
   {
     name: "relationship_subtype",

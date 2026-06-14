@@ -56,7 +56,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
       <div className="graphViewport">
         <div className="graphViewportOverlay" />
         <div className="graphDust" />
-        <svg viewBox="0 0 100 100" role="img" aria-label={`${graph.company.name} supply chain graph`}>
+        <svg viewBox="0 0 100 100" role="img" aria-label={`${graph.focusCompany.name} supply chain graph`}>
           <g transform={`scale(${zoom}) translate(${(1 - zoom) * 50} ${(1 - zoom) * 50})`}>
             {graph.relations.map((relation) => {
               const source = graph.nodes.find((node) => node.id === relation.sourceId);

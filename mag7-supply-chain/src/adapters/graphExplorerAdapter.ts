@@ -1,16 +1,17 @@
 import type {
+  CompanyDetailResponseDTO,
   CompanyDetailDTO,
-  CompanyDetailResponse,
   CompanyListItemDTO,
-  CompanyListResponse,
+  CompanyListResponseDTO,
   CompanyOverviewDTO,
   EvidenceDTO,
   RelationDTO,
-  RelationEvidenceResponse,
+  RelationEvidenceResponseDTO,
   SubgraphDTO,
-} from "../contracts/api";
+} from "../../packages/contracts/src/index";
 import type {
   CompanyOptionViewModel,
+  CompanyOverviewViewModel,
   CompanyProfileViewModel,
   EvidenceSummaryViewModel,
   EvidenceViewModel,
@@ -38,35 +39,74 @@ const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], Gr
   Material: "material",
 };
 
-export function adaptCompanyOptions(response: CompanyListResponse): CompanyOptionViewModel[] {
+export function adaptCompanyOptions(response: CompanyListResponseDTO): CompanyOptionViewModel[] {
   return response.items.map(adaptCompanyOption);
 }
 
+export function adaptCompanyOverview(overview: CompanyOverviewDTO): CompanyOverviewViewModel {
+  return {
+    companyId: overview.companyId,
+    companyName: overview.companyName,
+    activeSnapshotId: overview.activeSnapshotId,
+    supplierCount: overview.supplierCount,
+    tier1SupplierCount: overview.tier1SupplierCount,
+    relationCount: overview.totalRelations,
+    evidenceCount: overview.evidenceCount,
+    criticalDependencyCount: overview.highRiskRelationCount,
+    evidenceCoverage: overview.evidenceCoverage,
+    lastUpdated: overview.lastUpdatedAt,
+    source: overview.source,
+  };
+}
+
+export function adaptCompanyProfile(
+  response: CompanyDetailResponseDTO,
+  overview: CompanyOverviewDTO,
+): CompanyProfileViewModel {
+  const company = response.item;
+  const option = adaptCompanyOption(company);
+  const overviewView = adaptCompanyOverview(overview);
+
+  return {
+    ...option,
+    summary: company.summary ?? company.description ?? `${company.name} supply-chain overview.`,
+    overview: overviewView,
+    apiBindings: {
+      companyEndpoint: `/api/v1/companies/${company.id}`,
+      overviewEndpoint: `/api/v1/companies/${company.id}/overview`,
+      graphEndpoint: `/api/v1/graph/subgraph?companyId=${encodeURIComponent(company.id)}`,
+      evidenceEndpoint: "/api/v1/relations/:relationId/evidence",
+    },
+    lastUpdated: company.lastUpdatedAt ?? overview.lastUpdatedAt,
+    source: response.source,
+  };
+}
+
 export function adaptGraphViewModel(input: {
-  company: CompanyDetailResponse;
+  company: CompanyDetailResponseDTO;
   overview: CompanyOverviewDTO;
   subgraph: SubgraphDTO;
   query: GraphQuery;
 }): GraphViewModel {
-  const company = adaptCompanyProfile(input.company.item, input.overview, input.company.source);
-  const layout = buildNodeLayout(input.subgraph.nodes, input.subgraph.relations, company.id);
-  const visibleNodeIds = selectVisibleNodeIds(layout, input.subgraph.relations, company.id, input.query.search);
+  const focusCompany = adaptCompanyProfile(input.company, input.overview);
+  const layout = buildNodeLayout(input.subgraph.nodes, input.subgraph.relations, focusCompany.id);
+  const visibleNodeIds = selectVisibleNodeIds(layout, input.subgraph.relations, focusCompany.id, input.query.search);
   const nodes = layout.filter((node) => visibleNodeIds.has(node.id));
   const relations = input.subgraph.relations
     .filter((relation) => visibleNodeIds.has(relation.sourceId) && visibleNodeIds.has(relation.targetId))
-    .map((relation) => adaptRelation(relation, company.id));
+    .map((relation) => adaptRelation(relation, focusCompany.id));
 
   return {
     snapshot: input.subgraph.snapshot,
-    company,
+    focusCompany,
     nodes,
     relations,
-    evidenceSummary: summarizeEvidence(relations),
+    evidenceOverview: summarizeEvidence(relations),
   };
 }
 
 export function adaptRelationEvidence(
-  response: RelationEvidenceResponse,
+  response: RelationEvidenceResponseDTO,
   relation: Pick<RelationDTO, "confidence">,
 ): EvidenceViewModel[] {
   return response.items.map((item) => adaptEvidence(item, relation.confidence));
@@ -82,35 +122,6 @@ function adaptCompanyOption(company: CompanyListItemDTO): CompanyOptionViewModel
     primaryRegion: company.primaryRegion,
     marketCapUsd: company.marketCapUsd,
     isMag7: company.isMag7,
-  };
-}
-
-function adaptCompanyProfile(
-  company: CompanyDetailDTO,
-  overview: CompanyOverviewDTO,
-  source: "mock" | "neo4j",
-): CompanyProfileViewModel {
-  const option = adaptCompanyOption(company);
-
-  return {
-    ...option,
-    summary: company.summary ?? company.description ?? `${company.name} supply-chain overview.`,
-    stats: {
-      supplierCount: overview.supplierCount,
-      tier1SupplierCount: overview.tier1SupplierCount,
-      relationCount: overview.totalRelations,
-      evidenceCount: overview.evidenceCount,
-      criticalDependencyCount: overview.highRiskRelationCount,
-      evidenceCoverage: overview.evidenceCoverage,
-    },
-    apiBindings: {
-      companyEndpoint: `/api/v1/companies/${company.id}`,
-      overviewEndpoint: `/api/v1/companies/${company.id}/overview`,
-      graphEndpoint: `/api/v1/graph/subgraph?companyId=${encodeURIComponent(company.id)}`,
-      evidenceEndpoint: "/api/v1/relations/:relationId/evidence",
-    },
-    lastUpdated: company.lastUpdatedAt ?? overview.lastUpdatedAt,
-    source,
   };
 }
 

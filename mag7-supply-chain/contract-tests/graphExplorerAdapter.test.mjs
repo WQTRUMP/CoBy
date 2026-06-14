@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { adaptCompanyOptions, adaptGraphViewModel, adaptRelationEvidence } from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
+import {
+  adaptCompanyOptions,
+  adaptCompanyOverview,
+  adaptCompanyProfile,
+  adaptGraphViewModel,
+  adaptRelationEvidence,
+} from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
 import {
   getCompaniesResponse,
   getCompanyOverviewResponse,
@@ -37,10 +43,54 @@ test("preserves non-direct relations, notes, tier, and evidence aggregation in t
   assert.equal(upstreamRelation.notes, "This non-direct edge must stay visible when the subgraph includes upstream chains.");
   assert.deepEqual(upstreamRelation.productScope, ["Lithium compounds"]);
 
-  assert.deepEqual(graph.evidenceSummary, {
+  assert.equal(graph.focusCompany.overview.relationCount, 3);
+  assert.deepEqual(graph.evidenceOverview, {
     confirmed: 2,
     strongEvidence: 3,
     inferred: 0,
+  });
+});
+
+test("maps company detail and overview into a dedicated company profile view-model", () => {
+  const company = adaptCompanyProfile(getCompanyResponse("company:TSLA"), getCompanyOverviewResponse("company:TSLA"));
+  const overview = adaptCompanyOverview(getCompanyOverviewResponse("company:TSLA"));
+
+  assert.equal(company.id, "company:TSLA");
+  assert.equal(company.overview.evidenceCoverage, 1);
+  assert.equal(company.apiBindings.overviewEndpoint, "/api/v1/companies/company:TSLA/overview");
+  assert.equal(overview.source, "mock");
+});
+
+test("aggregates confirmed, strong evidence, and inferred counts without reading raw evidence ids", () => {
+  const subgraph = getSubgraphResponse("company:TSLA", 2, true);
+  subgraph.relations.push({
+    ...subgraph.relations[0],
+    id: "rel:tesla-inferred",
+    sourceId: "company:TSLA",
+    targetId: "company:Ganfeng",
+    confidence: "inferred",
+    confidenceScore: 0.34,
+    summary: "Inferred upstream dependence for test coverage.",
+    evidence: [],
+    evidenceCount: 1,
+    evidenceIds: [],
+  });
+
+  const graph = adaptGraphViewModel({
+    company: getCompanyResponse("company:TSLA"),
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph,
+    query: {
+      companyId: "company:TSLA",
+      depth: 2,
+      search: "",
+    },
+  });
+
+  assert.deepEqual(graph.evidenceOverview, {
+    confirmed: 2,
+    strongEvidence: 3,
+    inferred: 1,
   });
 });
 

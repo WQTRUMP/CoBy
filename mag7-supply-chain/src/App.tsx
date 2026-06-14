@@ -5,10 +5,9 @@ import { StatusStrip } from "./components/StatusStrip";
 import { TopBar } from "./components/TopBar";
 import { useGraphExplorer } from "./hooks/useGraphExplorer";
 import { createHttpGraphExplorerApi } from "./services/graphExplorerApi";
-import { mockGraphExplorerApi } from "./services/mockGraphExplorerApi";
 import type { EvidenceViewModel, GraphNodeViewModel, GraphRelationViewModel } from "./types/viewModels";
 
-const graphExplorerApi = import.meta.env.VITE_USE_MOCK_API === "true" ? mockGraphExplorerApi : createHttpGraphExplorerApi();
+const graphExplorerApi = createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? "");
 
 export function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState("company:TSLA");
@@ -66,7 +65,7 @@ export function App() {
     }
 
     if (!graph.nodes.some((node) => node.id === activeNodeId)) {
-      setActiveNodeId(graph.company.id);
+      setActiveNodeId(graph.focusCompany.id);
     }
 
     if (activeRelationId && !graph.relations.some((relation) => relation.id === activeRelationId)) {
@@ -168,9 +167,9 @@ export function App() {
           activeNode={activeNode}
           activeRelation={activeRelation}
           activeTab={activeTab}
-          company={graph.company}
+          company={graph.focusCompany}
           evidence={activeEvidence}
-          evidenceSummary={graph.evidenceSummary}
+          evidenceSummary={graph.evidenceOverview}
           onRelationSelect={handleRelationSelect}
           onTabChange={setActiveTab}
           relations={graph.relations}

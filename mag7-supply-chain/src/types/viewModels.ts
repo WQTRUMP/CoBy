@@ -1,4 +1,4 @@
-import type { EvidenceDTO, RelationDTO, SnapshotDTO } from "../contracts/api";
+import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO } from "../../packages/contracts/src/index";
 
 export interface GraphQuery {
   companyId: string;
@@ -19,14 +19,7 @@ export interface CompanyOptionViewModel {
 
 export interface CompanyProfileViewModel extends CompanyOptionViewModel {
   summary: string;
-  stats: {
-    supplierCount: number;
-    tier1SupplierCount: number;
-    relationCount: number;
-    evidenceCount: number;
-    criticalDependencyCount: number;
-    evidenceCoverage: number;
-  };
+  overview: CompanyOverviewViewModel;
   apiBindings: {
     companyEndpoint: string;
     overviewEndpoint: string;
@@ -34,7 +27,21 @@ export interface CompanyProfileViewModel extends CompanyOptionViewModel {
     evidenceEndpoint: string;
   };
   lastUpdated: string | null;
-  source: "mock" | "neo4j";
+  source: BackendSource;
+}
+
+export interface CompanyOverviewViewModel {
+  companyId: string;
+  companyName: string;
+  activeSnapshotId: string | null;
+  supplierCount: number;
+  tier1SupplierCount: number;
+  relationCount: number;
+  evidenceCount: number;
+  criticalDependencyCount: number;
+  evidenceCoverage: number;
+  lastUpdated: string | null;
+  source: BackendSource;
 }
 
 export type GraphNodeKind = "company" | "facility" | "product" | "technology" | "material";
@@ -91,8 +98,8 @@ export interface EvidenceSummaryViewModel {
 
 export interface GraphViewModel {
   snapshot: SnapshotDTO;
-  company: CompanyProfileViewModel;
+  focusCompany: CompanyProfileViewModel;
   nodes: GraphNodeViewModel[];
   relations: GraphRelationViewModel[];
-  evidenceSummary: EvidenceSummaryViewModel;
+  evidenceOverview: EvidenceSummaryViewModel;
 }

@@ -81,7 +81,7 @@ export function TopBar(props: TopBarProps) {
 
         <article className="heroCanvasCard">
           <div className="heroCanvasCopy">
-            <span>{graph.company.shortName} live focus</span>
+            <span>{graph.focusCompany.shortName} live focus</span>
             <button className="headerAction secondary" type="button">
               <SlidersHorizontal size={16} />
               Filters
@@ -90,7 +90,7 @@ export function TopBar(props: TopBarProps) {
           <div className="heroCanvasGlow">
             <div className="heroOrbit heroOrbitPrimary" />
             <div className="heroOrbit heroOrbitSecondary" />
-            <div className="heroFocusBadge">{graph.company.ticker}</div>
+            <div className="heroFocusBadge">{graph.focusCompany.ticker}</div>
           </div>
         </article>
       </section>

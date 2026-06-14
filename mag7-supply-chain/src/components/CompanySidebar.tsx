@@ -71,8 +71,8 @@ export function CompanySidebar(props: CompanySidebarProps) {
             <div className="detailMetricGrid">
               <MetricCard icon={<Buildings size={18} />} label="Primary region" value={company.primaryRegion} />
               <MetricCard icon={<ChartBar size={18} />} label="Market cap" value={formatCurrency(company.marketCapUsd)} />
-              <MetricCard icon={<Stack size={18} />} label="Relations" value={`${company.stats.relationCount}`} />
-              <MetricCard icon={<Database size={18} />} label="Critical deps" value={`${company.stats.criticalDependencyCount}`} />
+              <MetricCard icon={<Stack size={18} />} label="Relations" value={`${company.overview.relationCount}`} />
+              <MetricCard icon={<Database size={18} />} label="Critical deps" value={`${company.overview.criticalDependencyCount}`} />
             </div>
 
             <div className="detailCard">
