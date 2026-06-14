@@ -46,7 +46,7 @@ describe("runtime startup", () => {
   }, 30_000);
 
   it(
-    "starts listening and reports degraded health when configured redis is unreachable",
+    "defaults to live mode and returns 503 business errors instead of mock when dependencies are missing",
     async () => {
       const port = 4311;
       const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
@@ -73,7 +73,7 @@ describe("runtime startup", () => {
       });
 
       const deadline = Date.now() + 8_000;
-      let response: Response | null = null;
+      let healthResponse: Response | null = null;
 
       while (Date.now() < deadline) {
         if (child.exitCode !== null) {
@@ -83,7 +83,7 @@ describe("runtime startup", () => {
         }
 
         try {
-          response = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
           break;
         } catch {
           await new Promise((resolve) => {
@@ -92,32 +92,152 @@ describe("runtime startup", () => {
         }
       }
 
-      expect(response, `server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
-      expect(response!.status).toBe(200);
+      expect(healthResponse, `server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
+      expect(healthResponse!.status).toBe(200);
       expect(Date.now() - startedAt, `server startup exceeded budget\nstdout:\n${stdout}\nstderr:\n${stderr}`).toBeLessThan(
         2_500,
       );
 
-      const payload = (await response!.json()) as {
+      const healthPayload = (await healthResponse!.json()) as {
         status: string;
+        runtimeMode: string;
+        repositoryMode: string;
         dependencies: {
+          neo4j: {
+            status: string;
+            required: boolean;
+            detail: string;
+          };
           redis: {
             status: string;
+            required: boolean;
             enabled: boolean;
             detail: string;
           };
         };
       };
 
-      expect(payload).toMatchObject({
+      expect(healthPayload).toMatchObject({
         status: "degraded",
+        runtimeMode: "live",
+        repositoryMode: "neo4j",
         dependencies: {
+          neo4j: {
+            status: "not_configured",
+            required: true,
+            detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+          },
           redis: {
             status: "down",
+            required: true,
             enabled: false,
             detail: expect.stringContaining("cache disabled"),
           },
         },
+      });
+
+      const companiesResponse = await fetch(`http://127.0.0.1:${port}/api/v1/companies?isMag7=true&page=1&pageSize=2`);
+      expect(companiesResponse.status).toBe(503);
+      await expect(companiesResponse.json()).resolves.toMatchObject({
+        error: "dependency_unavailable",
+        dependency: "neo4j",
+        message: "Live graph mode requires a reachable Neo4j dependency.",
+        detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+      });
+    },
+    15_000,
+  );
+
+  it(
+    "allows explicit prototype mode to serve mock data when Neo4j and Redis are absent",
+    async () => {
+      const port = 4312;
+      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
+        cwd: backendDir,
+        env: {
+          ...process.env,
+          HOST: "127.0.0.1",
+          PORT: String(port),
+          GRAPH_RUNTIME_MODE: "prototype",
+          REDIS_URL: "",
+          NEO4J_URI: "",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      childProcesses.add(child);
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      const deadline = Date.now() + 8_000;
+      let healthResponse: Response | null = null;
+
+      while (Date.now() < deadline) {
+        if (child.exitCode !== null) {
+          throw new Error(
+            `server exited before prototype health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
+          );
+        }
+
+        try {
+          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+          break;
+        } catch {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 200);
+          });
+        }
+      }
+
+      expect(healthResponse, `prototype server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
+      expect(healthResponse!.status).toBe(200);
+
+      const healthPayload = (await healthResponse!.json()) as {
+        runtimeMode: string;
+        repositoryMode: string;
+        contracts: {
+          mockGraphBoundary: boolean;
+        };
+        dependencies: {
+          neo4j: {
+            status: string;
+            required: boolean;
+          };
+          redis: {
+            status: string;
+            required: boolean;
+          };
+        };
+      };
+
+      expect(healthPayload).toMatchObject({
+        runtimeMode: "prototype",
+        repositoryMode: "mock",
+        contracts: {
+          mockGraphBoundary: true,
+        },
+        dependencies: {
+          neo4j: {
+            status: "not_configured",
+            required: false,
+          },
+          redis: {
+            status: "not_configured",
+            required: false,
+          },
+        },
+      });
+
+      const companiesResponse = await fetch(`http://127.0.0.1:${port}/api/v1/companies?isMag7=true&page=1&pageSize=2`);
+      expect(companiesResponse.status).toBe(200);
+      await expect(companiesResponse.json()).resolves.toMatchObject({
+        source: "mock",
       });
     },
     15_000,

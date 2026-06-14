@@ -51,7 +51,7 @@ const cacheClient: CacheClient = {
     cache.delete(key);
   },
   async health() {
-    return { status: "up", enabled: true, detail: "test cache" };
+    return { status: "up", enabled: true, detail: "test cache", required: true };
   },
   async close() {},
 };
@@ -559,12 +559,14 @@ beforeAll(async () => {
   const neo4jHealth = async (): Promise<Neo4jHealth> => ({
     status: "up",
     detail: "full-package sample repository",
+    required: true,
   });
 
   app = await buildApp({
     cacheClient,
     graphRepository,
     neo4jHealth,
+    runtimeMode: "live",
   });
 });
 

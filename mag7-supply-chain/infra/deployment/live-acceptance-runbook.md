@@ -12,6 +12,7 @@
 
 - `prototype`：已具备发布条件，但允许 `mock / degraded`。
 - `real_data_launch`：截至 `2026-06-14` 仍未通过，唯一保留阻塞是缺少一次可复验的 live `Neo4j/Redis` 导入与 HTTP 闭环。
+- `preview/default` 的 `/api` 代理：截至 `2026-06-14` 已修复为返回后端 JSON，不再回退 `index.html`；但默认运行态仍是 `repositoryMode = "mock"` / 业务 `source = "mock"`，因此这只能证明代理链路修复，不能证明 live 数据链路通过。
 - 当前工作机不能执行这套 live 闭环，原因见第 10 节。
 
 ## 3. 版本与运行时要求
@@ -67,6 +68,19 @@ REDIS_PORT=6379
 CORS_ORIGIN=http://127.0.0.1:5174
 ```
 
+### 4.3 preview/default 基线口径
+
+外部验收方需要区分两个层次：
+
+1. `preview/default` 代理基线
+   - 目标：确认 `/api` 入口返回 JSON，而不是前端 `index.html`
+   - 当前已知可接受现象：
+     - `GET /api/v1/health` 返回 HTTP `200` + JSON
+     - `GET /api` 返回 HTTP `404` + JSON
+2. live/验收模式基线
+   - 目标：确认后端连接真实 `Neo4j + Redis`
+   - 如果仍看到 `repositoryMode = "mock"` 或业务 `source = "mock"`，则说明停留在 prototype，不能作为 `real_data_launch` 通过证据
+
 ## 5. 验收输入
 
 ### 5.1 仓库根目录
@@ -104,12 +118,14 @@ CORS_ORIGIN=http://127.0.0.1:5174
 满足以下任一组合即可：
 
 1. 前端和后端可构建，后端 `GET /api/v1/health` 返回 `200`，即使 `status=degraded` 也允许。
-2. 后端在 `mock` 或依赖降级模式下能返回结构化接口数据。
+2. Vite `preview/default` 下 `/api` 返回 JSON，而非 `index.html`。
+3. 后端在 `mock` 或依赖降级模式下能返回结构化接口数据。
 
 以下情况仍然只算 `prototype`，不能升级为 `real_data_launch`：
 
 - `repositoryMode=mock`
 - 导入命令输出 `source: "mock"`
+- `preview/default` 的 `/api` 虽已返回 JSON，但对应业务接口仍为 `source: "mock"`
 - `health.status=degraded`
 - `dependencies.neo4j.status != "up"`
 - `dependencies.redis.status != "up"`
@@ -138,16 +154,22 @@ CORS_ORIGIN=http://127.0.0.1:5174
    - `/api/v1/graph/stats?...`
    - `/api/v1/relations/<relationId>/evidence`
 5. 需要带 `source` 的业务响应必须是 `source = "neo4j"`。
-6. 不能把 in-memory `real-shape` 测试、mock 返回、degraded 健康状态表述成 live Neo4j/Redis 验收通过。
+6. live/验收模式不得静默回退到 `mock`。如果显式提供 `NEO4J_URI`（以及要求中的 `REDIS_URL`）但依赖不可达，允许的失败语义只有：
+   - `/api/v1/health` 仍可返回 HTTP `200`，但必须是 `status = "degraded"`，并显式暴露 `dependencies.neo4j.status != "up"` 或 `dependencies.redis.status != "up"`
+   - 业务接口返回 HTTP `503` + `error = "dependency_unavailable"`
+   - 不能返回 HTTP `200` + `source = "mock"` 伪装成成功
+7. 不能把 in-memory `real-shape` 测试、mock 返回、degraded 健康状态表述成 live Neo4j/Redis 验收通过。
 
 ## 7. 推荐执行顺序
 
 1. 安装依赖并构建 contracts / backend。
-2. 拉起 `Neo4j 5.26` 与 `Redis 7.4`。
-3. 运行全量包导入。
-4. 启动后端。
-5. 逐条执行 HTTP 验收命令。
-6. 若所有命令满足第 6.2 节，才可把结论改成 `real_data_launch 通过`。
+2. 先执行一次 `preview/default` JSON 基线检查，确认 `/api` 不再回退 `index.html`。
+3. 拉起 `Neo4j 5.26` 与 `Redis 7.4`。
+4. 运行全量包导入。
+5. 启动后端。
+6. 先执行一次“显式 live 模式失败语义检查”。
+7. 再逐条执行 HTTP 验收命令。
+8. 若所有命令满足第 6.2 节，才可把结论改成 `real_data_launch 通过`。
 
 完整命令见同目录：
 
@@ -156,6 +178,25 @@ infra/deployment/live-acceptance-commands.sh
 ```
 
 ## 8. 预期成功返回
+
+### 8.1 preview/default JSON 基线
+
+截至 `2026-06-14`，以下结果表示 `/api` 代理已修复：
+
+- `GET /api/v1/health`
+  - HTTP `200`
+  - `content-type: application/json`
+- `GET /api`
+  - HTTP `404`
+  - `content-type: application/json`
+
+但如果健康检查或业务返回同时包含以下任一现象，则仍只是 prototype：
+
+- `repositoryMode = "mock"`
+- `contracts.mockGraphBoundary = true`
+- 业务接口 `source = "mock"`
+
+### 8.2 live 成功信号
 
 以下字段是关键成功信号：
 
@@ -294,6 +335,14 @@ infra/deployment/live-acceptance-commands.sh
 2. `dependencies.redis.status != "up"`
    - 服务可能仍可监听并提供业务返回，但只算降级；`real_data_launch` 仍不通过。
 
+如果同时出现：
+
+- `repositoryMode = "neo4j"`
+- `contracts.mockGraphBoundary = false`
+- `dependencies.neo4j.status = "down"` 或 `dependencies.redis.status = "down"`
+
+则这属于“显式 live 模式失败”，是可接受的失败信号；它证明系统没有静默回退到 mock，但仍不能判定通过。
+
 ### 9.4 业务接口返回 `503 dependency_unavailable`
 
 含义：
@@ -327,6 +376,37 @@ infra/deployment/live-acceptance-commands.sh
 该情况结论：
 
 - 不算 live 验收通过。
+- 如果 `source = "mock"`，还应追加结论：
+  - `/api` 代理虽然存在且可用，但系统仍停留在 prototype/default mock 运行态
+  - 必须回到环境变量与依赖就绪检查，不能继续做 live 通过判定
+
+### 9.7 显式 live 环境变量已设置，但业务接口返回 `503 dependency_unavailable`
+
+这是截至 `2026-06-14` 与 `full.8` 复验、以及 CEO 指定的 9f2ed7cd 后续口径一致的预期失败语义：
+
+1. `GET /api/v1/health`
+   - HTTP `200`
+   - `status = "degraded"`
+   - `repositoryMode = "neo4j"`
+   - `contracts.mockGraphBoundary = false`
+2. 以下业务接口
+   - `companies`
+   - `detail`
+   - `overview`
+   - `search`
+   - `suggest`
+   - `subgraph`
+   - `path`
+   - `stats`
+   - `evidence`
+   返回 HTTP `503`，正文包含 `error = "dependency_unavailable"`
+
+该语义说明：
+
+- 系统已进入 live 验收分支；
+- 失败根因是 Neo4j/Redis 依赖不可达；
+- 这比静默返回 mock 更正确；
+- 但 `real_data_launch` 仍不通过。
 
 ## 10. 为什么当前本机无法执行 live 闭环
 

@@ -22,7 +22,7 @@ const cacheClient: CacheClient = {
     cache.delete(key);
   },
   async health() {
-    return { status: "up", enabled: true, detail: "test cache" };
+    return { status: "up", enabled: true, detail: "test cache", required: false };
   },
   async close() {},
 };
@@ -181,6 +181,7 @@ beforeAll(async () => {
   const neo4jHealth = async (): Promise<Neo4jHealth> => ({
     status: "not_configured",
     detail: "test mode",
+    required: false,
   });
 
   app = await buildApp({
@@ -206,6 +207,7 @@ describe("backend app", () => {
     expect(response.json()).toMatchObject({
       status: "degraded",
       service: "mag7-backend",
+      runtimeMode: "prototype",
       contracts: {
         importSchemaVersion: "mag7-supply-chain.import-relations.v3",
         mockGraphBoundary: true,
@@ -425,11 +427,13 @@ describe("backend app", () => {
       expect(healthResponse.statusCode).toBe(200);
       expect(healthResponse.json()).toMatchObject({
         status: "degraded",
+        runtimeMode: "live",
         repositoryMode: "neo4j",
         dependencies: {
           neo4j: {
             status: "down",
             detail: "connect ECONNREFUSED 127.0.0.1:7687",
+            required: true,
           },
         },
       });
@@ -599,7 +603,7 @@ describe("backend app", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       schemaVersion: "mag7-supply-chain.import-relations.v3",
-      mode: "mock-ready",
+      mode: "prototype-mock-ready",
       compatibility: {
         previousSchemaVersions: ["mag7-supply-chain.import-relations.v2"],
       },

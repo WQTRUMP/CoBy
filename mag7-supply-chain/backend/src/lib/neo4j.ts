@@ -1249,7 +1249,6 @@ export function createNeo4jBundle(options: CreateNeo4jBundleOptions = {}): Neo4j
     }
 
     const detail = "NEO4J_URI is not configured; GRAPH_RUNTIME_MODE=live requires a reachable Neo4j instance";
-    const repository = new MockGraphRepository();
     return {
       repository: new UnavailableGraphRepository(detail),
       health: async () => ({

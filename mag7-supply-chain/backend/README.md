@@ -50,6 +50,7 @@ http://127.0.0.1:4000
 PORT=4000
 HOST=127.0.0.1
 CORS_ORIGIN=http://127.0.0.1:5174
+GRAPH_RUNTIME_MODE=live
 NEO4J_URI=bolt://127.0.0.1:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=mag7-dev-password
@@ -57,16 +58,58 @@ NEO4J_DATABASE=neo4j
 REDIS_URL=redis://127.0.0.1:6379
 ```
 
-## 本地无数据库模式
+## 运行模式边界
 
-如果未配置 `NEO4J_URI` 或 Neo4j / Redis 未启动，服务仍可运行：
+后端现在通过显式 `GRAPH_RUNTIME_MODE` 区分两类运行语义：
 
-- 图查询自动回退到内置 mock 数据
-- 健康检查会返回 `degraded`，并明确指出哪个依赖未配置或不可达
-- 健康检查同时返回当前 import contract 版本与 mock 边界状态
+- `GRAPH_RUNTIME_MODE=live`（默认，验收/集成模式）
+  - 不再允许静默回退 `MockGraphRepository`
+  - 若 `NEO4J_URI` 缺失或 Neo4j 不可达，`/api/v1/health` 会返回 `runtimeMode=live`、`repositoryMode=neo4j`、依赖状态 `not_configured/down`
+  - 若 live 模式下访问业务接口且 Neo4j 不可用，接口返回结构化 `503 dependency_unavailable`
+  - 若 `REDIS_URL` 缺失或 Redis 不可达，服务仍可启动，但 health 会明确 `required: true`，表示当前不满足完整验收依赖
+- `GRAPH_RUNTIME_MODE=prototype`
+  - 仅用于本地演示/原型，允许未配置 Neo4j 时回退内置 mock 图谱
+  - health 会返回 `repositoryMode=mock`、`contracts.mockGraphBoundary=true`
+  - Redis 默认为可选，未配置时仅禁用缓存
+
+这只意味着 `prototype` 可用于演示，不意味着 `real_data_launch` 已通过。正式验收、preview/default 联调和上线前 smoke test 都应使用默认 `live` 模式。
+
+## 本地 Prototype 启动
+
+如果只是演示前端交互、暂时不接真实数据源，可显式启用原型模式：
+
+```bash
+GRAPH_RUNTIME_MODE=prototype npm run dev
+```
+
+此时如果未配置 `NEO4J_URI` / `REDIS_URL`：
+
+- 图查询会回退到内置 mock 数据
+- 健康检查会返回 `degraded`
 - 导入接口会完成文件与 schema 校验，但不会写入真实 Neo4j
 
-这只意味着 `prototype` 可用于演示，不意味着 `real_data_launch` 已通过。真实上线仍要求 live Neo4j / Redis 依赖可达，并完成导入、健康检查和业务接口闭环验收。
+## 本地 Live/验收启动
+
+默认就是 live 模式，也可以显式指定：
+
+```bash
+GRAPH_RUNTIME_MODE=live npm run dev
+```
+
+建议在启动前确认：
+
+```bash
+export GRAPH_RUNTIME_MODE=live
+export NEO4J_URI=bolt://127.0.0.1:7687
+export REDIS_URL=redis://127.0.0.1:6379
+npm run dev
+```
+
+如果此模式下缺失 `NEO4J_URI`、Neo4j 不可达、或 Redis 缺失/不可达：
+
+- `/api/v1/health` 仍返回 JSON，但会明确暴露依赖缺口，不再伪装为 mock 可用态
+- 依赖 Neo4j 的业务接口会返回 `503 dependency_unavailable`
+- `graph/stats` 等缓存键会按 repository source 隔离，避免 prototype/mock 缓存串入 live
 
 ## 关键接口
 

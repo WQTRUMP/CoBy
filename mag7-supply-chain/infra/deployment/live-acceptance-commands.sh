@@ -36,12 +36,55 @@ npm install
 cd "$BACKEND_DIR"
 npm install
 
-echo "== 2. 拉起 Neo4j / Redis / MinIO =="
+echo "== 2. preview/default JSON 基线检查 =="
+PREVIEW_LOG="$(mktemp)"
+BACKEND_LOG="$(mktemp)"
+
+cd "$BACKEND_DIR"
+npm start >"$BACKEND_LOG" 2>&1 &
+DEFAULT_BACKEND_PID=$!
+cd "$REPO_ROOT"
+npm run preview -- --host 127.0.0.1 --port 4173 >"$PREVIEW_LOG" 2>&1 &
+PREVIEW_PID=$!
+
+cleanup_preview() {
+  kill "$PREVIEW_PID" >/dev/null 2>&1 || true
+  kill "$DEFAULT_BACKEND_PID" >/dev/null 2>&1 || true
+}
+
+trap 'cleanup_preview; kill "${SERVER_PID:-0}" >/dev/null 2>&1 || true' EXIT
+
+for _ in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:4173/api/v1/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+curl -sS -D /tmp/mag7-preview-health.headers "http://127.0.0.1:4173/api/v1/health" -o /tmp/mag7-preview-health.json
+grep -qi '^content-type: application/json' /tmp/mag7-preview-health.headers
+jq . /tmp/mag7-preview-health.json
+
+curl -sS -D /tmp/mag7-preview-api.headers "http://127.0.0.1:4173/api" -o /tmp/mag7-preview-api.json
+grep -q '404' /tmp/mag7-preview-api.headers
+grep -qi '^content-type: application/json' /tmp/mag7-preview-api.headers
+jq . /tmp/mag7-preview-api.json
+
+echo "== 2.1 preview/default mock 基线记录 =="
+curl -fsS "http://127.0.0.1:4173/api/v1/companies?isMag7=true&page=1&pageSize=2" | tee /tmp/mag7-preview-companies.json | jq .
+jq -e '
+  .source == "mock"
+' /tmp/mag7-preview-companies.json >/dev/null
+
+cleanup_preview
+trap 'kill "${SERVER_PID:-0}" >/dev/null 2>&1 || true' EXIT
+
+echo "== 3. 拉起 Neo4j / Redis / MinIO =="
 cd "$REPO_ROOT"
 docker compose -f infra/docker/docker-compose.dev.yml up -d
 docker compose -f infra/docker/docker-compose.dev.yml ps
 
-echo "== 3. 等待 Neo4j 与 Redis 健康 =="
+echo "== 4. 等待 Neo4j 与 Redis 健康 =="
 for _ in $(seq 1 30); do
   if docker compose -f infra/docker/docker-compose.dev.yml ps --format json | jq -e '
     map(select(.Service == "neo4j" and .Health == "healthy")) | length == 1
@@ -63,11 +106,11 @@ done
 docker exec mag7-neo4j cypher-shell -u "$NEO4J_USERNAME" -p "$NEO4J_PASSWORD" -d system 'RETURN 1;'
 docker exec mag7-redis redis-cli ping
 
-echo "== 4. 构建 backend =="
+echo "== 5. 构建 backend =="
 cd "$BACKEND_DIR"
 npm run build
 
-echo "== 5. 导入全量包，必须返回 source=neo4j =="
+echo "== 6. 导入全量包，必须返回 source=neo4j =="
 IMPORT_JSON="$(mktemp)"
 npm run import:normalized -- \
   --relations "$PACKAGE_DIR/relations.jsonl" \
@@ -80,7 +123,7 @@ jq -e '
   (.snapshotCount > 0)
 ' "$IMPORT_JSON" >/dev/null
 
-echo "== 6. 启动 backend =="
+echo "== 7. 启动 backend =="
 SERVER_LOG="$(mktemp)"
 cd "$BACKEND_DIR"
 npm start >"$SERVER_LOG" 2>&1 &
@@ -94,7 +137,14 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-echo "== 7. health 验收 =="
+echo "== 8. 显式 live 模式失败语义探针 =="
+curl -fsS "$API_BASE/api/v1/health" | tee /tmp/mag7-health-probe.json | jq .
+jq -e '
+  .repositoryMode == "neo4j" and
+  .contracts.mockGraphBoundary == false
+' /tmp/mag7-health-probe.json >/dev/null
+
+echo "== 9. health 验收 =="
 curl -fsS "$API_BASE/api/v1/health" | tee /tmp/mag7-health.json | jq .
 jq -e '
   .status == "ok" and
@@ -104,7 +154,7 @@ jq -e '
   .dependencies.redis.status == "up"
 ' /tmp/mag7-health.json >/dev/null
 
-echo "== 8. companies/detail/overview/search/suggest 验收 =="
+echo "== 10. companies/detail/overview/search/suggest 验收 =="
 curl -fsS "$API_BASE/api/v1/companies/company:AAPL" | tee /tmp/mag7-detail.json | jq .
 jq -e '
   .source == "neo4j" and
@@ -132,7 +182,7 @@ jq -e '
   any(.items[]; .id == "company:TSLA")
 ' /tmp/mag7-suggest.json >/dev/null
 
-echo "== 9. subgraph/path/stats/evidence 验收 =="
+echo "== 11. subgraph/path/stats/evidence 验收 =="
 curl -fsS "$API_BASE/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true" | tee /tmp/mag7-subgraph.json | jq .
 jq -e '
   (.snapshot.id | type == "string") and
@@ -159,10 +209,10 @@ jq -e '
   (.total > 0)
 ' /tmp/mag7-evidence.json >/dev/null
 
-echo "== 10. 通过判定 =="
+echo "== 12. 通过判定 =="
 echo "real_data_launch 验收通过：导入为 live neo4j，health/status=ok，全部核心接口返回真实数据。"
 
-echo "== 11. 收尾 =="
+echo "== 13. 收尾 =="
 kill "$SERVER_PID"
 wait "$SERVER_PID" || true
 docker compose -f "$REPO_ROOT/infra/docker/docker-compose.dev.yml" down
