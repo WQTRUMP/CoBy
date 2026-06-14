@@ -461,13 +461,13 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   retrieved_at: z.string(),
   excerpt: z.string(),
   citation_text: z.string(),
-  page_ref: z.string().optional(),
+  page_ref: z.string().nullable().optional(),
   language: z.string().optional(),
   reliability_tier: z.number().int().min(1).max(4),
   parser_version: z.string(),
-  license_note: z.string().optional(),
+  license_note: z.string().nullable().optional(),
   source_report_path: z.string(),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
 }).transform((record) => ({
   ...record,
   published_at_resolution:
