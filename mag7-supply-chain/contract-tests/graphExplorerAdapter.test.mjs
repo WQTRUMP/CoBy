@@ -42,6 +42,14 @@ test("preserves non-direct relations, notes, tier, and evidence aggregation in t
   assert.equal(upstreamRelation.tier, 2);
   assert.equal(upstreamRelation.notes, "This non-direct edge must stay visible when the subgraph includes upstream chains.");
   assert.deepEqual(upstreamRelation.productScope, ["Lithium compounds"]);
+  assert.equal(upstreamRelation.relationshipSubtype, "lithium_feedstock");
+  assert.equal(upstreamRelation.relationshipSubtypeLabel, "Lithium Feedstock");
+  assert.equal(upstreamRelation.sourceMethod, "mock_frontend_fixture");
+  assert.equal(upstreamRelation.sourceMethodLabel, "Mock Frontend Fixture");
+  assert.equal(upstreamRelation.evidenceDateResolution, "quarter");
+  assert.equal(upstreamRelation.evidenceDateResolutionLabel, "Quarter-level");
+  assert.equal(upstreamRelation.validFrom, "2024-01-01");
+  assert.equal(upstreamRelation.validityLabel, "2024-01-01 onward");
 
   assert.equal(graph.focusCompany.overview.relationCount, 3);
   assert.deepEqual(graph.evidenceOverview, {
@@ -140,4 +148,27 @@ test("keeps the official_doc contract source type mapped for frontend evidence c
 
   assert.equal(evidence[0]?.sourceType, "official_doc");
   assert.equal(evidence[0]?.sourceTypeLabel, "Official Document");
+});
+
+test("filters graph relations by relationship type and subtype while preserving filter options", () => {
+  const graph = adaptGraphViewModel({
+    company: getCompanyResponse("company:TSLA"),
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    query: {
+      companyId: "company:TSLA",
+      depth: 2,
+      search: "",
+      relationshipTypes: ["component_supply"],
+      relationshipSubtype: "battery_cells",
+    },
+  });
+
+  assert.equal(graph.relations.length, 1);
+  assert.equal(graph.relations[0]?.relationshipType, "component_supply");
+  assert.equal(graph.relations[0]?.relationshipSubtype, "battery_cells");
+  assert.deepEqual(
+    graph.relationshipSubtypeOptions.map((option) => option.value),
+    ["battery_cells", "lfp_cells"],
+  );
 });

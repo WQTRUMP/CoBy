@@ -45,6 +45,7 @@ test("parses list, detail, overview, subgraph, and evidence responses from the s
   const subgraph = await api.getSubgraph({
     companyId: "company:TSLA",
     depth: 2,
+    relationshipTypes: ["component_supply", "raw_material_supply"],
     snapshot: "published",
   });
   const evidence = await api.getRelationEvidence("rel:tesla-panasonic");
@@ -57,6 +58,8 @@ test("parses list, detail, overview, subgraph, and evidence responses from the s
 
   assert.match(requests[0], /\?q=tesla$/);
   assert.match(requests[3], /includeEvidence=true/);
+  assert.match(requests[3], /relationshipTypes=component_supply/);
+  assert.match(requests[3], /relationshipTypes=raw_material_supply/);
 });
 
 function response(payload) {

@@ -5,15 +5,18 @@
     "moduleResolution": "Bundler",
     "outDir": ".tmp-contract-tests",
     "rootDir": ".",
+    "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true
   },
   "include": [
     "src/adapters/**/*.ts",
+    "src/components/**/*.tsx",
     "src/hooks/**/*.ts",
     "src/mocks/**/*.ts",
     "src/services/**/*.ts",
-    "src/types/**/*.ts"
+    "src/types/**/*.ts",
+    "src/utils/**/*.ts"
   ]
 }
