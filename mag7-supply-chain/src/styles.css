@@ -305,6 +305,100 @@ a {
   color: var(--text-secondary);
 }
 
+.filterPanel,
+.filterPanelSection,
+.filterChipGrid,
+.filterPanelHeader,
+.filterSelectField,
+.metaGrid {
+  display: grid;
+}
+
+.filterPanel {
+  gap: 14px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 15, 28, 0.64);
+  backdrop-filter: blur(14px);
+}
+
+.filterPanelSection {
+  gap: 10px;
+}
+
+.filterPanelHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.filterPanelHeader span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.filterChipGrid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.filterChip,
+.textButton {
+  border: 0;
+  color: inherit;
+}
+
+.filterChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.filterChip span,
+.filterSelectField span,
+.textButton {
+  color: var(--text-secondary);
+}
+
+.filterChip strong {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.filterChip.active {
+  border-color: rgba(64, 224, 208, 0.24);
+  background: rgba(64, 224, 208, 0.14);
+}
+
+.textButton {
+  padding: 0;
+  background: transparent;
+  font-size: 12px;
+}
+
+.filterSelectField {
+  gap: 8px;
+}
+
+.filterSelectField select {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
 .heroCanvasGlow {
   min-height: 250px;
   margin-top: 24px;
@@ -896,6 +990,26 @@ a {
   color: var(--text-secondary);
 }
 
+.metaGrid {
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.metaGrid.compact {
+  margin-top: 14px;
+}
+
+.metaGrid span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metaGrid strong {
+  margin-bottom: 0;
+  font-size: 12px;
+}
+
 .detailMetricGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -960,9 +1074,20 @@ a {
   line-height: 1.45;
 }
 
+.sidebarRelation p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .sidebarRelation.active {
   background: rgba(64, 224, 208, 0.12);
   border-color: rgba(64, 224, 208, 0.24);
+}
+
+.miniBadge.semantic {
+  margin-top: 8px;
 }
 
 .confidenceBadge.confirmed {
@@ -1122,6 +1247,11 @@ a {
   .capabilitySection,
   .detailMetricGrid,
   .evidenceKpis {
+    grid-template-columns: 1fr;
+  }
+
+  .filterChipGrid,
+  .metaGrid {
     grid-template-columns: 1fr;
   }
 

@@ -68,6 +68,25 @@ export function CompanySidebar(props: CompanySidebarProps) {
               <p>{activeNode ? `${activeNode.kind} in ${activeNode.region}` : company.summary}</p>
             </div>
 
+            {activeRelation ? (
+              <div className="detailCard relationContextCard">
+                <p className="sectionEyebrow compact">Selected relationship</p>
+                <strong>{activeRelation.relationshipSemanticLabel}</strong>
+                <div className="metaGrid">
+                  <span>Type</span>
+                  <strong>{activeRelation.relationshipTypeLabel}</strong>
+                  <span>Subtype</span>
+                  <strong>{activeRelation.relationshipSubtypeLabel ?? "Not specified"}</strong>
+                  <span>Source method</span>
+                  <strong>{activeRelation.sourceMethodLabel ?? "Not specified"}</strong>
+                  <span>Evidence precision</span>
+                  <strong>{activeRelation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+                  <span>Validity</span>
+                  <strong>{activeRelation.validityLabel}</strong>
+                </div>
+              </div>
+            ) : null}
+
             <div className="detailMetricGrid">
               <MetricCard icon={<Buildings size={18} />} label="Primary region" value={company.primaryRegion} />
               <MetricCard icon={<ChartBar size={18} />} label="Market cap" value={formatCurrency(company.marketCapUsd)} />
@@ -89,7 +108,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
                       <Path size={12} />
                       Tier {relation.tier}
                     </span>
+                    <span className="miniBadge semantic">{relation.relationshipTypeLabel}</span>
                     <strong>{relation.summary}</strong>
+                    <p>{relation.relationshipSemanticLabel}</p>
                   </button>
                 ))}
               </div>

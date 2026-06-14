@@ -1,5 +1,6 @@
 import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
 import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
+import { getRelationshipTypeLabel } from "../utils/relationSemantics";
 
 interface GraphCanvasProps {
   activeNodeId: string | null;
@@ -10,29 +11,6 @@ interface GraphCanvasProps {
   onRelationSelect: (relation: GraphRelationViewModel) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
-}
-
-const relationLabels: Record<string, string> = {
-  component_supply: "Component",
-  manufacturing: "Manufacturing",
-  cloud_service: "Cloud / Compute",
-  raw_material_supply: "Raw Material",
-  equipment_supply: "Equipment",
-  software_dependency: "Entry",
-  logistics: "Logistics",
-  professional_service: "Professional",
-  channel_partner: "Channel",
-};
-
-function getRelationLabel(relationshipType: GraphRelationViewModel["relationshipType"]) {
-  return (
-    relationLabels[relationshipType] ??
-    relationshipType
-      .split("_")
-      .filter(Boolean)
-      .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-      .join(" ")
-  );
 }
 
 export function GraphCanvas(props: GraphCanvasProps) {
@@ -83,7 +61,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
                     onClick={() => onRelationSelect(relation)}
                   />
                   <text className="graphEdgeLabel" x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 2}>
-                    {getRelationLabel(relation.relationshipType)}
+                    {getRelationshipTypeLabel(relation.relationshipType)}
                   </text>
                 </g>
               );

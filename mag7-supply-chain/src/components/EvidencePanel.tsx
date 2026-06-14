@@ -15,6 +15,20 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
           <strong>{relation ? "Relation-scoped source cards" : "Evidence placeholder"}</strong>
         </div>
         <p>{relation ? relation.summary : "Select a relation to inspect citations and confidence labels."}</p>
+        {relation ? (
+          <div className="metaGrid compact">
+            <span>Relationship</span>
+            <strong>{relation.relationshipSemanticLabel}</strong>
+            <span>Subtype</span>
+            <strong>{relation.relationshipSubtypeLabel ?? "Not specified"}</strong>
+            <span>Source method</span>
+            <strong>{relation.sourceMethodLabel ?? "Not specified"}</strong>
+            <span>Evidence precision</span>
+            <strong>{relation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+            <span>Validity</span>
+            <strong>{relation.validityLabel}</strong>
+          </div>
+        ) : null}
       </div>
 
       <div className="evidenceList">

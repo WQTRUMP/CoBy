@@ -4,6 +4,8 @@ export interface GraphQuery {
   companyId?: string | null;
   depth: number;
   search?: string;
+  relationshipTypes?: RelationDTO["relationshipType"][];
+  relationshipSubtype?: string | null;
 }
 
 export interface CompanyOptionViewModel {
@@ -78,6 +80,10 @@ export interface GraphRelationViewModel {
   sourceId: string;
   targetId: string;
   relationshipType: RelationDTO["relationshipType"];
+  relationshipTypeLabel: string;
+  relationshipSemanticLabel: string;
+  relationshipSubtype: string | null;
+  relationshipSubtypeLabel: string | null;
   tier: number;
   depthFromMag7: number;
   confidence: RelationDTO["confidence"];
@@ -85,9 +91,22 @@ export interface GraphRelationViewModel {
   summary: string;
   productScope: string[];
   notes: string | null;
+  sourceMethod: string | null;
+  sourceMethodLabel: string | null;
+  evidenceDateResolution: string | null;
+  evidenceDateResolutionLabel: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  validityLabel: string;
   evidenceCount: number;
   evidence: EvidenceViewModel[];
   isDirectRelation: boolean;
+}
+
+export interface RelationFilterOptionViewModel {
+  count: number;
+  label: string;
+  value: string;
 }
 
 export interface EvidenceSummaryViewModel {
@@ -102,4 +121,6 @@ export interface GraphViewModel {
   nodes: GraphNodeViewModel[];
   relations: GraphRelationViewModel[];
   evidenceOverview: EvidenceSummaryViewModel;
+  relationTypeOptions: RelationFilterOptionViewModel[];
+  relationshipSubtypeOptions: RelationFilterOptionViewModel[];
 }

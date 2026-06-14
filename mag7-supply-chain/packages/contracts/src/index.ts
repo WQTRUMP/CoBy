@@ -175,6 +175,7 @@ export const relationSchema = z.object({
   snapshotId: z.string(),
   status: relationStatusSchema,
   sourceMethod: z.string().nullable().optional(),
+  evidenceDateResolution: z.string().nullable().optional(),
   sourceCount: z.number().int().min(0).optional(),
   lineageKey: z.string().nullable().optional(),
   lastVerifiedAt: z.string().nullable().optional(),

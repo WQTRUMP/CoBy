@@ -20,7 +20,16 @@ import type {
   GraphQuery,
   GraphRelationViewModel,
   GraphViewModel,
+  RelationFilterOptionViewModel,
 } from "../types/viewModels";
+import {
+  formatDateResolution,
+  formatRelationshipSubtype,
+  formatSourceMethod,
+  formatValidityLabel,
+  getRelationshipSemanticLabel,
+  getRelationshipTypeLabel,
+} from "../utils/relationSemantics";
 
 const SOURCE_TYPE_LABELS = {
   "10k": "10-K",
@@ -91,9 +100,11 @@ export function adaptGraphViewModel(input: {
 }): GraphViewModel {
   const focusCompany = adaptCompanyProfile(input.company, input.overview);
   const layout = buildNodeLayout(input.subgraph.nodes, input.subgraph.relations, focusCompany.id);
-  const visibleNodeIds = selectVisibleNodeIds(layout, input.subgraph.relations, focusCompany.id, input.query.search);
+  const typeFilteredRelations = input.subgraph.relations.filter((relation) => matchesRelationshipTypeFilter(relation, input.query));
+  const filteredRelations = typeFilteredRelations.filter((relation) => matchesRelationshipSubtypeFilter(relation, input.query));
+  const visibleNodeIds = selectVisibleNodeIds(layout, filteredRelations, focusCompany.id, input.query.search);
   const nodes = layout.filter((node) => visibleNodeIds.has(node.id));
-  const relations = input.subgraph.relations
+  const relations = filteredRelations
     .filter((relation) => visibleNodeIds.has(relation.sourceId) && visibleNodeIds.has(relation.targetId))
     .map((relation) => adaptRelation(relation, focusCompany.id));
 
@@ -103,6 +114,8 @@ export function adaptGraphViewModel(input: {
     nodes,
     relations,
     evidenceOverview: summarizeEvidence(relations),
+    relationTypeOptions: collectRelationTypeOptions(typeFilteredRelations.length > 0 ? typeFilteredRelations : input.subgraph.relations),
+    relationshipSubtypeOptions: collectRelationshipSubtypeOptions(typeFilteredRelations),
   };
 }
 
@@ -132,6 +145,10 @@ function adaptRelation(relation: RelationDTO, companyId: string): GraphRelationV
     sourceId: relation.sourceId,
     targetId: relation.targetId,
     relationshipType: relation.relationshipType,
+    relationshipTypeLabel: getRelationshipTypeLabel(relation.relationshipType),
+    relationshipSemanticLabel: getRelationshipSemanticLabel(relation.relationshipType),
+    relationshipSubtype: relation.relationshipSubtype ?? null,
+    relationshipSubtypeLabel: formatRelationshipSubtype(relation.relationshipSubtype),
     tier: relation.tier,
     depthFromMag7: relation.depthFromMag7,
     confidence: relation.confidence,
@@ -139,6 +156,13 @@ function adaptRelation(relation: RelationDTO, companyId: string): GraphRelationV
     summary: relation.summary,
     productScope: relation.productScope,
     notes: relation.notes ?? null,
+    sourceMethod: relation.sourceMethod ?? null,
+    sourceMethodLabel: formatSourceMethod(relation.sourceMethod),
+    evidenceDateResolution: relation.evidenceDateResolution ?? null,
+    evidenceDateResolutionLabel: formatDateResolution(relation.evidenceDateResolution),
+    validFrom: relation.validFrom ?? null,
+    validTo: relation.validTo ?? null,
+    validityLabel: formatValidityLabel(relation.validFrom, relation.validTo),
     evidenceCount: relation.evidenceCount,
     evidence: (relation.evidence ?? []).map((item) => adaptEvidence(item, relation.confidence)),
     isDirectRelation: relation.sourceId === companyId || relation.targetId === companyId,
@@ -290,6 +314,59 @@ function selectVisibleNodeIds(
 
   matchedIds.add(companyId);
   return matchedIds;
+}
+
+function matchesRelationshipTypeFilter(relation: RelationDTO, query: GraphQuery) {
+  if (!query.relationshipTypes || query.relationshipTypes.length === 0) {
+    return true;
+  }
+
+  return query.relationshipTypes.includes(relation.relationshipType);
+}
+
+function matchesRelationshipSubtypeFilter(relation: RelationDTO, query: GraphQuery) {
+  const subtype = query.relationshipSubtype?.trim().toLowerCase();
+  if (!subtype) {
+    return true;
+  }
+
+  return relation.relationshipSubtype?.trim().toLowerCase() === subtype;
+}
+
+function collectRelationTypeOptions(relations: RelationDTO[]): RelationFilterOptionViewModel[] {
+  const counts = new Map<string, number>();
+
+  for (const relation of relations) {
+    counts.set(relation.relationshipType, (counts.get(relation.relationshipType) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([value, count]) => ({
+      value,
+      count,
+      label: getRelationshipTypeLabel(value as RelationDTO["relationshipType"]),
+    }));
+}
+
+function collectRelationshipSubtypeOptions(relations: RelationDTO[]): RelationFilterOptionViewModel[] {
+  const counts = new Map<string, number>();
+
+  for (const relation of relations) {
+    if (!relation.relationshipSubtype) {
+      continue;
+    }
+
+    counts.set(relation.relationshipSubtype, (counts.get(relation.relationshipSubtype) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([value, count]) => ({
+      value,
+      count,
+      label: formatRelationshipSubtype(value) ?? value,
+    }));
 }
 
 function getShortName(company: Pick<CompanyListItemDTO, "name"> & { aliases?: string[] }): string {

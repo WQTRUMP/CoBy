@@ -15,6 +15,9 @@ export function App() {
   const [search, setSearch] = useState("");
   const [zoom, setZoom] = useState(1);
   const [activeTab, setActiveTab] = useState<"overview" | "evidence" | "financials">("overview");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [relationshipTypes, setRelationshipTypes] = useState<GraphRelationViewModel["relationshipType"][]>([]);
+  const [relationshipSubtype, setRelationshipSubtype] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search);
 
   const explorer = useGraphExplorer(
@@ -24,8 +27,10 @@ export function App() {
         companyId: selectedCompanyId,
         depth,
         search: deferredSearch,
+        relationshipTypes,
+        relationshipSubtype,
       }),
-      [deferredSearch, depth, selectedCompanyId],
+      [deferredSearch, depth, relationshipSubtype, relationshipTypes, selectedCompanyId],
     ),
   );
 
@@ -77,6 +82,17 @@ export function App() {
     }
   }, [activeNodeId, activeRelationId, explorer.loading, graph, selectedCompanyId]);
 
+  useEffect(() => {
+    if (!graph || !relationshipSubtype) {
+      return;
+    }
+
+    const stillAvailable = graph.relationshipSubtypeOptions.some((option) => option.value === relationshipSubtype);
+    if (!stillAvailable) {
+      setRelationshipSubtype(null);
+    }
+  }, [graph, relationshipSubtype]);
+
   function handleCompanySelect(companyId: string) {
     startTransition(() => {
       setSelectedCompanyId(companyId);
@@ -100,6 +116,15 @@ export function App() {
     setActiveTab("evidence");
   }
 
+  function handleRelationshipTypeToggle(value: GraphRelationViewModel["relationshipType"]) {
+    setRelationshipTypes((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
+  }
+
+  function handleFilterClear() {
+    setRelationshipTypes([]);
+    setRelationshipSubtype(null);
+  }
+
   if (!graph) {
     return <div className="loadingShell">{explorer.error ?? "Loading graph shell…"}</div>;
   }
@@ -111,10 +136,19 @@ export function App() {
       <TopBar
         companies={explorer.companies}
         depth={depth}
+        filtersOpen={filtersOpen}
         graph={graph}
         onCompanySelect={handleCompanySelect}
         onDepthChange={setDepth}
+        onFiltersClear={handleFilterClear}
+        onFiltersToggle={() => setFiltersOpen((current) => !current)}
         onSearchChange={setSearch}
+        onRelationshipSubtypeChange={setRelationshipSubtype}
+        onRelationshipTypeToggle={handleRelationshipTypeToggle}
+        relationshipSubtype={relationshipSubtype}
+        relationshipSubtypeOptions={graph.relationshipSubtypeOptions}
+        relationshipTypes={relationshipTypes}
+        relationTypeOptions={graph.relationTypeOptions}
         search={search}
         selectedCompanyId={selectedCompanyId}
       />

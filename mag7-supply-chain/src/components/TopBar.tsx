@@ -1,19 +1,47 @@
 import { MagnifyingGlass, ScanSmiley, SlidersHorizontal } from "@phosphor-icons/react";
-import type { CompanyOptionViewModel, GraphViewModel } from "../types/viewModels";
+import type { CompanyOptionViewModel, GraphRelationViewModel, GraphViewModel, RelationFilterOptionViewModel } from "../types/viewModels";
 
 interface TopBarProps {
   companies: CompanyOptionViewModel[];
   depth: number;
+  filtersOpen: boolean;
   graph: GraphViewModel;
+  relationshipSubtype: string | null;
+  relationshipTypes: GraphRelationViewModel["relationshipType"][];
+  relationshipSubtypeOptions: RelationFilterOptionViewModel[];
+  relationTypeOptions: RelationFilterOptionViewModel[];
   onDepthChange: (depth: number) => void;
   onCompanySelect: (companyId: string) => void;
+  onFiltersClear: () => void;
+  onFiltersToggle: () => void;
   onSearchChange: (value: string) => void;
+  onRelationshipSubtypeChange: (value: string | null) => void;
+  onRelationshipTypeToggle: (value: GraphRelationViewModel["relationshipType"]) => void;
   search: string;
   selectedCompanyId: string | null;
 }
 
 export function TopBar(props: TopBarProps) {
-  const { companies, depth, graph, onCompanySelect, onDepthChange, onSearchChange, search, selectedCompanyId } = props;
+  const {
+    companies,
+    depth,
+    filtersOpen,
+    graph,
+    onCompanySelect,
+    onDepthChange,
+    onFiltersClear,
+    onFiltersToggle,
+    onRelationshipSubtypeChange,
+    onRelationshipTypeToggle,
+    onSearchChange,
+    relationshipSubtype,
+    relationshipSubtypeOptions,
+    relationshipTypes,
+    relationTypeOptions,
+    search,
+    selectedCompanyId,
+  } = props;
+  const activeFilterCount = relationshipTypes.length + (relationshipSubtype ? 1 : 0);
 
   return (
     <>
@@ -82,11 +110,63 @@ export function TopBar(props: TopBarProps) {
         <article className="heroCanvasCard">
           <div className="heroCanvasCopy">
             <span>{graph.focusCompany.shortName} live focus</span>
-            <button className="headerAction secondary" type="button">
+            <button
+              aria-expanded={filtersOpen}
+              aria-controls="relationship-filters-panel"
+              className="headerAction secondary"
+              onClick={onFiltersToggle}
+              type="button"
+            >
               <SlidersHorizontal size={16} />
-              Filters
+              {activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"}
             </button>
           </div>
+          {filtersOpen ? (
+            <div className="filterPanel" id="relationship-filters-panel">
+              <div className="filterPanelSection">
+                <div className="filterPanelHeader">
+                  <strong>Relationship types</strong>
+                  <button className="textButton" onClick={onFiltersClear} type="button">
+                    Clear
+                  </button>
+                </div>
+                <div className="filterChipGrid">
+                  {relationTypeOptions.map((option) => {
+                    const active = relationshipTypes.includes(option.value as GraphRelationViewModel["relationshipType"]);
+                    return (
+                      <button
+                        key={option.value}
+                        className={active ? "filterChip active" : "filterChip"}
+                        onClick={() => onRelationshipTypeToggle(option.value as GraphRelationViewModel["relationshipType"])}
+                        type="button"
+                      >
+                        <span>{option.label}</span>
+                        <strong>{option.count}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="filterPanelSection">
+                <div className="filterPanelHeader">
+                  <strong>Relationship subtype</strong>
+                  <span>{relationshipSubtypeOptions.length} available</span>
+                </div>
+                <label className="filterSelectField">
+                  <span>Subtype</span>
+                  <select value={relationshipSubtype ?? ""} onChange={(event) => onRelationshipSubtypeChange(event.target.value || null)}>
+                    <option value="">All subtypes</option>
+                    {relationshipSubtypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} ({option.count})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          ) : null}
           <div className="heroCanvasGlow">
             <div className="heroOrbit heroOrbitPrimary" />
             <div className="heroOrbit heroOrbitSecondary" />
