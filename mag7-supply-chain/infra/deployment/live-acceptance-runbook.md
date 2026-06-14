@@ -12,7 +12,7 @@
 
 - `prototype`：已具备发布条件，但允许 `mock / degraded`。
 - `real_data_launch`：截至 `2026-06-14` 仍未通过，唯一保留阻塞是缺少一次可复验的 live `Neo4j/Redis` 导入与 HTTP 闭环。
-- `preview/default` 的 `/api` 代理：截至 `2026-06-14` 已修复为返回后端 JSON，不再回退 `index.html`；但默认运行态仍是 `repositoryMode = "mock"` / 业务 `source = "mock"`，因此这只能证明代理链路修复，不能证明 live 数据链路通过。
+- `preview/default` 的 `/api` 代理：截至 `2026-06-14` 已修复为返回后端 JSON，不再回退 `index.html`；并且默认运行态已是 `GRAPH_RUNTIME_MODE=live`。如果依赖未就绪，正确结果应是 `health=degraded` 与业务接口显式 `503 dependency_unavailable`，而不是静默回退 `mock`。
 - 当前工作机不能执行这套 live 闭环，原因见第 10 节。
 
 ## 3. 版本与运行时要求
@@ -53,8 +53,9 @@ REDIS_URL=redis://127.0.0.1:6379
 
 说明：
 
-- `NEO4J_URI` 缺失时，后端会进入 `mock` 仓储边界。
-- `REDIS_URL` 缺失或 Redis 不可达时，后端可降级启动，但这只能算 `prototype`，不能算 `real_data_launch` 通过。
+- 默认 `GRAPH_RUNTIME_MODE=live`；在这个模式下，`NEO4J_URI` 缺失或不可达都不会再静默回退 `mock`，而是保留 `repositoryMode = "neo4j"` 并让业务接口返回结构化 `503 dependency_unavailable`。
+- 只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，后端才允许进入 `mock` 仓储边界。
+- `REDIS_URL` 缺失或 Redis 不可达时，后端仍可启动并暴露 `health`，但 live/验收模式下业务接口与 `POST /api/v1/imports/normalized-package` 同样必须返回 `503 dependency_unavailable`；这仍不能算 `real_data_launch` 通过。
 
 ### 4.2 本地 compose 推荐变量
 
@@ -77,9 +78,11 @@ CORS_ORIGIN=http://127.0.0.1:5174
    - 当前已知可接受现象：
      - `GET /api/v1/health` 返回 HTTP `200` + JSON
      - `GET /api` 返回 HTTP `404` + JSON
+     - 当 Neo4j / Redis 尚未拉起时，`GET /api/v1/health` 必须暴露 `runtimeMode = "live"`、`repositoryMode = "neo4j"`、`contracts.mockGraphBoundary = false`
+     - 当 Neo4j 不可用时，业务接口必须返回 HTTP `503` + `error = "dependency_unavailable"`
 2. live/验收模式基线
    - 目标：确认后端连接真实 `Neo4j + Redis`
-   - 如果仍看到 `repositoryMode = "mock"` 或业务 `source = "mock"`，则说明停留在 prototype，不能作为 `real_data_launch` 通过证据
+   - 如果未显式设置 `GRAPH_RUNTIME_MODE=prototype` 却仍看到 `repositoryMode = "mock"` 或业务 `source = "mock"`，则说明运行态口径错误，不能作为 `real_data_launch` 通过证据
 
 ## 5. 验收输入
 
@@ -119,13 +122,13 @@ CORS_ORIGIN=http://127.0.0.1:5174
 
 1. 前端和后端可构建，后端 `GET /api/v1/health` 返回 `200`，即使 `status=degraded` 也允许。
 2. Vite `preview/default` 下 `/api` 返回 JSON，而非 `index.html`。
-3. 后端在 `mock` 或依赖降级模式下能返回结构化接口数据。
+3. 后端在显式 `GRAPH_RUNTIME_MODE=prototype` 或依赖降级模式下能返回结构化接口数据。
 
 以下情况仍然只算 `prototype`，不能升级为 `real_data_launch`：
 
-- `repositoryMode=mock`
-- 导入命令输出 `source: "mock"`
-- `preview/default` 的 `/api` 虽已返回 JSON，但对应业务接口仍为 `source: "mock"`
+- 显式 `GRAPH_RUNTIME_MODE=prototype` 时的 `repositoryMode=mock`
+- 显式 `GRAPH_RUNTIME_MODE=prototype` 时导入命令输出 `source: "mock"`
+- `preview/default` 的 `/api` 虽已返回 JSON，但 `health.status=degraded` 或业务接口返回 `503 dependency_unavailable`
 - `health.status=degraded`
 - `dependencies.neo4j.status != "up"`
 - `dependencies.redis.status != "up"`
@@ -154,16 +157,16 @@ CORS_ORIGIN=http://127.0.0.1:5174
    - `/api/v1/graph/stats?...`
    - `/api/v1/relations/<relationId>/evidence`
 5. 需要带 `source` 的业务响应必须是 `source = "neo4j"`。
-6. live/验收模式不得静默回退到 `mock`。如果显式提供 `NEO4J_URI`（以及要求中的 `REDIS_URL`）但依赖不可达，允许的失败语义只有：
+6. 默认 live/验收模式不得静默回退到 `mock`。如果使用默认运行态或显式提供 `GRAPH_RUNTIME_MODE=live`，且 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有：
    - `/api/v1/health` 仍可返回 HTTP `200`，但必须是 `status = "degraded"`，并显式暴露 `dependencies.neo4j.status != "up"` 或 `dependencies.redis.status != "up"`
    - 业务接口返回 HTTP `503` + `error = "dependency_unavailable"`
    - 不能返回 HTTP `200` + `source = "mock"` 伪装成成功
-7. 不能把 in-memory `real-shape` 测试、mock 返回、degraded 健康状态表述成 live Neo4j/Redis 验收通过。
+7. 只有显式 `GRAPH_RUNTIME_MODE=prototype` 时，`mock` 返回才是允许现象；不能把 in-memory `real-shape` 测试、prototype/mock 返回、degraded 健康状态表述成 live Neo4j/Redis 验收通过。
 
 ## 7. 推荐执行顺序
 
 1. 安装依赖并构建 contracts / backend。
-2. 先执行一次 `preview/default` JSON 基线检查，确认 `/api` 不再回退 `index.html`。
+2. 先执行一次 `preview/default` JSON + live 失败语义基线检查，确认 `/api` 不再回退 `index.html`，且默认运行态不会静默回退 `mock`。
 3. 拉起 `Neo4j 5.26` 与 `Redis 7.4`。
 4. 运行全量包导入。
 5. 启动后端。
@@ -189,12 +192,19 @@ infra/deployment/live-acceptance-commands.sh
 - `GET /api`
   - HTTP `404`
   - `content-type: application/json`
+- 在未显式设置 `GRAPH_RUNTIME_MODE=prototype` 且依赖尚未拉起前：
+  - `runtimeMode = "live"`
+  - `repositoryMode = "neo4j"`
+  - `contracts.mockGraphBoundary = false`
+  - 业务接口返回 HTTP `503` + `error = "dependency_unavailable"`
 
-但如果健康检查或业务返回同时包含以下任一现象，则仍只是 prototype：
+但如果健康检查或业务返回同时包含以下任一现象，则需要按运行态区分：
 
-- `repositoryMode = "mock"`
-- `contracts.mockGraphBoundary = true`
-- 业务接口 `source = "mock"`
+- 仅当显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，允许：
+  - `repositoryMode = "mock"`
+  - `contracts.mockGraphBoundary = true`
+  - 业务接口 `source = "mock"`
+- 如果未显式设置 `GRAPH_RUNTIME_MODE=prototype` 却出现上述现象，则说明默认 live 口径失效，验收不通过。
 
 ### 8.2 live 成功信号
 
@@ -301,13 +311,14 @@ infra/deployment/live-acceptance-commands.sh
 
 含义：
 
-- 后端导入脚本没有连到真实 Neo4j。
+- 后端导入脚本处于显式 `prototype`，或没有连到真实 Neo4j。
 
 优先排查：
 
 1. `NEO4J_URI` 是否缺失。
 2. `NEO4J_URI` 是否指向错误端口。
 3. Neo4j 是否尚未 ready。
+4. 是否误设了 `GRAPH_RUNTIME_MODE=prototype`。
 
 该情况结论：
 
@@ -377,10 +388,11 @@ infra/deployment/live-acceptance-commands.sh
 
 - 不算 live 验收通过。
 - 如果 `source = "mock"`，还应追加结论：
-  - `/api` 代理虽然存在且可用，但系统仍停留在 prototype/default mock 运行态
+  - 若未显式设置 `GRAPH_RUNTIME_MODE=prototype`，则说明默认 live 运行态被错误改写或静默回退
+  - 若显式设置了 `GRAPH_RUNTIME_MODE=prototype`，则该结果只能证明原型链路可用，不能用于 live 通过判定
   - 必须回到环境变量与依赖就绪检查，不能继续做 live 通过判定
 
-### 9.7 显式 live 环境变量已设置，但业务接口返回 `503 dependency_unavailable`
+### 9.7 默认 live 或显式 live 环境变量已设置，但业务接口返回 `503 dependency_unavailable`
 
 这是截至 `2026-06-14` 与 `full.8` 复验、以及 CEO 指定的 9f2ed7cd 后续口径一致的预期失败语义：
 

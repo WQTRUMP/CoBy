@@ -66,7 +66,7 @@ REDIS_URL=redis://127.0.0.1:6379
   - 不再允许静默回退 `MockGraphRepository`
   - 若 `NEO4J_URI` 缺失或 Neo4j 不可达，`/api/v1/health` 会返回 `runtimeMode=live`、`repositoryMode=neo4j`、依赖状态 `not_configured/down`
   - 若 live 模式下访问业务接口且 Neo4j 不可用，接口返回结构化 `503 dependency_unavailable`
-  - 若 `REDIS_URL` 缺失或 Redis 不可达，服务仍可启动，但 health 会明确 `required: true`，表示当前不满足完整验收依赖
+  - 若 `REDIS_URL` 缺失或 Redis 不可达，服务仍可启动且 health 会明确 `required: true`；但业务接口与 `POST /api/v1/imports/normalized-package` 同样返回结构化 `503 dependency_unavailable`，不能再伪装成 `source=mock` 成功
 - `GRAPH_RUNTIME_MODE=prototype`
   - 仅用于本地演示/原型，允许未配置 Neo4j 时回退内置 mock 图谱
   - health 会返回 `repositoryMode=mock`、`contracts.mockGraphBoundary=true`
@@ -108,7 +108,7 @@ npm run dev
 如果此模式下缺失 `NEO4J_URI`、Neo4j 不可达、或 Redis 缺失/不可达：
 
 - `/api/v1/health` 仍返回 JSON，但会明确暴露依赖缺口，不再伪装为 mock 可用态
-- 依赖 Neo4j 的业务接口会返回 `503 dependency_unavailable`
+- `companies/detail/overview/search/suggest/subgraph/path/stats/evidence` 与 `POST /api/v1/imports/normalized-package` 都会返回 `503 dependency_unavailable`
 - `graph/stats` 等缓存键会按 repository source 隔离，避免 prototype/mock 缓存串入 live
 
 ## 关键接口

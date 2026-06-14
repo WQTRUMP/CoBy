@@ -442,7 +442,7 @@ describe("backend app", () => {
       expect(companiesResponse.json()).toMatchObject({
         error: "dependency_unavailable",
         dependency: "neo4j",
-        message: "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+        message: "Live graph mode requires a reachable Neo4j dependency.",
         detail: "connect ECONNREFUSED 127.0.0.1:7687",
       });
     } finally {
