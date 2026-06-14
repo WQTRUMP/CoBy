@@ -35,8 +35,9 @@
 - 后端源码入口：`backend/src/server.ts`
 - 后端构建产物入口：`backend/dist/backend/src/server.js`
 - 前端 API 基址变量：`VITE_GRAPH_API_BASE_URL`
-- 后端真实依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
-- 发布约束：`prototype` 允许以 mock / degraded 形态申请部署；`real_data_launch` 仍不通过，原因是 live Neo4j / Redis 导入与运行时闭环未完成
+- 后端默认运行态：`GRAPH_RUNTIME_MODE=live`
+- 后端 live 依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
+- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`，`real_data_launch` 仍未通过
 
 ## 快速开始
 
@@ -121,6 +122,7 @@ npm start
 
 ```dotenv
 VITE_GRAPH_API_BASE_URL=http://127.0.0.1:4000
+GRAPH_RUNTIME_MODE=live
 NEO4J_URI=bolt://127.0.0.1:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=mag7-dev-password
@@ -145,6 +147,7 @@ CORS_ORIGIN=http://127.0.0.1:5174
 PORT=4000
 HOST=127.0.0.1
 CORS_ORIGIN=http://127.0.0.1:5174
+GRAPH_RUNTIME_MODE=live
 NEO4J_URI=bolt://127.0.0.1:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=mag7-dev-password
@@ -152,7 +155,11 @@ NEO4J_DATABASE=neo4j
 REDIS_URL=redis://127.0.0.1:6379
 ```
 
-未配置 `NEO4J_URI` 时，后端会进入 mock / degraded 模式；这允许 `prototype` 演示，但不构成真实数据上线验收。
+默认 `GRAPH_RUNTIME_MODE=live`。在这个模式下：
+
+- `NEO4J_URI` 缺失或 Neo4j 不可达时，`/api/v1/health` 会保留 `runtimeMode=live`、`repositoryMode=neo4j` 并暴露依赖状态；业务接口返回结构化 `503 dependency_unavailable`
+- `REDIS_URL` 缺失或 Redis 不可达时，服务仍可启动并暴露 health，但业务接口与 `POST /api/v1/imports/normalized-package` 同样返回结构化 `503 dependency_unavailable`
+- 只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，后端才允许进入 `mock` 仓储边界用于原型演示
 
 ### 前端部署变量
 
@@ -184,8 +191,10 @@ curl http://127.0.0.1:4173/api/v1/health
 当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：
 
 - `prototype`：可发布。允许前端静态站点接独立 API，或后端以 mock / degraded 模式对外演示。
+- 仅当显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许 `repositoryMode=mock` / `source=mock` 的原型演示链路。
 - `real_data_launch`：不通过。当前仍缺 live Neo4j / Redis 依赖下的导入闭环、健康检查与业务接口验收。
-- 不得把全量包 in-memory real-shape 测试或 mock / degraded 运行结果表述成真实 Neo4j + Redis 验收。
+- 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。
+- 不得把全量包 in-memory real-shape 测试、prototype/mock 返回或 degraded 运行结果表述成真实 Neo4j + Redis 验收。
 - Cloudflare、正式域名、付费数据库 / 缓存资源的实际部署必须走 Wanman 审批流，不能直接使用提供商凭据。
 
 推荐部署拆分：
