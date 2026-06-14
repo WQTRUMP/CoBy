@@ -27,10 +27,12 @@ export function GraphCanvas(props: GraphCanvasProps) {
         <div className="workspaceTopline">
           <div className="inlineLegend">
             <span>Relationship Type</span>
-            <strong>Supply</strong>
-            <strong>Manufacturing</strong>
-            <strong>Logistics</strong>
-            <strong>IP / Technology</strong>
+            {graph.relationTypeOptions.map((option) => (
+              <strong key={option.value}>
+                {option.label}
+                <small>{option.count}</small>
+              </strong>
+            ))}
           </div>
           <div className="inlineLegend">
             <span>Tier Depth</span>

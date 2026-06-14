@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { adaptCompanyOptions, adaptGraphViewModel, adaptRelationEvidence } from "../adapters/graphExplorerAdapter";
 import { ApiRequestError } from "../services/graphExplorerApi";
+import { getGraphQueryKey } from "../utils/graphQueryKey.js";
 import { resolveFallbackCompanyId } from "./graphExplorerSelection";
 export function useGraphExplorer(api, query) {
     const [state, setState] = useState({
@@ -10,6 +11,7 @@ export function useGraphExplorer(api, query) {
         loading: true,
     });
     const [relationEvidenceById, setRelationEvidenceById] = useState({});
+    const queryKey = getGraphQueryKey(query);
     useEffect(() => {
         let alive = true;
         async function load() {
@@ -94,7 +96,7 @@ export function useGraphExplorer(api, query) {
         return () => {
             alive = false;
         };
-    }, [api, query.companyId, query.depth, query.search]);
+    }, [api, queryKey]);
     async function loadRelationEvidence(relation) {
         if (!relation) {
             return [];

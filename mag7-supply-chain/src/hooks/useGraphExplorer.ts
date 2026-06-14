@@ -8,6 +8,7 @@ import type {
   GraphRelationViewModel,
   GraphViewModel,
 } from "../types/viewModels";
+import { getGraphQueryKey } from "../utils/graphQueryKey.js";
 import { resolveFallbackCompanyId } from "./graphExplorerSelection";
 
 interface ExplorerState {
@@ -25,6 +26,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     loading: true,
   });
   const [relationEvidenceById, setRelationEvidenceById] = useState<Record<string, EvidenceViewModel[]>>({});
+  const queryKey = getGraphQueryKey(query);
 
   useEffect(() => {
     let alive = true;
@@ -126,7 +128,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     return () => {
       alive = false;
     };
-  }, [api, query.companyId, query.depth, query.search]);
+  }, [api, queryKey]);
 
   async function loadRelationEvidence(relation: GraphRelationViewModel | null) {
     if (!relation) {

@@ -71,7 +71,7 @@ function mapCompanyToGraphNode(company: CompanyDetailDTO): SubgraphDTO["nodes"][
   return {
     id: company.id,
     entityType: "Company",
-    label: company.name,
+    label: company.displayName ?? company.name,
     company,
     country: company.country,
     marketCapUsd: company.marketCapUsd,
@@ -163,20 +163,52 @@ function mapRelationRecord(
     snapshotId: String(relation.snapshotId),
     status: String(relation.status) as RelationDTO["status"],
     sourceMethod: typeof relation.sourceMethod === "string" ? relation.sourceMethod : null,
+    evidenceDate: typeof relation.evidenceDate === "string" ? relation.evidenceDate : null,
+    evidenceDateResolution:
+      typeof relation.evidenceDateResolution === "string"
+        ? relation.evidenceDateResolution as RelationDTO["evidenceDateResolution"]
+        : null,
+    evidenceDateNormalized:
+      typeof relation.evidenceDateNormalized === "string" ? relation.evidenceDateNormalized : null,
+    evidenceDateIsNormalized: Boolean(relation.evidenceDateIsNormalized),
     sourceCount: toNumber(relation.sourceCount) ?? 0,
     lineageKey: typeof relation.lineageKey === "string" ? relation.lineageKey : null,
     lastVerifiedAt: typeof relation.lastVerifiedAt === "string" ? relation.lastVerifiedAt : null,
     validFrom: typeof relation.validFrom === "string" ? relation.validFrom : null,
+    validFromResolution:
+      typeof relation.validFromResolution === "string"
+        ? relation.validFromResolution as RelationDTO["validFromResolution"]
+        : null,
     validTo: typeof relation.validTo === "string" ? relation.validTo : null,
+    validToResolution:
+      typeof relation.validToResolution === "string"
+        ? relation.validToResolution as RelationDTO["validToResolution"]
+        : null,
+    validityNote: typeof relation.validityNote === "string" ? relation.validityNote : null,
     evidence: includeEvidence ? evidence : undefined,
   };
 }
 
 function mapCompanyNode(properties: Record<string, unknown>): CompanyDetailDTO {
+  const entityProfileJson = typeof properties.entityProfileJson === "string" ? properties.entityProfileJson : null;
+  const entityProfile =
+    typeof properties.entityProfile === "object" && properties.entityProfile !== null
+      ? properties.entityProfile
+      : entityProfileJson
+        ? JSON.parse(entityProfileJson)
+        : undefined;
+
   return {
     id: String(properties.id),
     ticker: typeof properties.ticker === "string" ? properties.ticker : undefined,
     name: String(properties.name),
+    canonicalName: typeof properties.canonicalName === "string" ? properties.canonicalName : String(properties.name),
+    displayName:
+      typeof properties.displayName === "string"
+        ? properties.displayName
+        : typeof properties.name === "string"
+          ? properties.name
+          : String(properties.id),
     entityType: "Company",
     companyType: String(properties.companyType) as CompanyDetailDTO["companyType"],
     country: String(properties.country),
@@ -184,6 +216,7 @@ function mapCompanyNode(properties: Record<string, unknown>): CompanyDetailDTO {
     marketCapUsd: toNumber(properties.marketCapUsd),
     description: typeof properties.description === "string" ? properties.description : null,
     aliases: toStringArray(properties.aliases),
+    entityProfile: entityProfile as CompanyDetailDTO["entityProfile"],
     active: properties.active !== false,
     importanceScore: toNumber(properties.importanceScore) ?? 0.5,
     primaryRegion: typeof properties.primaryRegion === "string" ? properties.primaryRegion : String(properties.country),
@@ -219,6 +252,20 @@ function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO
     publisher: String(properties.publisher),
     url: String(properties.url),
     publishedAt: String(properties.publishedAt),
+    publishedAtResolution:
+      typeof properties.publishedAtResolution === "string"
+        ? properties.publishedAtResolution as EvidenceDTO["publishedAtResolution"]
+        : "published_at",
+    coverageStart: typeof properties.coverageStart === "string" ? properties.coverageStart : null,
+    coverageEnd: typeof properties.coverageEnd === "string" ? properties.coverageEnd : null,
+    coverageStartResolution:
+      typeof properties.coverageStartResolution === "string"
+        ? properties.coverageStartResolution as EvidenceDTO["coverageStartResolution"]
+        : null,
+    coverageEndResolution:
+      typeof properties.coverageEndResolution === "string"
+        ? properties.coverageEndResolution as EvidenceDTO["coverageEndResolution"]
+        : null,
     retrievedAt: String(properties.retrievedAt),
     excerpt: String(properties.excerpt),
     pageRef: typeof properties.pageRef === "string" ? properties.pageRef : null,
@@ -383,8 +430,11 @@ export class Neo4jGraphRepository implements GraphRepository {
         MATCH (c:Company)
         WHERE ($query IS NULL
           OR toLower(c.name) CONTAINS toLower($query)
+          OR toLower(coalesce(c.canonicalName, "")) CONTAINS toLower($query)
+          OR toLower(coalesce(c.displayName, "")) CONTAINS toLower($query)
           OR toLower(coalesce(c.ticker, "")) CONTAINS toLower($query)
-          OR any(alias IN coalesce(c.aliases, []) WHERE toLower(alias) CONTAINS toLower($query)))
+          OR any(alias IN coalesce(c.aliases, []) WHERE toLower(alias) CONTAINS toLower($query))
+          OR any(alias IN coalesce(c.searchAliases, []) WHERE toLower(alias) CONTAINS toLower($query)))
           AND ($isMag7 IS NULL OR c.isMag7 = $isMag7)
         OPTIONAL MATCH (c)<-[:TARGET_OF|SOURCE_OF]-(rel:SupplyRelation)<-[:CONTAINS]-(snapshot:Snapshot)
         WHERE snapshot.status = 'published'
@@ -398,7 +448,11 @@ export class Neo4jGraphRepository implements GraphRepository {
           primaryRegion: coalesce(c.primaryRegion, c.country),
           activeSnapshotId: head([snapshot IN publishedSnapshots | snapshot.id]),
           lastUpdatedAt: head([snapshot IN publishedSnapshots | snapshot.publishedAt]),
-          aliases: coalesce(c.aliases, [])
+          aliases: coalesce(c.aliases, []),
+          canonicalName: coalesce(c.canonicalName, c.name),
+          displayName: coalesce(c.displayName, c.name),
+          entityProfileJson: c.entityProfileJson,
+          searchAliases: coalesce(c.searchAliases, [])
         } AS company
         ORDER BY c.isMag7 DESC,
                  head([snapshot IN publishedSnapshots | snapshot.publishedAt]) DESC,
@@ -435,6 +489,10 @@ export class Neo4jGraphRepository implements GraphRepository {
           activeSnapshotId: head([snapshot IN publishedSnapshots | snapshot.id]),
           lastUpdatedAt: head([snapshot IN publishedSnapshots | snapshot.publishedAt]),
           aliases: coalesce(c.aliases, []),
+          canonicalName: coalesce(c.canonicalName, c.name),
+          displayName: coalesce(c.displayName, c.name),
+          entityProfileJson: c.entityProfileJson,
+          searchAliases: coalesce(c.searchAliases, []),
           summary: coalesce(c.summary, c.description)
         } AS company
         LIMIT 1

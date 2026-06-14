@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { EvidencePanel } from "../.tmp-contract-tests/src/components/EvidencePanel.js";
+import { GraphCanvas } from "../.tmp-contract-tests/src/components/GraphCanvas.js";
 import { TopBar } from "../.tmp-contract-tests/src/components/TopBar.js";
 import { adaptGraphViewModel } from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
 import {
@@ -51,6 +52,37 @@ test("renders relationship filters with real type and subtype options", () => {
   assert.match(markup, /Relationship types/);
   assert.match(markup, /Component Supply/);
   assert.match(markup, /Battery Cells \(1\)/);
+});
+
+test("renders graph legend with concrete relationship labels instead of generic buckets", () => {
+  const graph = adaptGraphViewModel({
+    company: getCompanyResponse("company:TSLA"),
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    query: {
+      companyId: "company:TSLA",
+      depth: 2,
+      search: "",
+    },
+  });
+
+  const markup = renderToStaticMarkup(
+    React.createElement(GraphCanvas, {
+      activeNodeId: graph.focusCompany.id,
+      activeRelationId: graph.relations[0]?.id ?? null,
+      focusNode: graph.nodes[0],
+      graph,
+      onNodeSelect() {},
+      onRelationSelect() {},
+      onZoomChange() {},
+      zoom: 1,
+    }),
+  );
+
+  assert.match(markup, /Component Supply/);
+  assert.match(markup, /Raw Material Supply/);
+  assert.doesNotMatch(markup, />Supply</);
+  assert.doesNotMatch(markup, /IP \/ Technology/);
 });
 
 test("renders service relationships with service semantics instead of component-supply language", () => {

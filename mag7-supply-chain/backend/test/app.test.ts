@@ -45,7 +45,9 @@ const graphRepository: GraphRepository = {
 
         return (
           company.name.toLowerCase().includes(normalized) ||
-          company.ticker?.toLowerCase().includes(normalized)
+          company.ticker?.toLowerCase().includes(normalized) ||
+          company.displayName?.toLowerCase().includes(normalized) ||
+          company.aliases.some((alias) => alias.toLowerCase().includes(normalized))
         );
       })
       .map((company) => ({
@@ -149,7 +151,7 @@ describe("backend app", () => {
       status: "degraded",
       service: "mag7-backend",
       contracts: {
-        importSchemaVersion: "mag7-supply-chain.import-relations.v2",
+        importSchemaVersion: "mag7-supply-chain.import-relations.v3",
         mockGraphBoundary: true,
       },
     });
@@ -253,8 +255,14 @@ describe("backend app", () => {
       item: {
         id: "company:AAPL",
         name: "Apple",
+        canonicalName: "Apple",
+        displayName: "Apple",
         primaryRegion: "US",
         activeSnapshotId: "snapshot:2026-06-14.1",
+        entityProfile: {
+          canonicalName: "Apple",
+          displayName: "Apple",
+        },
       },
       source: "mock",
     });
@@ -491,8 +499,15 @@ describe("backend app", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
-      schemaVersion: "mag7-supply-chain.import-relations.v2",
+      schemaVersion: "mag7-supply-chain.import-relations.v3",
       mode: "mock-ready",
+      compatibility: {
+        previousSchemaVersions: ["mag7-supply-chain.import-relations.v2"],
+      },
+      enums: {
+        date_resolution: expect.arrayContaining(["month", "published_at"]),
+        alias_type: expect.arrayContaining(["canonical", "legal_entity", "brand", "facility"]),
+      },
     });
   });
 
@@ -585,12 +600,24 @@ describe("backend app", () => {
       productScope: ["Apple silicon"],
       evidenceIds: ["evidence:apple:2025-08-06:tsmc-arizona"],
       primaryEvidenceId: "evidence:apple:2025-08-06:tsmc-arizona",
+      evidenceDate: "2025-08-06",
+      evidenceDateResolution: "published_at",
+      validFrom: null,
+      validFromResolution: null,
     });
     expect(prepared.relationEdges[0]).toEqual({
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
       sourceCompanyId: "company:TSMC",
       targetCompanyId: "company:AAPL",
       snapshotId: "snapshot:2026-06-14.1",
+    });
+    expect(prepared.companies.find((company) => company.id === "company:AAPL")).toMatchObject({
+      canonicalName: "Apple",
+      displayName: "Apple",
+      entityProfile: {
+        canonicalName: "Apple",
+        displayName: "Apple",
+      },
     });
   });
 });

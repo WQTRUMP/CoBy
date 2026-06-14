@@ -122,7 +122,6 @@ function buildSubgraph(
   companyById: Map<string, CompanyDetailDTO>,
   prepared: PreparedNormalizedImport,
   relations: RelationDTO[],
-  snapshotId: string,
 ): SubgraphDTO {
   const nodeMap = new Map<string, GraphNodeDTO>();
 
@@ -133,7 +132,7 @@ function buildSubgraph(
       nodeMap.set(source.id, {
         id: source.id,
         entityType: "Company",
-        label: source.name,
+        label: source.displayName ?? source.name,
         company: source,
         country: source.country,
         marketCapUsd: source.marketCapUsd,
@@ -144,7 +143,7 @@ function buildSubgraph(
       nodeMap.set(target.id, {
         id: target.id,
         entityType: "Company",
-        label: target.name,
+        label: target.displayName ?? target.name,
         company: target,
         country: target.country,
         marketCapUsd: target.marketCapUsd,
@@ -153,11 +152,17 @@ function buildSubgraph(
     }
   }
 
+  const snapshot = pickLatestSnapshot(
+    relations
+      .map((relation) => prepared.snapshots.find((snapshotItem) => snapshotItem.id === relation.snapshotId) ?? null)
+      .filter((snapshotItem): snapshotItem is SnapshotDTO => Boolean(snapshotItem)),
+  );
+
   return {
     snapshot:
-      prepared.snapshots.find((snapshot) => snapshot.id === snapshotId) ?? {
-        id: snapshotId,
-        version: snapshotId.replace("snapshot:", "").replace(/-/g, "."),
+      snapshot ?? {
+        id: relations[0]?.snapshotId ?? "snapshot:published",
+        version: (relations[0]?.snapshotId ?? "snapshot:published").replace("snapshot:", "").replace(/-/g, "."),
         status: "published" as const,
         publishedAt: null,
         scope: [],
@@ -200,6 +205,11 @@ class RealSampleGraphRepository implements GraphRepository {
         publisher: evidenceNode.publisher,
         url: evidenceNode.url,
         publishedAt: evidenceNode.publishedAt,
+        publishedAtResolution: evidenceNode.publishedAtResolution,
+        coverageStart: evidenceNode.coverageStart,
+        coverageEnd: evidenceNode.coverageEnd,
+        coverageStartResolution: evidenceNode.coverageStartResolution,
+        coverageEndResolution: evidenceNode.coverageEndResolution,
         retrievedAt: evidenceNode.retrievedAt,
         excerpt: evidenceNode.excerpt,
         pageRef: evidenceNode.pageRef,
@@ -303,7 +313,7 @@ class RealSampleGraphRepository implements GraphRepository {
           ? [{
               id: rootCompany.id,
               entityType: "Company" as const,
-              label: rootCompany.name,
+              label: rootCompany.displayName ?? rootCompany.name,
               company: rootCompany,
               country: rootCompany.country,
               marketCapUsd: rootCompany.marketCapUsd,
@@ -314,7 +324,7 @@ class RealSampleGraphRepository implements GraphRepository {
       };
     }
 
-    return buildSubgraph(this.companyById, this.prepared, relations, relations[0].snapshotId);
+    return buildSubgraph(this.companyById, this.prepared, relations);
   }
 
   async getPath(query: GraphPathQuery): Promise<SubgraphDTO> {
@@ -344,7 +354,7 @@ class RealSampleGraphRepository implements GraphRepository {
           nodes: [],
           relations: [],
         }
-      : buildSubgraph(this.companyById, this.prepared, directRelations, directRelations[0].snapshotId);
+      : buildSubgraph(this.companyById, this.prepared, directRelations);
   }
 
   async getGraphStats(query: GraphStatsQuery): Promise<GraphStatsDTO> {
@@ -467,19 +477,28 @@ describe("full package app", () => {
     }
   });
 
-  it("keeps Alphabet detail, overview, and stats pinned to the latest published snapshot", async () => {
-    const [detail, overview, stats] = await Promise.all([
+  it("keeps Alphabet detail, overview, subgraph, and stats pinned to the latest published snapshot", async () => {
+    const [detail, overview, subgraph, stats] = await Promise.all([
       app.inject({ method: "GET", url: "/api/v1/companies/company:GOOGL" }),
       app.inject({ method: "GET", url: "/api/v1/companies/company:GOOGL/overview" }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:GOOGL&depth=3&snapshot=published&includeEvidence=true",
+      }),
       app.inject({ method: "GET", url: "/api/v1/graph/stats?snapshot=published&companyId=company:GOOGL" }),
     ]);
 
     expect(detail.statusCode).toBe(200);
     expect(overview.statusCode).toBe(200);
+    expect(subgraph.statusCode).toBe(200);
     expect(stats.statusCode).toBe(200);
 
     expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.3");
     expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.3");
+    expect(subgraph.json().snapshot).toMatchObject({
+      id: "snapshot:2026-06-14.3",
+      version: "2026.06.14.3",
+    });
     expect(stats.json().snapshot).toMatchObject({
       id: "snapshot:2026-06-14.3",
       version: "2026.06.14.3",

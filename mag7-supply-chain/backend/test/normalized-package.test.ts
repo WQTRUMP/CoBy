@@ -70,6 +70,15 @@ describe("prepareNormalizedImport", () => {
       summary: "TSMC manufactures Apple silicon.",
       lineageKey: "Apple|TSMC|manufacturing|Apple silicon",
       lastVerifiedAt: "2026-06-14T00:00:00.000Z",
+      evidenceDate: "2025-08-06",
+      evidenceDateResolution: "day",
+      evidenceDateNormalized: null,
+      evidenceDateIsNormalized: false,
+      validFrom: null,
+      validFromResolution: null,
+      validTo: null,
+      validToResolution: null,
+      validityNote: null,
     });
     expect(prepared.relationEdges[0]).toEqual({
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
@@ -81,6 +90,117 @@ describe("prepareNormalizedImport", () => {
     expect(prepared.evidenceBindings[0]).toEqual({
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
       evidenceId: "evidence:apple:tsmc:1",
+    });
+    expect(prepared.companies.find((company) => company.id === "company:AAPL")).toMatchObject({
+      canonicalName: "Apple",
+      displayName: "Apple",
+      entityProfile: {
+        canonicalName: "Apple",
+        displayName: "Apple",
+      },
+    });
+  });
+
+  it("maps v3 entity refs and legacy month-normalized inputs without defaulting evidenceDate onto validFrom", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:alphabet:tsmc:manufacturing:tensor",
+          snapshot_id: "snapshot:2026-06-14.4",
+          company: "Alphabet",
+          company_slug: "alphabet",
+          supplier: "TSMC",
+          supplier_slug: "tsmc",
+          company_entity_ref: {
+            entity_id: "company:GOOGL",
+            display_name: "Google",
+            legal_entity_name: "Google LLC",
+          },
+          supplier_entity_ref: {
+            entity_id: "company:TSMC",
+            display_name: "TSMC",
+            legal_entity_name: "Taiwan Semiconductor Manufacturing Company Limited",
+          },
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "manufacturing",
+          relationship_subtype: "wafer_foundry",
+          product_scope: ["Tensor SoC"],
+          evidence_ids: ["evidence:alphabet:tsmc:1"],
+          primary_evidence_id: "evidence:alphabet:tsmc:1",
+          evidence_date: "2025-03-01",
+          evidence_date_resolution: "month-normalized",
+          evidence_excerpt: "March quarter commentary supports TSMC foundry usage.",
+          source_url: "https://example.com/google-tsmc",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.9,
+          source_method: "manual_research",
+          source_count: 2,
+          status: "approved",
+          summary: "TSMC manufactures Tensor SoCs for Google.",
+          notes: "Legacy month-normalized package.",
+          lineage_key: "Alphabet|TSMC|manufacturing|Tensor SoC",
+          source_report_path: "output/evidence/google-tsmc.json",
+          last_verified_at: "2026-06-14T00:00:00.000Z",
+          valid_from: "2025-03-01",
+          valid_from_resolution: "month-normalized",
+          valid_to: null,
+          valid_to_resolution: null,
+          validity_note: "Management commentary indicates supply in March quarter 2025.",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:alphabet:tsmc:1",
+          relation_id: "rel:alphabet:tsmc:manufacturing:tensor",
+          source_type: "earnings_call",
+          title: "Alphabet Q1 2025 Earnings Call",
+          publisher: "Alphabet",
+          source_url: "https://example.com/google-tsmc",
+          source_domain: "example.com",
+          published_at: "2025-04-24",
+          published_at_resolution: "day",
+          coverage_start: "2025-03-01",
+          coverage_end: "2025-03-31",
+          coverage_start_resolution: "month",
+          coverage_end_resolution: "month",
+          retrieved_at: "2026-06-14T00:00:00.000Z",
+          excerpt: "March quarter demand drove Tensor wafer demand.",
+          citation_text: "March quarter demand drove Tensor wafer demand.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v2",
+          source_report_path: "output/evidence/google-tsmc.json",
+        },
+      ],
+    });
+
+    expect(prepared.relations[0]).toMatchObject({
+      evidenceDate: "2025-03-01",
+      evidenceDateResolution: "month",
+      evidenceDateNormalized: "2025-03-01",
+      evidenceDateIsNormalized: true,
+      validFrom: "2025-03-01",
+      validFromResolution: "month",
+      validityNote: "Management commentary indicates supply in March quarter 2025.",
+    });
+    expect(prepared.companies.find((company) => company.id === "company:GOOGL")).toMatchObject({
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      aliases: expect.arrayContaining(["Alphabet", "Google", "Google LLC"]),
+      entityProfile: {
+        canonicalName: "Alphabet",
+        displayName: "Google",
+        legalEntities: expect.arrayContaining([
+          expect.objectContaining({ name: "Google LLC", aliasType: "legal_entity" }),
+        ]),
+      },
+    });
+    expect(prepared.evidence[0]).toMatchObject({
+      publishedAtResolution: "day",
+      coverageStart: "2025-03-01",
+      coverageEnd: "2025-03-31",
+      coverageStartResolution: "month",
+      coverageEndResolution: "month",
     });
   });
 });
