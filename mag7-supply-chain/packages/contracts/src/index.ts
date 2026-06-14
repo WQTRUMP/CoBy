@@ -122,6 +122,32 @@ export const companyListItemSchema = z.object({
   activeSnapshotId: z.string().nullable(),
 });
 
+export const companySearchMatchSchema = z.object({
+  field: z.enum(["name", "ticker", "canonicalName", "displayName", "alias"]),
+  value: z.string(),
+  aliasType: aliasTypeSchema.nullable().optional(),
+  explanation: z.string(),
+});
+
+export const companySearchResultItemSchema = companyListItemSchema.extend({
+  canonicalName: z.string().optional(),
+  displayName: z.string().optional(),
+  entityProfile: entityProfileSchema.optional(),
+  match: companySearchMatchSchema.optional(),
+});
+
+export const companySuggestItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  secondaryLabel: z.string().optional(),
+  ticker: z.string().optional(),
+  isMag7: z.boolean(),
+  canonicalName: z.string().optional(),
+  displayName: z.string().optional(),
+  entityProfile: entityProfileSchema.optional(),
+  match: companySearchMatchSchema.optional(),
+});
+
 export const companyListQuerySchema = z.object({
   q: z.string().optional(),
   isMag7: z.coerce.boolean().optional(),
@@ -266,7 +292,7 @@ export const searchCompaniesQuerySchema = z.object({
 });
 
 export const searchCompaniesResponseSchema = z.object({
-  items: z.array(companyListItemSchema),
+  items: z.array(companySearchResultItemSchema),
   total: z.number().int().min(0),
   query: z.string(),
   source: backendSourceSchema,
@@ -278,14 +304,7 @@ export const suggestCompaniesQuerySchema = z.object({
 });
 
 export const suggestCompaniesResponseSchema = z.object({
-  items: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-      ticker: z.string().optional(),
-      isMag7: z.boolean(),
-    }),
-  ),
+  items: z.array(companySuggestItemSchema),
   total: z.number().int().min(0),
   query: z.string(),
   source: backendSourceSchema,
@@ -695,6 +714,9 @@ export type DateResolution = z.infer<typeof dateResolutionSchema>;
 export type AliasType = z.infer<typeof aliasTypeSchema>;
 export type CompanyDTO = z.infer<typeof companySchema>;
 export type CompanyListItemDTO = z.infer<typeof companyListItemSchema>;
+export type CompanySearchMatchDTO = z.infer<typeof companySearchMatchSchema>;
+export type CompanySearchResultItemDTO = z.infer<typeof companySearchResultItemSchema>;
+export type CompanySuggestItemDTO = z.infer<typeof companySuggestItemSchema>;
 export type CompanyListQuery = z.infer<typeof companyListQuerySchema>;
 export type CompanyListResponseDTO = z.infer<typeof companyListResponseSchema>;
 export type CompanyDetailDTO = z.infer<typeof companyDetailSchema>;

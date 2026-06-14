@@ -26,6 +26,56 @@ test("adapts company list items from shared contract responses", () => {
   assert.equal(companies[0]?.primaryRegion, "North America");
 });
 
+test("uses displayName for company list short names instead of aliases[0]", () => {
+  const companies = adaptCompanyOptions({
+    items: [
+      {
+        id: "company:GOOG",
+        name: "Alphabet",
+        canonicalName: "Alphabet",
+        displayName: "Google",
+        aliases: ["Alphabet Inc.", "Google"],
+        ticker: "GOOG",
+        isMag7: true,
+        primaryRegion: "North America",
+        marketCapUsd: 1000,
+        entityProfile: {
+          canonicalName: "Alphabet",
+          displayName: "Google",
+          legalEntities: [
+            {
+              id: "alias:google-llc",
+              name: "Google LLC",
+              normalizedName: "google llc",
+              aliasType: "legal_entity",
+              isPrimary: true,
+            },
+          ],
+          brands: [
+            {
+              id: "alias:google-cloud",
+              name: "Google Cloud",
+              normalizedName: "google cloud",
+              aliasType: "brand",
+              isPrimary: true,
+            },
+          ],
+          aliases: [],
+        },
+      },
+    ],
+    total: 1,
+    source: "mock",
+  });
+
+  assert.equal(companies[0]?.displayName, "Google");
+  assert.equal(companies[0]?.shortName, "Google");
+  assert.equal(companies[0]?.canonicalName, "Alphabet");
+  assert.doesNotMatch(companies[0]?.hierarchySummary ?? "", /Alphabet Inc\./);
+  assert.match(companies[0]?.hierarchySummary ?? "", /Google LLC/);
+  assert.match(companies[0]?.hierarchySummary ?? "", /Google Cloud/);
+});
+
 test("prefers displayName and canonical entity profile fields over aliases for company presentation", () => {
   const company = adaptCompanyProfile(
     {
@@ -236,6 +286,29 @@ test("maps evidence date semantics and compatibility notes for reported periods 
           parserVersion: "contract-test",
         },
         {
+          id: "evidence:retrieved-surrogate",
+          sourceType: "official_doc",
+          title: "Undated policy page",
+          publisher: "Example Policy",
+          url: "https://example.com/policy",
+          publishedAt: "2026-06-01T00:00:00.000Z",
+          publishedAtResolution: "undated",
+          coverageStart: null,
+          coverageEnd: null,
+          coverageStartResolution: null,
+          coverageEndResolution: null,
+          retrievedAt: "2026-06-14T00:00:00.000Z",
+          excerpt: "Fixture for undated evidence fallback semantics.",
+          pageRef: null,
+          language: "en",
+          hash: "sha256:retrieved-surrogate",
+          sourceDomain: "example.com",
+          citationText: "Fixture for undated evidence fallback semantics.",
+          reliabilityTier: 1,
+          licenseNote: null,
+          parserVersion: "contract-test",
+        },
+        {
           id: "evidence:normalized-month",
           sourceType: "media",
           title: "Monthly industry note",
@@ -259,7 +332,7 @@ test("maps evidence date semantics and compatibility notes for reported periods 
           parserVersion: "contract-test",
         },
       ],
-      total: 2,
+      total: 3,
       source: "contract-test",
       generatedAt: "2026-06-14T00:00:00.000Z",
     },
@@ -269,8 +342,10 @@ test("maps evidence date semantics and compatibility notes for reported periods 
   assert.equal(evidence[0]?.publishedAtSemantic, "reported_period_end");
   assert.equal(evidence[0]?.reportedPeriodEnd, "2025-03-31");
   assert.match(evidence[0]?.compatibilityNote ?? "", /reported period end/);
-  assert.equal(evidence[1]?.publishedAtSemantic, "month-normalized compatibility");
-  assert.match(evidence[1]?.compatibilityNote ?? "", /month-normalized/);
+  assert.equal(evidence[1]?.publishedAtSemantic, "retrieved_at_surrogate");
+  assert.match(evidence[1]?.compatibilityNote ?? "", /retrieved_at surrogate/i);
+  assert.equal(evidence[2]?.publishedAtSemantic, "month-normalized compatibility");
+  assert.match(evidence[2]?.compatibilityNote ?? "", /month-normalized/);
 });
 
 test("filters graph relations by relationship type and subtype while preserving filter options", () => {

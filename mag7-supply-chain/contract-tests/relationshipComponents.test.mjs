@@ -207,3 +207,41 @@ test("renders entity-layer guidance in the company sidebar without falling back 
   assert.match(markup, /Gigafactory Texas/);
   assert.doesNotMatch(markup, /Legacy Alias/);
 });
+
+test("renders evidence provenance semantics for published, reported-period, retrieved, and normalized dates", () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(EvidencePanel, {
+      relation: null,
+      evidence: [
+        {
+          id: "evidence:date-semantics",
+          title: "Undated supplier policy",
+          publisher: "Example Publisher",
+          sourceType: "official_doc",
+          sourceTypeLabel: "Official Document",
+          publishedAt: "2026-06-01T00:00:00.000Z",
+          publishedAtResolution: "undated",
+          publishedAtResolutionLabel: "Undated / Retrieved surrogate",
+          publishedAtSemantic: "retrieved_at_surrogate",
+          reportedPeriodEnd: "2025-03-31",
+          reportedPeriodEndResolutionLabel: "Day-level",
+          retrievedAt: "2026-06-14T00:00:00.000Z",
+          retrievedAtSemantic: "retrieved_at_surrogate",
+          compatibilityNote:
+            "Legacy month-normalized inputs are rendered as month-level values; 2025-03-01 may be a surrogate boundary, not a day-exact publication timestamp.",
+          url: "https://example.com/policy",
+          citation: "Example citation",
+          excerpt: "Example excerpt",
+          pageRef: null,
+          confidence: "confirmed",
+        },
+      ],
+    }),
+  );
+
+  assert.match(markup, /Primary date semantic/);
+  assert.match(markup, /retrieved_at_surrogate/);
+  assert.match(markup, /reported_period_end/);
+  assert.match(markup, /month-normalized compatibility/);
+  assert.match(markup, /Legacy month-normalized inputs are rendered as month-level values/);
+});
