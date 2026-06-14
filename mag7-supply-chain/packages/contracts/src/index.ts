@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+export const backendSourceSchema = z.enum(["neo4j", "mock"]);
 export const confidenceSchema = z.enum(["confirmed", "strong_evidence", "inferred"]);
 export const relationStatusSchema = z.enum(["draft", "approved", "deprecated", "disputed"]);
 
@@ -59,6 +60,31 @@ export const companySchema = z.object({
   importanceScore: z.number().min(0).max(1).optional(),
 });
 
+export const companyListItemSchema = z.object({
+  id: z.string(),
+  ticker: z.string().optional(),
+  name: z.string(),
+  isMag7: z.boolean(),
+  marketCapUsd: z.number().nullable(),
+  primaryRegion: z.string(),
+  activeSnapshotId: z.string().nullable(),
+});
+
+export const companyListQuerySchema = z.object({
+  q: z.string().optional(),
+  isMag7: z.coerce.boolean().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const companyListResponseSchema = z.object({
+  items: z.array(companyListItemSchema),
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1).max(100),
+  total: z.number().int().min(0),
+  source: backendSourceSchema,
+});
+
 export const evidenceSchema = z.object({
   id: z.string(),
   sourceType: sourceTypeSchema,
@@ -87,11 +113,37 @@ export const snapshotSchema = z.object({
   notes: z.string().nullable().optional(),
 });
 
+export const companyDetailSchema = companySchema.extend({
+  primaryRegion: z.string(),
+  activeSnapshotId: z.string().nullable(),
+  summary: z.string().nullable().optional(),
+  lastUpdatedAt: z.string().nullable().optional(),
+});
+
+export const companyDetailResponseSchema = z.object({
+  item: companyDetailSchema,
+  source: backendSourceSchema,
+});
+
+export const companyOverviewSchema = z.object({
+  companyId: z.string(),
+  companyName: z.string(),
+  activeSnapshotId: z.string().nullable(),
+  totalRelations: z.number().int().min(0),
+  tier1SupplierCount: z.number().int().min(0),
+  supplierCount: z.number().int().min(0),
+  highRiskRelationCount: z.number().int().min(0),
+  evidenceCount: z.number().int().min(0),
+  evidenceCoverage: z.number().min(0).max(1),
+  lastUpdatedAt: z.string().nullable(),
+  source: backendSourceSchema,
+});
+
 export const graphNodeSchema = z.object({
   id: z.string(),
   entityType: entityTypeSchema.exclude(["SupplyRelation", "Evidence", "Snapshot"]),
   label: z.string(),
-  company: companySchema.optional(),
+  company: companyDetailSchema.optional(),
   country: z.string().optional(),
   marketCapUsd: z.number().nullable().optional(),
   importanceScore: z.number().min(0).max(1).optional(),
@@ -102,16 +154,23 @@ export const relationSchema = z.object({
   sourceId: z.string(),
   targetId: z.string(),
   relationshipType: relationshipTypeSchema,
+  relationshipSubtype: z.string().nullable().optional(),
   tier: z.number().int().min(1),
   depthFromMag7: z.number().int().min(0),
   confidence: confidenceSchema,
   confidenceScore: z.number().min(0).max(1),
   summary: z.string(),
-  productScope: z.string().nullable().optional(),
+  productScope: z.array(z.string()).default([]),
   notes: z.string().nullable().optional(),
+  evidenceIds: z.array(z.string()).default([]),
+  primaryEvidenceId: z.string().nullable().optional(),
   evidenceCount: z.number().int().min(0),
   snapshotId: z.string(),
   status: relationStatusSchema,
+  sourceMethod: z.string().nullable().optional(),
+  sourceCount: z.number().int().min(0).optional(),
+  lineageKey: z.string().nullable().optional(),
+  lastVerifiedAt: z.string().nullable().optional(),
   validFrom: z.string().nullable().optional(),
   validTo: z.string().nullable().optional(),
   evidence: z.array(evidenceSchema).optional(),
@@ -136,55 +195,126 @@ export const subgraphSchema = z.object({
   relations: z.array(relationSchema),
 });
 
+export const relationEvidenceResponseSchema = z.object({
+  relationId: z.string(),
+  items: z.array(evidenceSchema),
+  total: z.number().int().min(0),
+  source: backendSourceSchema,
+});
+
 export const standardizedImportRelationRecordSchema = z.object({
+  relation_id: z.string(),
+  snapshot_id: z.string(),
   company: z.string(),
+  company_slug: z.string(),
   supplier: z.string(),
+  supplier_slug: z.string(),
   tier: z.number().int().min(1),
+  depth_from_mag7: z.number().int().min(0),
   relationship_type: relationshipTypeSchema,
-  product_scope: z.string(),
+  relationship_subtype: z.string(),
+  product_scope: z.array(z.string()).min(1),
+  evidence_ids: z.array(z.string()).min(1),
+  primary_evidence_id: z.string(),
   evidence_date: z.string(),
+  evidence_date_resolution: z.string(),
   evidence_excerpt: z.string(),
   source_url: z.string().url(),
   confidence_label: confidenceSchema,
   confidence_score: z.number().min(0).max(1),
-  notes: z.string(),
-  source_type: sourceTypeSchema.optional(),
-  source_title: z.string().optional(),
-  source_publisher: z.string().optional(),
-  evidence_page_ref: z.string().optional(),
-  source_domain: z.string().optional(),
-  parser_version: z.string().optional(),
-  reliability_tier: z.number().int().min(1).max(4).optional(),
-  depth_from_mag7: z.number().int().min(0).optional(),
-  snapshot_id: z.string().optional(),
+  source_method: z.string(),
+  source_count: z.number().int().min(1),
+  status: relationStatusSchema,
+  summary: z.string(),
+  notes: z.string().optional(),
+  lineage_key: z.string(),
+  source_report_path: z.string(),
+  last_verified_at: z.string(),
+});
+
+export const standardizedImportEvidenceRecordSchema = z.object({
+  evidence_id: z.string(),
+  relation_id: z.string(),
+  source_type: sourceTypeSchema,
+  title: z.string(),
+  publisher: z.string(),
+  source_url: z.string().url(),
+  source_domain: z.string(),
+  published_at: z.string(),
+  published_at_resolution: z.string(),
+  retrieved_at: z.string(),
+  excerpt: z.string(),
+  citation_text: z.string(),
+  page_ref: z.string().optional(),
+  language: z.string().optional(),
+  reliability_tier: z.number().int().min(1).max(4),
+  parser_version: z.string(),
+  license_note: z.string().optional(),
+  source_report_path: z.string(),
+  notes: z.string().optional(),
+});
+
+export const standardizedImportPackageSchema = z.object({
+  relations: z.array(standardizedImportRelationRecordSchema).min(1),
+  evidence: z.array(standardizedImportEvidenceRecordSchema).min(1),
 });
 
 export const importRelationsRequestSchema = z.object({
   requestId: z.string(),
   source: z.string(),
   dataVersion: z.string(),
-  schemaVersion: z.string().default("mag7-supply-chain.import-relations.v1"),
+  schemaVersion: z.string().default("mag7-supply-chain.import-relations.v2"),
   relations: z.array(standardizedImportRelationRecordSchema).min(1),
 });
 
 export const importRelationsFieldCatalog = [
   {
+    name: "relation_id",
+    type: "string",
+    required: true,
+    description: "Stable relation primary key from the normalized package.",
+  },
+  {
+    name: "snapshot_id",
+    type: "string",
+    required: true,
+    description: "Snapshot identifier that versions this relation fact.",
+  },
+  {
     name: "company",
     type: "string",
     required: true,
-    description: "Target Mag7 or downstream company canonical label or identifier.",
+    description: "Downstream company display label.",
+  },
+  {
+    name: "company_slug",
+    type: "string",
+    required: true,
+    description: "Canonical downstream company slug.",
   },
   {
     name: "supplier",
     type: "string",
     required: true,
-    description: "Supplier or upstream provider canonical label or identifier.",
+    description: "Upstream supplier display label.",
+  },
+  {
+    name: "supplier_slug",
+    type: "string",
+    required: true,
+    description: "Canonical upstream supplier slug.",
   },
   {
     name: "tier",
     type: "integer",
     required: true,
-    description: "Supplier tier relative to the target company.",
+    description: "Supplier tier relative to the downstream company.",
+  },
+  {
+    name: "depth_from_mag7",
+    type: "integer",
+    required: true,
+    description: "Traversal depth from the Mag7 anchor company.",
   },
   {
     name: "relationship_type",
@@ -193,28 +323,52 @@ export const importRelationsFieldCatalog = [
     description: "Normalized supply-chain relationship type.",
   },
   {
-    name: "product_scope",
+    name: "relationship_subtype",
     type: "string",
     required: true,
-    description: "Product, component, material, or service scope for the relation.",
+    description: "Human-readable subtype preserved from research normalization.",
+  },
+  {
+    name: "product_scope",
+    type: "string[]",
+    required: true,
+    description: "Lossless array of products, materials, services, or technologies in scope.",
+  },
+  {
+    name: "evidence_ids",
+    type: "string[]",
+    required: true,
+    description: "All evidence identifiers attached to the relation.",
+  },
+  {
+    name: "primary_evidence_id",
+    type: "string",
+    required: true,
+    description: "Primary evidence identifier for summary and ranking.",
   },
   {
     name: "evidence_date",
     type: "string",
     required: true,
-    description: "Source publication date in ISO-8601 string form.",
+    description: "Canonical evidence date in ISO-8601 string form.",
+  },
+  {
+    name: "evidence_date_resolution",
+    type: "string",
+    required: true,
+    description: "How the evidence date was resolved during normalization.",
   },
   {
     name: "evidence_excerpt",
     type: "string",
     required: true,
-    description: "Short evidence excerpt used for downstream review and display.",
+    description: "Supporting excerpt kept for auditability and UI display.",
   },
   {
     name: "source_url",
     type: "string",
     required: true,
-    description: "Canonical source URL for the evidence item.",
+    description: "Canonical URL for the primary evidence source.",
   },
   {
     name: "confidence_label",
@@ -229,19 +383,71 @@ export const importRelationsFieldCatalog = [
     description: "Continuous confidence score between 0 and 1.",
   },
   {
-    name: "notes",
+    name: "source_method",
     type: "string",
     required: true,
-    description: "Analyst notes, caveats, or inference chain context.",
+    description: "Collection method used to derive the relation.",
+  },
+  {
+    name: "source_count",
+    type: "integer",
+    required: true,
+    description: "Number of supporting sources considered during normalization.",
+  },
+  {
+    name: "status",
+    type: "enum",
+    required: true,
+    description: "Lifecycle status of the relation fact.",
+  },
+  {
+    name: "summary",
+    type: "string",
+    required: true,
+    description: "Canonical analyst summary for the relation.",
+  },
+  {
+    name: "notes",
+    type: "string",
+    required: false,
+    description: "Optional analyst notes and caveats.",
+  },
+  {
+    name: "lineage_key",
+    type: "string",
+    required: true,
+    description: "Lineage key used for deduplication and version tracking.",
+  },
+  {
+    name: "source_report_path",
+    type: "string",
+    required: true,
+    description: "Collector output path where the evidence bundle originated.",
+  },
+  {
+    name: "last_verified_at",
+    type: "string",
+    required: true,
+    description: "Latest verification timestamp for this relation.",
   },
 ] as const;
 
+export type BackendSource = z.infer<typeof backendSourceSchema>;
 export type CompanyDTO = z.infer<typeof companySchema>;
+export type CompanyListItemDTO = z.infer<typeof companyListItemSchema>;
+export type CompanyListQuery = z.infer<typeof companyListQuerySchema>;
+export type CompanyListResponseDTO = z.infer<typeof companyListResponseSchema>;
+export type CompanyDetailDTO = z.infer<typeof companyDetailSchema>;
+export type CompanyDetailResponseDTO = z.infer<typeof companyDetailResponseSchema>;
+export type CompanyOverviewDTO = z.infer<typeof companyOverviewSchema>;
 export type EvidenceDTO = z.infer<typeof evidenceSchema>;
 export type SnapshotDTO = z.infer<typeof snapshotSchema>;
 export type GraphNodeDTO = z.infer<typeof graphNodeSchema>;
 export type RelationDTO = z.infer<typeof relationSchema>;
 export type SubgraphDTO = z.infer<typeof subgraphSchema>;
 export type SubgraphQuery = z.infer<typeof subgraphQuerySchema>;
+export type RelationEvidenceResponseDTO = z.infer<typeof relationEvidenceResponseSchema>;
 export type StandardizedImportRelationRecord = z.infer<typeof standardizedImportRelationRecordSchema>;
+export type StandardizedImportEvidenceRecord = z.infer<typeof standardizedImportEvidenceRecordSchema>;
+export type StandardizedImportPackage = z.infer<typeof standardizedImportPackageSchema>;
 export type ImportRelationsRequest = z.infer<typeof importRelationsRequestSchema>;

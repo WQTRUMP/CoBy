@@ -1,5 +1,5 @@
 import type {
-  CompanyDTO,
+  CompanyDetailDTO,
   EvidenceDTO,
   SnapshotDTO,
   SubgraphDTO,
@@ -14,7 +14,7 @@ const snapshot: SnapshotDTO = {
   notes: "Mock snapshot for backend bootstrap",
 };
 
-const companies: CompanyDTO[] = [
+const companies: CompanyDetailDTO[] = [
   {
     id: "company:AAPL",
     ticker: "AAPL",
@@ -28,6 +28,10 @@ const companies: CompanyDTO[] = [
     aliases: ["Apple Inc."],
     active: true,
     importanceScore: 1,
+    primaryRegion: "US",
+    activeSnapshotId: snapshot.id,
+    summary: "Consumer hardware and services company with concentrated foundry and assembly dependencies.",
+    lastUpdatedAt: snapshot.publishedAt,
   },
   {
     id: "company:TSMC",
@@ -42,6 +46,10 @@ const companies: CompanyDTO[] = [
     aliases: ["Taiwan Semiconductor Manufacturing Company"],
     active: true,
     importanceScore: 0.82,
+    primaryRegion: "TW",
+    activeSnapshotId: snapshot.id,
+    summary: "Advanced semiconductor foundry serving leading AI and consumer hardware programs.",
+    lastUpdatedAt: snapshot.publishedAt,
   },
   {
     id: "company:ASML",
@@ -56,6 +64,10 @@ const companies: CompanyDTO[] = [
     aliases: [],
     active: true,
     importanceScore: 0.74,
+    primaryRegion: "NL",
+    activeSnapshotId: snapshot.id,
+    summary: "Critical semiconductor equipment provider for advanced-node manufacturing.",
+    lastUpdatedAt: snapshot.publishedAt,
   },
 ];
 
@@ -120,11 +132,18 @@ export const mockSubgraph: SubgraphDTO = {
       confidence: "strong_evidence",
       confidenceScore: 0.88,
       summary: "TSMC 为 Apple 提供先进制程晶圆代工能力。",
-      productScope: "advanced silicon manufacturing",
+      relationshipSubtype: "wafer_foundry",
+      productScope: ["advanced silicon manufacturing"],
       notes: "Mock relation aligned to standardized import field set.",
+      evidenceIds: [evidence[0].id],
+      primaryEvidenceId: evidence[0].id,
       evidenceCount: 1,
       snapshotId: snapshot.id,
       status: "approved",
+      sourceMethod: "mock_seed",
+      sourceCount: 1,
+      lineageKey: "lineage:tsmc:aapl:manufacturing",
+      lastVerifiedAt: "2026-06-14T00:00:00.000Z",
       validFrom: "2024-01-01",
       validTo: null,
       evidence: [evidence[0]],
@@ -139,11 +158,18 @@ export const mockSubgraph: SubgraphDTO = {
       confidence: "strong_evidence",
       confidenceScore: 0.84,
       summary: "ASML 为 TSMC 提供 EUV 光刻设备。",
-      productScope: "EUV lithography equipment",
+      relationshipSubtype: "lithography_equipment",
+      productScope: ["EUV lithography equipment"],
       notes: "Mock relation aligned to standardized import field set.",
+      evidenceIds: [evidence[1].id],
+      primaryEvidenceId: evidence[1].id,
       evidenceCount: 1,
       snapshotId: snapshot.id,
       status: "approved",
+      sourceMethod: "mock_seed",
+      sourceCount: 1,
+      lineageKey: "lineage:asml:tsmc:equipment",
+      lastVerifiedAt: "2026-06-14T00:00:00.000Z",
       validFrom: "2024-01-01",
       validTo: null,
       evidence: [evidence[1]],

@@ -1,60 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 
-const normalizedRelationSchema = z.object({
-  relation_id: z.string(),
-  snapshot_id: z.string(),
-  company: z.string(),
-  company_slug: z.string(),
-  supplier: z.string(),
-  supplier_slug: z.string(),
-  tier: z.number().int().min(1),
-  depth_from_mag7: z.number().int().min(0),
-  relationship_type: z.string(),
-  relationship_subtype: z.string(),
-  product_scope: z.array(z.string()).min(1),
-  evidence_ids: z.array(z.string()).min(1),
-  primary_evidence_id: z.string(),
-  evidence_date: z.string(),
-  evidence_date_resolution: z.string(),
-  evidence_excerpt: z.string(),
-  source_url: z.string().url(),
-  confidence_label: z.string(),
-  confidence_score: z.number().min(0).max(1),
-  source_method: z.string(),
-  source_count: z.number().int().min(1),
-  status: z.string(),
-  summary: z.string(),
-  notes: z.string().optional(),
-  lineage_key: z.string(),
-  source_report_path: z.string(),
-  last_verified_at: z.string(),
-});
-
-const normalizedEvidenceSchema = z.object({
-  evidence_id: z.string(),
-  relation_id: z.string(),
-  source_type: z.string(),
-  title: z.string(),
-  publisher: z.string(),
-  source_url: z.string().url(),
-  source_domain: z.string(),
-  published_at: z.string(),
-  published_at_resolution: z.string(),
-  retrieved_at: z.string(),
-  excerpt: z.string(),
-  citation_text: z.string(),
-  page_ref: z.string().optional(),
-  language: z.string().optional(),
-  reliability_tier: z.number().int().min(1).max(4),
-  parser_version: z.string(),
-  license_note: z.string().optional(),
-  source_report_path: z.string(),
-  notes: z.string().optional(),
-});
-
-export type NormalizedRelationRecord = z.infer<typeof normalizedRelationSchema>;
-export type NormalizedEvidenceRecord = z.infer<typeof normalizedEvidenceSchema>;
+import {
+  standardizedImportEvidenceRecordSchema,
+  standardizedImportRelationRecordSchema,
+  type StandardizedImportEvidenceRecord,
+  type StandardizedImportRelationRecord,
+} from "../../../packages/contracts/src/index.js";
+export type NormalizedRelationRecord = StandardizedImportRelationRecord;
+export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
 
 export interface NormalizedImportPackage {
   relations: NormalizedRelationRecord[];
@@ -96,9 +50,9 @@ export interface ImportRelationNode {
   confidence: string;
   confidenceScore: number;
   summary: string;
-  productScope: string | null;
-  productScopeList: string[];
+  productScope: string[];
   notes: string | null;
+  evidenceIds: string[];
   evidenceCount: number;
   snapshotId: string;
   status: string;
@@ -376,8 +330,8 @@ export async function loadNormalizedImportPackage(
 ): Promise<NormalizedImportPackage> {
   const [relations, evidence]: [NormalizedRelationRecord[], NormalizedEvidenceRecord[]] =
     await Promise.all([
-    readNormalizedJsonlFile(relationFile, normalizedRelationSchema),
-    readNormalizedJsonlFile(evidenceFile, normalizedEvidenceSchema),
+    readNormalizedJsonlFile(relationFile, standardizedImportRelationRecordSchema),
+    readNormalizedJsonlFile(evidenceFile, standardizedImportEvidenceRecordSchema),
   ]);
 
   return {
@@ -432,9 +386,9 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       confidence: relation.confidence_label,
       confidenceScore: relation.confidence_score,
       summary: relation.summary,
-      productScope: relation.product_scope.join(", "),
-      productScopeList: relation.product_scope,
+      productScope: relation.product_scope,
       notes: relation.notes ?? null,
+      evidenceIds: relation.evidence_ids,
       evidenceCount: relation.evidence_ids.length,
       snapshotId: relation.snapshot_id,
       status: relation.status,
