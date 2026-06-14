@@ -21,12 +21,12 @@ export interface CacheClient {
 export interface RedisClientLike {
   isOpen: boolean;
   on(event: string, listener: (...args: unknown[]) => void): unknown;
-  connect(): Promise<void>;
+  connect(): Promise<unknown>;
   get(key: string): Promise<string | null>;
   set(key: string, value: string, options: { EX: number }): Promise<unknown>;
   del(key: string): Promise<unknown>;
   ping(): Promise<string>;
-  quit(): Promise<void>;
+  quit(): Promise<unknown>;
 }
 
 interface DisabledReason {
