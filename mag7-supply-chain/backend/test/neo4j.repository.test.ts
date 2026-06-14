@@ -914,4 +914,78 @@ describe("Neo4jGraphRepository", () => {
       },
     });
   });
+
+  it("preserves canonical/display names and entity profiles in company list items", async () => {
+    const session = {
+      async run() {
+        return {
+          records: [
+            new FakeRecord({
+              company: {
+                id: "company:GOOGL",
+                ticker: "GOOGL",
+                name: "Alphabet",
+                canonicalName: "Alphabet",
+                displayName: "Google",
+                entityType: "Company",
+                companyType: "public_company",
+                country: "US",
+                isMag7: true,
+                marketCapUsd: 2200000000000,
+                description: "Alphabet",
+                aliases: ["Alphabet Inc.", "Google"],
+                entityProfileJson: JSON.stringify({
+                  canonicalName: "Alphabet",
+                  displayName: "Google",
+                  legalEntities: [],
+                  brands: [],
+                  aliases: [
+                    {
+                      id: "alias:alphabet:google",
+                      name: "Google",
+                      normalizedName: "google",
+                      aliasType: "short_name",
+                      isPrimary: true,
+                    },
+                  ],
+                }),
+                active: true,
+                importanceScore: 1,
+                primaryRegion: "US",
+                activeSnapshotId: "snapshot:2026-06-14.3",
+                summary: "Alphabet summary",
+                lastUpdatedAt: "2026-06-14T03:05:00.000Z",
+                searchAliases: ["Google"],
+              },
+            }),
+          ],
+        };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const results = await repository.listCompanies({
+      q: "google",
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      id: "company:GOOGL",
+      canonicalName: "Alphabet",
+      displayName: "Google",
+      entityProfile: {
+        canonicalName: "Alphabet",
+        displayName: "Google",
+      },
+    });
+  });
 });

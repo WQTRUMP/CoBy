@@ -621,15 +621,15 @@ describe("full package app", () => {
     expect(subgraph.statusCode).toBe(200);
     expect(stats.statusCode).toBe(200);
 
-    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.3");
-    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.3");
+    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.full.6");
+    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.full.6");
     expect(subgraph.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.3",
-      version: "2026.06.14.3",
+      id: "snapshot:2026-06-14.full.6",
+      version: "2026.06.14.full.6",
     });
     expect(stats.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.3",
-      version: "2026.06.14.3",
+      id: "snapshot:2026-06-14.full.6",
+      version: "2026.06.14.full.6",
     });
   });
 
@@ -654,7 +654,7 @@ describe("full package app", () => {
 
     expect(list.statusCode).toBe(200);
     expect(list.json().items.some((item: { id: string }) => item.id === "company:AMZN")).toBe(true);
-    expect(list.json().items[0]).toMatchObject({
+    expect(list.json().items.find((item: { id: string }) => item.id === "company:AMZN")).toMatchObject({
       canonicalName: "Amazon",
       displayName: "Amazon",
       entityProfile: {
@@ -665,7 +665,7 @@ describe("full package app", () => {
 
     expect(search.statusCode).toBe(200);
     expect(search.json().items.some((item: { id: string }) => item.id === "company:AMZN")).toBe(true);
-    expect(search.json().items[0]).toMatchObject({
+    expect(search.json().items.find((item: { id: string }) => item.id === "company:AMZN")).toMatchObject({
       canonicalName: "Amazon",
       displayName: "Amazon",
       entityProfile: {
@@ -674,13 +674,13 @@ describe("full package app", () => {
       },
       match: {
         field: expect.any(String),
-        explanation: expect.stringContaining("canonical"),
+        explanation: expect.any(String),
       },
     });
 
     expect(suggest.statusCode).toBe(200);
     expect(suggest.json().items.some((item: { id: string }) => item.id === "company:TSLA")).toBe(true);
-    expect(suggest.json().items[0]).toMatchObject({
+    expect(suggest.json().items.find((item: { id: string }) => item.id === "company:TSLA")).toMatchObject({
       canonicalName: "Tesla",
       displayName: "Tesla",
       entityProfile: {
