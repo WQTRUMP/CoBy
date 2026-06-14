@@ -22,7 +22,7 @@ const cacheClient: CacheClient = {
     cache.delete(key);
   },
   async health() {
-    return { status: "up", detail: "test cache" };
+    return { status: "up", enabled: true, detail: "test cache" };
   },
   async close() {},
 };

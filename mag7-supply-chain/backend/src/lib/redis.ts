@@ -6,6 +6,7 @@ import { toDependencyDetail } from "./dependency-failures.js";
 
 export interface RedisHealth {
   status: DependencyStatus;
+  enabled: boolean;
   detail: string;
 }
 
@@ -36,6 +37,8 @@ interface DisabledReason {
 
 export type RedisClientFactory = (options: { url: string }) => RedisClientLike;
 
+const REDIS_CONNECT_TIMEOUT_MS = 1_000;
+
 class NoopCacheClient implements CacheClient {
   enabled = false;
 
@@ -53,7 +56,10 @@ class NoopCacheClient implements CacheClient {
   async del() {}
 
   async health() {
-    return this.reason;
+    return {
+      ...this.reason,
+      enabled: false,
+    };
   }
 
   async close() {}
@@ -123,17 +129,19 @@ class RedisCacheClient implements CacheClient {
     if (!this.available) {
       return {
         status: "down" as const,
+        enabled: false,
         detail: this.detail,
       };
     }
 
     try {
       await this.client.ping();
-      return { status: "up" as const, detail: this.detail };
+      return { status: "up" as const, enabled: true, detail: this.detail };
     } catch (error) {
       await this.disable(`Redis unavailable; cache disabled: ${toDependencyDetail(error, "Redis ping failed")}`);
       return {
         status: "down" as const,
+        enabled: false,
         detail: this.detail,
       };
     }
@@ -158,14 +166,38 @@ export async function createCacheClient(options: CreateCacheClientOptions = {}):
     return new NoopCacheClient();
   }
 
-  const factory = options.createClient ?? ((clientOptions) => createClient(clientOptions) as RedisClientLike);
+  const factory =
+    options.createClient ??
+    ((clientOptions) =>
+      createClient({
+        ...clientOptions,
+        socket: {
+          connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
+          reconnectStrategy: false,
+        },
+      }) as RedisClientLike);
   const client = factory({ url });
   client.on("error", () => undefined);
 
   try {
-    await client.connect();
+    await Promise.race([
+      client.connect(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Redis connect timeout after ${REDIS_CONNECT_TIMEOUT_MS}ms`));
+        }, REDIS_CONNECT_TIMEOUT_MS + 100);
+      }),
+    ]);
     return new RedisCacheClient(client);
   } catch (error) {
+    if (client.isOpen) {
+      try {
+        await client.quit();
+      } catch {
+        // Ignore shutdown failures after a startup connect timeout/failure.
+      }
+    }
+
     return new NoopCacheClient({
       status: "down",
       detail: `Redis unavailable; cache disabled: ${toDependencyDetail(error, "Redis connect failed")}`,

@@ -33,6 +33,7 @@ describe("createCacheClient", () => {
     await expect(client.set("companies:search", "payload", 60)).resolves.toBeUndefined();
     await expect(client.health()).resolves.toMatchObject({
       status: "down",
+      enabled: false,
       detail: expect.stringContaining("cache disabled"),
     });
   });
@@ -53,6 +54,7 @@ describe("createCacheClient", () => {
     await expect(client.set("graph:stats", "payload", 60)).resolves.toBeUndefined();
     await expect(client.health()).resolves.toMatchObject({
       status: "down",
+      enabled: false,
       detail: expect.stringContaining("read ECONNRESET"),
     });
     expect(redisStub.quit).toHaveBeenCalledTimes(1);
