@@ -8,9 +8,13 @@
 - 标准化入库 schema 边界（为统一数据包任务预留）
 - `GET /api/v1/health` 健康检查
 - `GET /api/v1/companies` 公司列表
+- `GET /api/v1/companies/search` 公司搜索
+- `GET /api/v1/companies/suggest` 公司建议
 - `GET /api/v1/companies/:companyId` 公司详情
 - `GET /api/v1/companies/:companyId/overview` 公司聚合概览
 - `GET /api/v1/graph/subgraph` 子图查询
+- `GET /api/v1/graph/path` 公司路径查询
+- `GET /api/v1/graph/stats` 图谱统计
 - `GET /api/v1/relations/:relationId/evidence` 关系证据列表
 - `POST /api/v1/imports/relations` 数据导入占位接口
 - `POST /api/v1/imports/normalized-package` 标准化 JSONL 导入入口
@@ -45,9 +49,13 @@ http://127.0.0.1:4000
 ```bash
 curl http://127.0.0.1:4000/api/v1/health
 curl "http://127.0.0.1:4000/api/v1/companies?q=app"
+curl "http://127.0.0.1:4000/api/v1/companies/search?q=amazon&limit=5"
+curl "http://127.0.0.1:4000/api/v1/companies/suggest?q=tes&limit=5"
 curl "http://127.0.0.1:4000/api/v1/companies/company:AAPL"
 curl "http://127.0.0.1:4000/api/v1/companies/company:AAPL/overview"
 curl "http://127.0.0.1:4000/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&includeEvidence=true"
+curl "http://127.0.0.1:4000/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&includeEvidence=true"
+curl "http://127.0.0.1:4000/api/v1/graph/stats?snapshot=published&companyId=company:AMZN"
 curl "http://127.0.0.1:4000/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
 curl http://127.0.0.1:4000/api/v1/schema/import-relations
 ```
@@ -66,6 +74,14 @@ curl -X POST http://127.0.0.1:4000/api/v1/imports/relations \
 npm run import:normalized -- \
   --relations /workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl \
   --evidence /workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl
+```
+
+全量 Mag7 发布包导入：
+
+```bash
+npm run import:normalized -- \
+  --relations /workspace/agents/evidence-collector/output/mag7-full-package/relations.jsonl \
+  --evidence /workspace/agents/evidence-collector/output/mag7-full-package/evidence.jsonl
 ```
 
 或通过 HTTP 触发：
@@ -109,12 +125,21 @@ Neo4j 约束与索引位于：
 
 这一层是 ingestion contract，不复用前端原型字段，也不要求调用方提供 Neo4j 内部节点 ID。
 
-首批真实样例已经对齐：
+当前真实样例已经对齐：
 
 - Apple
 - Microsoft
 - Alphabet
 - Meta
+- Amazon
+- NVIDIA
+- Tesla
+
+## 真实模式说明
+
+- Neo4j 真实模式的 `subgraph`/`path` 查询现在按 `snapshot` 参数过滤；`snapshot=published` 只返回 `Snapshot.status = published` 的关系。
+- 真实模式下，`getSubgraph()` 在查询无结果时不再回退到 Tesla mock 图；会返回空图或仅包含根公司节点的空结果，避免多版本或 mock 污染。
+- `search` / `suggest` / `subgraph` / `path` / `stats` 均带 Redis 缓存键，便于热查询复用。
 
 ## 测试
 

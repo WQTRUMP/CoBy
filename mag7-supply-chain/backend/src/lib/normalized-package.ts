@@ -179,6 +179,21 @@ const companyRegistry = new Map<string, CompanySeed>([
     },
   ],
   [
+    "amazon",
+    {
+      id: "company:AMZN",
+      ticker: "AMZN",
+      name: "Amazon",
+      companyType: "public_company",
+      country: "US",
+      isMag7: true,
+      marketCapUsd: 2100000000000,
+      description: "E-commerce, cloud, logistics, and devices platform",
+      aliases: ["Amazon.com, Inc."],
+      importanceScore: 1,
+    },
+  ],
+  [
     "tsmc",
     {
       id: "company:TSMC",
@@ -277,6 +292,21 @@ const companyRegistry = new Map<string, CompanySeed>([
       marketCapUsd: 3300000000000,
       description: "Accelerated computing and AI infrastructure company",
       aliases: ["NVIDIA Corporation"],
+      importanceScore: 1,
+    },
+  ],
+  [
+    "tesla",
+    {
+      id: "company:TSLA",
+      ticker: "TSLA",
+      name: "Tesla",
+      companyType: "public_company",
+      country: "US",
+      isMag7: true,
+      marketCapUsd: 700000000000,
+      description: "Electric vehicles, energy storage, and manufacturing systems",
+      aliases: ["Tesla, Inc."],
       importanceScore: 1,
     },
   ],

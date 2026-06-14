@@ -11,6 +11,7 @@ export const knownSourceTypes = [
   "media",
   "industry_report",
   "press_release",
+  "official_doc",
  ] as const;
 
 export const sourceTypeSchema = z.enum(knownSourceTypes);
@@ -199,6 +200,62 @@ export const subgraphSchema = z.object({
   snapshot: snapshotSchema,
   nodes: z.array(graphNodeSchema),
   relations: z.array(relationSchema),
+});
+
+export const searchCompaniesQuerySchema = z.object({
+  q: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  isMag7: z.coerce.boolean().optional(),
+});
+
+export const searchCompaniesResponseSchema = z.object({
+  items: z.array(companyListItemSchema),
+  total: z.number().int().min(0),
+  query: z.string(),
+  source: backendSourceSchema,
+});
+
+export const suggestCompaniesQuerySchema = z.object({
+  q: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(20).default(8),
+});
+
+export const suggestCompaniesResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      ticker: z.string().optional(),
+      isMag7: z.boolean(),
+    }),
+  ),
+  total: z.number().int().min(0),
+  query: z.string(),
+  source: backendSourceSchema,
+});
+
+export const graphPathQuerySchema = z.object({
+  sourceCompanyId: z.string(),
+  targetCompanyId: z.string(),
+  maxDepth: z.coerce.number().int().min(1).max(4).default(3),
+  snapshot: z.string().default("published"),
+  includeEvidence: z.coerce.boolean().default(false),
+});
+
+export const graphStatsQuerySchema = z.object({
+  snapshot: z.string().default("published"),
+  companyId: z.string().optional(),
+});
+
+export const graphStatsSchema = z.object({
+  snapshot: snapshotSchema.nullable(),
+  companyCount: z.number().int().min(0),
+  relationCount: z.number().int().min(0),
+  evidenceCount: z.number().int().min(0),
+  mag7CompanyCount: z.number().int().min(0),
+  relationshipTypeBreakdown: z.record(z.string(), z.number().int().min(0)),
+  confidenceBreakdown: z.record(z.string(), z.number().int().min(0)),
+  source: backendSourceSchema,
 });
 
 export const relationEvidenceResponseSchema = z.object({
@@ -447,9 +504,16 @@ export type CompanyDetailDTO = z.infer<typeof companyDetailSchema>;
 export type CompanyDetailResponseDTO = z.infer<typeof companyDetailResponseSchema>;
 export type CompanyOverviewDTO = z.infer<typeof companyOverviewSchema>;
 export type EvidenceDTO = z.infer<typeof evidenceSchema>;
-export type SnapshotDTO = z.infer<typeof snapshotSchema>;
 export type GraphNodeDTO = z.infer<typeof graphNodeSchema>;
+export type GraphPathQuery = z.infer<typeof graphPathQuerySchema>;
+export type GraphStatsDTO = z.infer<typeof graphStatsSchema>;
+export type GraphStatsQuery = z.infer<typeof graphStatsQuerySchema>;
 export type RelationDTO = z.infer<typeof relationSchema>;
+export type SearchCompaniesQuery = z.infer<typeof searchCompaniesQuerySchema>;
+export type SearchCompaniesResponseDTO = z.infer<typeof searchCompaniesResponseSchema>;
+export type SnapshotDTO = z.infer<typeof snapshotSchema>;
+export type SuggestCompaniesQuery = z.infer<typeof suggestCompaniesQuerySchema>;
+export type SuggestCompaniesResponseDTO = z.infer<typeof suggestCompaniesResponseSchema>;
 export type SubgraphDTO = z.infer<typeof subgraphSchema>;
 export type SubgraphQuery = z.infer<typeof subgraphQuerySchema>;
 export type RelationEvidenceResponseDTO = z.infer<typeof relationEvidenceResponseSchema>;

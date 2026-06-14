@@ -7,6 +7,9 @@ import type {
   CompanyListQuery,
   CompanyOverviewDTO,
   EvidenceDTO,
+  GraphPathQuery,
+  GraphStatsDTO,
+  GraphStatsQuery,
   RelationDTO,
   SubgraphDTO,
   SubgraphQuery,
@@ -27,6 +30,8 @@ export interface GraphRepository {
   getCompany(companyId: string): Promise<CompanyDetailDTO | null>;
   getCompanyOverview(companyId: string): Promise<CompanyOverviewDTO | null>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
+  getPath(query: GraphPathQuery): Promise<SubgraphDTO>;
+  getGraphStats(query: GraphStatsQuery): Promise<GraphStatsDTO>;
   getRelationEvidence(relationId: string): Promise<EvidenceDTO[]>;
   importNormalizedPackage(payload: PreparedNormalizedImport): Promise<{
     companyCount: number;
@@ -55,6 +60,82 @@ function toNumber(value: unknown): number | null {
 
 function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+function mapCompanyToGraphNode(company: CompanyDetailDTO): SubgraphDTO["nodes"][number] {
+  return {
+    id: company.id,
+    entityType: "Company",
+    label: company.name,
+    company,
+    country: company.country,
+    marketCapUsd: company.marketCapUsd,
+    importanceScore: company.importanceScore,
+  };
+}
+
+function createSnapshotFallback(snapshot: string, fallbackId: string | null): SubgraphDTO["snapshot"] {
+  const id = snapshot === "published" ? fallbackId ?? "snapshot:published" : snapshot;
+  return {
+    id,
+    version: id.replace("snapshot:", "").replace(/-/g, "."),
+    status: "published",
+    publishedAt: null,
+    scope: [],
+    notes: "No matching relations returned for the requested snapshot filter.",
+  };
+}
+
+function mapRelationRecord(
+  resultRecord: { get: (key: string) => unknown },
+  companyMap: Map<string, SubgraphDTO["nodes"][number]>,
+  includeEvidence: boolean,
+): RelationDTO {
+  const sourceNode = resultRecord.get("source") as { properties: Record<string, unknown> };
+  const targetNode = resultRecord.get("target") as { properties: Record<string, unknown> };
+  const relationNode = resultRecord.get("rel") as { properties: Record<string, unknown> };
+  const sourceCompany = mapCompanyNode(sourceNode.properties);
+  const targetCompany = mapCompanyNode(targetNode.properties);
+  const relation = relationNode.properties;
+
+  for (const company of [sourceCompany, targetCompany]) {
+    companyMap.set(company.id, mapCompanyToGraphNode(company));
+  }
+
+  const evidence = (resultRecord.get("evidence") as Array<{ properties?: Record<string, unknown> } | null>)
+    .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
+    .map((item) => mapEvidenceProperties(item.properties));
+
+  return {
+    id: String(relation.id),
+    sourceId: sourceCompany.id,
+    targetId: targetCompany.id,
+    relationshipType: String(relation.relationshipType) as RelationDTO["relationshipType"],
+    tier: toNumber(relation.tier) ?? 1,
+    depthFromMag7: toNumber(relation.depthFromMag7) ?? 1,
+    confidence: String(relation.confidence) as RelationDTO["confidence"],
+    confidenceScore: toNumber(relation.confidenceScore) ?? 0,
+    summary: String(relation.summary),
+    relationshipSubtype:
+      typeof relation.relationshipSubtype === "string" ? relation.relationshipSubtype : null,
+    productScope:
+      Array.isArray(relation.productScope)
+        ? relation.productScope.map((item: unknown) => String(item))
+        : toStringArray(relation.productScope),
+    notes: typeof relation.notes === "string" ? relation.notes : null,
+    evidenceIds: toStringArray(relation.evidenceIds),
+    primaryEvidenceId: typeof relation.primaryEvidenceId === "string" ? relation.primaryEvidenceId : null,
+    evidenceCount: toNumber(relation.evidenceCount) ?? evidence.length,
+    snapshotId: String(relation.snapshotId),
+    status: String(relation.status) as RelationDTO["status"],
+    sourceMethod: typeof relation.sourceMethod === "string" ? relation.sourceMethod : null,
+    sourceCount: toNumber(relation.sourceCount) ?? 0,
+    lineageKey: typeof relation.lineageKey === "string" ? relation.lineageKey : null,
+    lastVerifiedAt: typeof relation.lastVerifiedAt === "string" ? relation.lastVerifiedAt : null,
+    validFrom: typeof relation.validFrom === "string" ? relation.validFrom : null,
+    validTo: typeof relation.validTo === "string" ? relation.validTo : null,
+    evidence: includeEvidence ? evidence : undefined,
+  };
 }
 
 function mapCompanyNode(properties: Record<string, unknown>): CompanyDetailDTO {
@@ -200,6 +281,46 @@ class MockGraphRepository implements GraphRepository {
         };
   }
 
+  async getPath(query: GraphPathQuery) {
+    const nodes = new Set([query.sourceCompanyId, query.targetCompanyId]);
+    const relations = mockSubgraph.relations.filter((relation) => {
+      const endpoints = [relation.sourceId, relation.targetId];
+      return endpoints.some((id) => nodes.has(id));
+    });
+
+    return {
+      ...mockSubgraph,
+      relations: query.includeEvidence
+        ? relations
+        : relations.map(({ evidence, ...relation }) => relation),
+    };
+  }
+
+  async getGraphStats() {
+    const companyIds = new Set<string>();
+    const relationshipTypeBreakdown: Record<string, number> = {};
+    const confidenceBreakdown: Record<string, number> = {};
+
+    for (const relation of mockSubgraph.relations) {
+      companyIds.add(relation.sourceId);
+      companyIds.add(relation.targetId);
+      relationshipTypeBreakdown[relation.relationshipType] =
+        (relationshipTypeBreakdown[relation.relationshipType] ?? 0) + 1;
+      confidenceBreakdown[relation.confidence] = (confidenceBreakdown[relation.confidence] ?? 0) + 1;
+    }
+
+    return {
+      snapshot: mockSubgraph.snapshot,
+      companyCount: companyIds.size,
+      relationCount: mockSubgraph.relations.length,
+      evidenceCount: mockSubgraph.relations.reduce((sum, relation) => sum + relation.evidenceCount, 0),
+      mag7CompanyCount: mockCompanies.filter((company) => company.isMag7).length,
+      relationshipTypeBreakdown,
+      confidenceBreakdown,
+      source: this.source,
+    };
+  }
+
   async getRelationEvidence(relationId: string) {
     return mockSubgraph.relations.find((relation) => relation.id === relationId)?.evidence ?? [];
   }
@@ -340,11 +461,12 @@ export class Neo4jGraphRepository implements GraphRepository {
         WHERE rel.depthFromMag7 <= $depth
           AND length(path) <= (($depth * 2) - 1)
           AND ($relationshipTypes IS NULL OR rel.relationshipType IN $relationshipTypes)
-        WITH DISTINCT rel
+        WITH root, DISTINCT rel
         WHERE rel IS NOT NULL
         MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
+        MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        WHERE (($snapshot = 'published' AND snapshot.status = 'published') OR snapshot.id = $snapshot)
         OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
-        OPTIONAL MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
         RETURN source, rel, target, collect(DISTINCT e) AS evidence, head(collect(DISTINCT snapshot)) AS snapshot
         ORDER BY rel.id ASC
         `,
@@ -352,75 +474,22 @@ export class Neo4jGraphRepository implements GraphRepository {
           companyId: query.companyId,
           depth: neo4j.int(query.depth),
           relationshipTypes: query.relationshipTypes ?? null,
+          snapshot: query.snapshot,
         },
       );
 
-      const record = result.records[0];
-      if (!record) {
-        return mockSubgraph;
-      }
-
       const companyMap = new Map<string, SubgraphDTO["nodes"][number]>();
-      const relations = result.records.map((resultRecord) => {
-          const sourceNode = resultRecord.get("source") as { properties: Record<string, unknown> };
-          const targetNode = resultRecord.get("target") as { properties: Record<string, unknown> };
-          const relationNode = resultRecord.get("rel") as { properties: Record<string, unknown> };
-          const sourceCompany = mapCompanyNode(sourceNode.properties);
-          const targetCompany = mapCompanyNode(targetNode.properties);
-          const relation = relationNode.properties;
-
-          for (const company of [sourceCompany, targetCompany]) {
-            companyMap.set(company.id, {
-              id: company.id,
-              entityType: "Company",
-              label: company.name,
-              company,
-              country: company.country,
-              marketCapUsd: company.marketCapUsd,
-              importanceScore: company.importanceScore,
-            });
-          }
-
-          const items = (resultRecord.get("evidence") as Array<{ properties?: Record<string, unknown> } | null>)
-            .filter((item): item is { properties: Record<string, unknown> } => Boolean(item?.properties))
-            .map((item) => mapEvidenceProperties(item.properties));
-
-          return {
-            id: String(relation.id),
-            sourceId: sourceCompany.id,
-            targetId: targetCompany.id,
-            relationshipType: String(relation.relationshipType) as SubgraphDTO["relations"][number]["relationshipType"],
-            tier: toNumber(relation.tier) ?? 1,
-            depthFromMag7: toNumber(relation.depthFromMag7) ?? 1,
-            confidence: String(relation.confidence) as SubgraphDTO["relations"][number]["confidence"],
-            confidenceScore: toNumber(relation.confidenceScore) ?? 0,
-            summary: String(relation.summary),
-            relationshipSubtype:
-              typeof relation.relationshipSubtype === "string" ? relation.relationshipSubtype : null,
-            productScope:
-              Array.isArray(relation.productScope)
-                ? relation.productScope.map((item: unknown) => String(item))
-                : toStringArray(relation.productScope),
-            notes: typeof relation.notes === "string" ? relation.notes : null,
-            evidenceIds: toStringArray(relation.evidenceIds),
-            primaryEvidenceId:
-              typeof relation.primaryEvidenceId === "string" ? relation.primaryEvidenceId : null,
-            evidenceCount: toNumber(relation.evidenceCount) ?? items.length,
-            snapshotId: String(relation.snapshotId),
-            status: String(relation.status) as SubgraphDTO["relations"][number]["status"],
-            sourceMethod: typeof relation.sourceMethod === "string" ? relation.sourceMethod : null,
-            sourceCount: toNumber(relation.sourceCount) ?? 0,
-            lineageKey: typeof relation.lineageKey === "string" ? relation.lineageKey : null,
-            lastVerifiedAt:
-              typeof relation.lastVerifiedAt === "string" ? relation.lastVerifiedAt : null,
-            validFrom: typeof relation.validFrom === "string" ? relation.validFrom : null,
-            validTo: typeof relation.validTo === "string" ? relation.validTo : null,
-            evidence: query.includeEvidence ? items : undefined,
-          };
-        });
+      const relations = result.records.map((resultRecord) =>
+        mapRelationRecord(resultRecord, companyMap, query.includeEvidence),
+      );
 
       if (relations.length === 0) {
-        return mockSubgraph;
+        const rootCompany = await this.getCompany(query.companyId);
+        return {
+          snapshot: createSnapshotFallback(query.snapshot, rootCompany?.activeSnapshotId ?? null),
+          nodes: rootCompany ? [mapCompanyToGraphNode(rootCompany)] : [],
+          relations: [],
+        };
       }
 
       const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
@@ -440,9 +509,167 @@ export class Neo4jGraphRepository implements GraphRepository {
               scope: toStringArray(snapshotNode.properties.scope),
               notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
             }
-          : mockSubgraph.snapshot,
+          : createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
         nodes: [...companyMap.values()],
         relations,
+      };
+    } finally {
+      await session.close();
+    }
+  }
+
+  async getPath(query: GraphPathQuery) {
+    const session = this.driver.session({ database: this.database });
+
+    try {
+      const result = await session.run(
+        `
+        MATCH (start:Company {id: $sourceCompanyId}), (finish:Company {id: $targetCompanyId})
+        OPTIONAL MATCH path = shortestPath((start)-[:TARGET_OF|SOURCE_OF*1..8]-(finish))
+        WITH [node IN nodes(path) WHERE node:SupplyRelation] AS relationsInPath
+        UNWIND relationsInPath AS rel
+        MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
+        MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        WHERE rel.depthFromMag7 <= $maxDepth
+          AND (($snapshot = 'published' AND snapshot.status = 'published') OR snapshot.id = $snapshot)
+        OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
+        RETURN source, rel, target, collect(DISTINCT e) AS evidence, head(collect(DISTINCT snapshot)) AS snapshot
+        ORDER BY rel.id ASC
+        `,
+        {
+          sourceCompanyId: query.sourceCompanyId,
+          targetCompanyId: query.targetCompanyId,
+          maxDepth: neo4j.int(query.maxDepth),
+          snapshot: query.snapshot,
+        },
+      );
+
+      const companyMap = new Map<string, SubgraphDTO["nodes"][number]>();
+      const relations = result.records.map((resultRecord) =>
+        mapRelationRecord(resultRecord, companyMap, query.includeEvidence),
+      );
+
+      if (relations.length === 0) {
+        const [sourceCompany, targetCompany] = await Promise.all([
+          this.getCompany(query.sourceCompanyId),
+          this.getCompany(query.targetCompanyId),
+        ]);
+        const nodes = [sourceCompany, targetCompany]
+          .filter((company): company is CompanyDetailDTO => Boolean(company))
+          .map(mapCompanyToGraphNode);
+
+        return {
+          snapshot: createSnapshotFallback(
+            query.snapshot,
+            sourceCompany?.activeSnapshotId ?? targetCompany?.activeSnapshotId ?? null,
+          ),
+          nodes,
+          relations: [],
+        };
+      }
+
+      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
+        | { properties?: Record<string, unknown> }
+        | null;
+
+      return {
+        snapshot: snapshotNode?.properties
+          ? {
+              id: String(snapshotNode.properties.id),
+              version: String(snapshotNode.properties.version),
+              status: String(snapshotNode.properties.status) as SubgraphDTO["snapshot"]["status"],
+              publishedAt:
+                typeof snapshotNode.properties.publishedAt === "string"
+                  ? snapshotNode.properties.publishedAt
+                  : null,
+              scope: toStringArray(snapshotNode.properties.scope),
+              notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
+            }
+          : createSnapshotFallback(query.snapshot, relations[0]?.snapshotId ?? null),
+        nodes: [...companyMap.values()],
+        relations,
+      };
+    } finally {
+      await session.close();
+    }
+  }
+
+  async getGraphStats(query: GraphStatsQuery) {
+    const session = this.driver.session({ database: this.database });
+
+    try {
+      const result = await session.run(
+        `
+        MATCH (source:Company)-[:SOURCE_OF]->(rel:SupplyRelation)-[:TARGET_OF]->(target:Company)
+        MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
+        WHERE (($snapshot = 'published' AND snapshot.status = 'published') OR snapshot.id = $snapshot)
+          AND ($companyId IS NULL OR source.id = $companyId OR target.id = $companyId)
+        OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)
+        RETURN source, target, rel, collect(DISTINCT e) AS evidence, head(collect(DISTINCT snapshot)) AS snapshot
+        ORDER BY rel.id ASC
+        `,
+        {
+          snapshot: query.snapshot,
+          companyId: query.companyId ?? null,
+        },
+      );
+
+      const companyIds = new Set<string>();
+      const mag7Ids = new Set<string>();
+      const evidenceIds = new Set<string>();
+      const relationshipTypeBreakdown: Record<string, number> = {};
+      const confidenceBreakdown: Record<string, number> = {};
+
+      for (const record of result.records) {
+        const source = mapCompanyNode((record.get("source") as { properties: Record<string, unknown> }).properties);
+        const target = mapCompanyNode((record.get("target") as { properties: Record<string, unknown> }).properties);
+        const relation = (record.get("rel") as { properties: Record<string, unknown> }).properties;
+        const evidence = record.get("evidence") as Array<{ properties?: Record<string, unknown> } | null>;
+
+        for (const company of [source, target]) {
+          companyIds.add(company.id);
+          if (company.isMag7) {
+            mag7Ids.add(company.id);
+          }
+        }
+
+        const relationshipType = String(relation.relationshipType);
+        const confidence = String(relation.confidence);
+        relationshipTypeBreakdown[relationshipType] = (relationshipTypeBreakdown[relationshipType] ?? 0) + 1;
+        confidenceBreakdown[confidence] = (confidenceBreakdown[confidence] ?? 0) + 1;
+
+        for (const item of evidence) {
+          if (item?.properties?.id) {
+            evidenceIds.add(String(item.properties.id));
+          }
+        }
+      }
+
+      const snapshotNode = result.records.find((item) => item.get("snapshot"))?.get("snapshot") as
+        | { properties?: Record<string, unknown> }
+        | null;
+
+      return {
+        snapshot: snapshotNode?.properties
+          ? {
+              id: String(snapshotNode.properties.id),
+              version: String(snapshotNode.properties.version),
+              status: String(snapshotNode.properties.status) as SubgraphDTO["snapshot"]["status"],
+              publishedAt:
+                typeof snapshotNode.properties.publishedAt === "string"
+                  ? snapshotNode.properties.publishedAt
+                  : null,
+              scope: toStringArray(snapshotNode.properties.scope),
+              notes: typeof snapshotNode.properties.notes === "string" ? snapshotNode.properties.notes : null,
+            }
+          : null,
+        companyCount: companyIds.size,
+        relationCount: result.records.length,
+        evidenceCount: evidenceIds.size,
+        mag7CompanyCount: mag7Ids.size,
+        relationshipTypeBreakdown,
+        confidenceBreakdown,
+        source: this.source,
       };
     } finally {
       await session.close();

@@ -83,6 +83,27 @@ const graphRepository: GraphRepository = {
   async getSubgraph() {
     return mockSubgraph;
   },
+  async getPath() {
+    return mockSubgraph;
+  },
+  async getGraphStats() {
+    return {
+      snapshot: mockSubgraph.snapshot,
+      companyCount: 3,
+      relationCount: mockSubgraph.relations.length,
+      evidenceCount: mockSubgraph.relations.reduce((sum, relation) => sum + relation.evidenceCount, 0),
+      mag7CompanyCount: 2,
+      relationshipTypeBreakdown: {
+        manufacturing: 1,
+        component_supply: 1,
+      },
+      confidenceBreakdown: {
+        confirmed: 1,
+        strong_evidence: 1,
+      },
+      source: "mock" as const,
+    };
+  },
   async getRelationEvidence(relationId) {
     return mockSubgraph.relations.find((relation) => relation.id === relationId)?.evidence ?? [];
   },
@@ -134,14 +155,65 @@ describe("backend app", () => {
   });
 
   it("returns subgraph payload", async () => {
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&includeEvidence=true",
+    const [subgraphResponse, pathResponse, statsResponse] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&includeEvidence=true",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&includeEvidence=true",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/stats?snapshot=published",
+      }),
+    ]);
+
+    expect(subgraphResponse.statusCode).toBe(200);
+    expect(subgraphResponse.headers["x-cache"]).toBe("miss");
+    expect(subgraphResponse.json().snapshot.id).toBe("snapshot:2026-06-14.1");
+
+    expect(pathResponse.statusCode).toBe(200);
+    expect(pathResponse.json().relations).toHaveLength(2);
+
+    expect(statsResponse.statusCode).toBe(200);
+    expect(statsResponse.json()).toMatchObject({
+      relationCount: 2,
+      companyCount: 3,
+      source: "mock",
+    });
+  });
+
+  it("returns search and suggest payloads", async () => {
+    const [searchResponse, suggestResponse] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/search?q=app&limit=5",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/suggest?q=app&limit=5",
+      }),
+    ]);
+
+    expect(searchResponse.statusCode).toBe(200);
+    expect(searchResponse.json()).toMatchObject({
+      total: 1,
+      query: "app",
+      source: "mock",
     });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.headers["x-cache"]).toBe("miss");
-    expect(response.json().snapshot.id).toBe("snapshot:2026-06-14.1");
+    expect(suggestResponse.statusCode).toBe(200);
+    expect(suggestResponse.json()).toMatchObject({
+      total: 1,
+      query: "app",
+      source: "mock",
+    });
+    expect(suggestResponse.json().items[0]).toMatchObject({
+      id: "company:AAPL",
+      label: "Apple (AAPL)",
+    });
   });
 
   it("returns company detail and overview payloads", async () => {

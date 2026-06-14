@@ -137,6 +137,9 @@ describe("Neo4jGraphRepository", () => {
     });
 
     expect(capturedQuery).toContain("MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)");
+    expect(capturedQuery).toContain("MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)");
+    expect(capturedQuery).toContain("snapshot.status = 'published'");
+    expect(capturedQuery).toContain("snapshot.id = $snapshot");
     expect(capturedQuery).toContain("OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)");
     expect(subgraph.relations).toHaveLength(1);
     expect(subgraph.relations[0]).toMatchObject({
@@ -152,5 +155,62 @@ describe("Neo4jGraphRepository", () => {
       id: "evidence:apple:tsmc",
       sourceType: "press_release",
     });
+  });
+
+  it("returns an empty real subgraph instead of falling back to Tesla mock when no relations match", async () => {
+    let callCount = 0;
+
+    const session = {
+      async run() {
+        callCount += 1;
+        if (callCount === 1) {
+          return { records: [] };
+        }
+
+        return {
+          records: [
+            new FakeRecord({
+              company: {
+                id: "company:AMZN",
+                ticker: "AMZN",
+                name: "Amazon",
+                companyType: "public_company",
+                country: "US",
+                isMag7: true,
+                marketCapUsd: 2100000000000,
+                description: "Amazon",
+                aliases: ["Amazon.com, Inc."],
+                active: true,
+                importanceScore: 1,
+                primaryRegion: "US",
+                activeSnapshotId: "snapshot:2026-06-14.2",
+                summary: "Amazon summary",
+                lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+              },
+            }),
+          ],
+        };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const subgraph = await repository.getSubgraph({
+      companyId: "company:AMZN",
+      depth: 2,
+      snapshot: "published",
+      includeEvidence: false,
+    });
+
+    expect(subgraph.relations).toHaveLength(0);
+    expect(subgraph.nodes).toHaveLength(1);
+    expect(subgraph.nodes[0].id).toBe("company:AMZN");
+    expect(subgraph.snapshot.id).toBe("snapshot:2026-06-14.2");
   });
 });

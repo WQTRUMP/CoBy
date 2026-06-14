@@ -1,9 +1,77 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
-import { companyListQuerySchema } from "@mag7/contracts";
+import {
+  companyListQuerySchema,
+  searchCompaniesQuerySchema,
+  suggestCompaniesQuerySchema,
+} from "@mag7/contracts";
+
+const CACHE_TTL_SECONDS = 300;
 
 export async function registerCompanyRoutes(app: FastifyInstance) {
+  app.get("/api/v1/companies/search", async (request, reply) => {
+    const query = searchCompaniesQuerySchema.parse(request.query);
+    const cacheKey = ["companies", "search", query.q.toLowerCase(), query.limit, query.isMag7 ?? "all"].join(":");
+    const cached = await app.cacheClient.get(cacheKey);
+
+    if (cached) {
+      reply.header("x-cache", "hit");
+      return JSON.parse(cached);
+    }
+
+    const items = (await app.graphRepository.listCompanies({
+      q: query.q,
+      isMag7: query.isMag7,
+      page: 1,
+      pageSize: query.limit,
+    })).slice(0, query.limit);
+    const payload = {
+      items,
+      total: items.length,
+      query: query.q,
+      source: app.graphRepository.source,
+    };
+
+    await app.cacheClient.set(cacheKey, JSON.stringify(payload), CACHE_TTL_SECONDS);
+    reply.header("x-cache", "miss");
+    return payload;
+  });
+
+  app.get("/api/v1/companies/suggest", async (request, reply) => {
+    const query = suggestCompaniesQuerySchema.parse(request.query);
+    const cacheKey = ["companies", "suggest", query.q.toLowerCase(), query.limit].join(":");
+    const cached = await app.cacheClient.get(cacheKey);
+
+    if (cached) {
+      reply.header("x-cache", "hit");
+      return JSON.parse(cached);
+    }
+
+    const items = (await app.graphRepository.listCompanies({
+      q: query.q,
+      page: 1,
+      pageSize: query.limit,
+    }))
+      .slice(0, query.limit)
+      .map((company) => ({
+        id: company.id,
+        label: company.ticker ? `${company.name} (${company.ticker})` : company.name,
+        ticker: company.ticker,
+        isMag7: company.isMag7,
+      }));
+    const payload = {
+      items,
+      total: items.length,
+      query: query.q,
+      source: app.graphRepository.source,
+    };
+
+    await app.cacheClient.set(cacheKey, JSON.stringify(payload), CACHE_TTL_SECONDS);
+    reply.header("x-cache", "miss");
+    return payload;
+  });
+
   app.get("/api/v1/companies", async (request) => {
     const query = companyListQuerySchema.parse(request.query);
     const items = await app.graphRepository.listCompanies(query);
