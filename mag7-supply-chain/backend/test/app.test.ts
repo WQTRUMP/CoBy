@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
+import { DependencyUnavailableError } from "../src/lib/dependency-failures.js";
 import { mockSubgraph } from "../src/lib/mock-data.js";
 import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
 import type { CacheClient } from "../src/lib/redis.js";
@@ -280,6 +281,62 @@ describe("backend app", () => {
       total: 1,
       source: "mock",
     });
+  });
+
+  it("returns structured 503 when neo4j dependency is unavailable", async () => {
+    const unavailableApp = await buildApp({
+      cacheClient,
+      graphRepository: {
+        ...graphRepository,
+        source: "neo4j",
+        async listCompanies() {
+          throw new DependencyUnavailableError(
+            "neo4j",
+            "connect ECONNREFUSED 127.0.0.1:7687",
+            "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+          );
+        },
+      },
+      neo4jHealth: async () => ({
+        status: "down",
+        detail: "connect ECONNREFUSED 127.0.0.1:7687",
+      }),
+    });
+
+    try {
+      const [healthResponse, companiesResponse] = await Promise.all([
+        unavailableApp.inject({
+          method: "GET",
+          url: "/api/v1/health",
+        }),
+        unavailableApp.inject({
+          method: "GET",
+          url: "/api/v1/companies/search?q=apple&limit=5",
+        }),
+      ]);
+
+      expect(healthResponse.statusCode).toBe(200);
+      expect(healthResponse.json()).toMatchObject({
+        status: "degraded",
+        repositoryMode: "neo4j",
+        dependencies: {
+          neo4j: {
+            status: "down",
+            detail: "connect ECONNREFUSED 127.0.0.1:7687",
+          },
+        },
+      });
+
+      expect(companiesResponse.statusCode).toBe(503);
+      expect(companiesResponse.json()).toMatchObject({
+        error: "dependency_unavailable",
+        dependency: "neo4j",
+        message: "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+        detail: "connect ECONNREFUSED 127.0.0.1:7687",
+      });
+    } finally {
+      await unavailableApp.close();
+    }
   });
 
   it("maps query validation failures to 400 responses", async () => {

@@ -16,6 +16,11 @@ import type {
 } from "@mag7/contracts";
 import { mockCompanies, mockSubgraph } from "./mock-data.js";
 import type { PreparedNormalizedImport } from "./normalized-package.js";
+import {
+  DependencyUnavailableError,
+  isNeo4jUnavailableError,
+  toDependencyDetail,
+} from "./dependency-failures.js";
 
 export type DependencyStatus = "up" | "down" | "not_configured";
 
@@ -851,6 +856,34 @@ export interface Neo4jClientBundle {
   close: () => Promise<void>;
 }
 
+function wrapRepositoryWithDependencyGuard(repository: GraphRepository): GraphRepository {
+  return new Proxy(repository, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+
+      if (typeof value !== "function") {
+        return value;
+      }
+
+      return async (...args: unknown[]) => {
+        try {
+          return await value.apply(target, args);
+        } catch (error) {
+          if (isNeo4jUnavailableError(error)) {
+            throw new DependencyUnavailableError(
+              "neo4j",
+              toDependencyDetail(error, "Neo4j connection failed"),
+              "Neo4j is currently unavailable; graph queries are temporarily degraded.",
+            );
+          }
+
+          throw error;
+        }
+      };
+    },
+  });
+}
+
 export function createNeo4jBundle(): Neo4jClientBundle {
   if (!env.NEO4J_URI) {
     const repository = new MockGraphRepository();
@@ -865,7 +898,9 @@ export function createNeo4jBundle(): Neo4jClientBundle {
   }
 
   const driver = neo4j.driver(env.NEO4J_URI, neo4j.auth.basic(env.NEO4J_USERNAME, env.NEO4J_PASSWORD));
-  const repository = new Neo4jGraphRepository(driver, env.NEO4J_DATABASE);
+  const repository = wrapRepositoryWithDependencyGuard(
+    new Neo4jGraphRepository(driver, env.NEO4J_DATABASE),
+  );
 
   return {
     repository,

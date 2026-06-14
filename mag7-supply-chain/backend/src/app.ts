@@ -10,6 +10,7 @@ import { registerImportRoutes } from "./modules/imports/routes.js";
 import { registerSchemaRoutes } from "./modules/schema/routes.js";
 import type { GraphRepository, Neo4jHealth } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
+import { isDependencyUnavailableError } from "./lib/dependency-failures.js";
 import { toRequestValidationError } from "./lib/request-validation.js";
 
 export interface AppOptions {
@@ -87,6 +88,15 @@ export async function buildApp(options: AppOptions) {
           })) ??
           error.validation ??
           [],
+      });
+    }
+
+    if (isDependencyUnavailableError(error)) {
+      return reply.code(error.statusCode).send({
+        error: error.error,
+        message: error.message,
+        dependency: error.dependency,
+        detail: error.detail,
       });
     }
 

@@ -1,39 +1,39 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-14T16:47:30Z",
+  "generated_at": "2026-06-14T16:58:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
     "display_name": "Mag7 供应链交互式探索平台",
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
-    "readiness": "prototype_ready_only",
-    "summary": "当前仓库已具备可部署的静态前端和 Node.js 后端，前端已切换到真实 HTTP API adapter、后端真实/Mock 双模式与共享 contracts 已落地；但前端契约测试仍因 `official_doc` 证据类型标签映射缺失而失败，且本地仅验证了 mock 运行模式，尚未完成带 Neo4j/Redis 的真实上线闭环。"
+    "readiness": "prototype_passed_real_data_launch_blocked",
+    "summary": "当前仓库已通过前端构建、前端 contracts、后端构建、后端测试与 mock/degraded 运行态健康检查，可作为 prototype 候选进入人工部署决策；但 live Neo4j/Redis 运行时尚未建立与验收，因此 real_data_launch 仍不可批准。"
   },
   "runtime": {
     "frontend": {
       "type": "static_site",
       "framework": "React 19 + Vite 6",
-      "node_version": "24.x LTS",
+      "node_version": "v22.22.3",
       "source_entrypoint": "src/main.tsx",
       "build_command": "npm run build",
       "preview_command": "npm run preview -- --host 127.0.0.1 --port 4174",
       "artifact_root": "dist",
-      "observed_local_node_version": "v22.22.3"
+      "validated_node_version": "v22.22.3"
     },
     "backend": {
       "type": "node_rest_api",
       "framework": "Fastify 5 + TypeScript",
-      "node_version": "24.x LTS",
-      "source_entrypoint": "src/server.ts",
-      "build_output_entrypoint": "dist/backend/src/server.js",
+      "node_version": "v22.22.3",
+      "source_entrypoint": "backend/src/server.ts",
+      "build_output_entrypoint": "backend/dist/backend/src/server.js",
       "build_command": "npm run build",
       "start_command": "npm start",
       "import_command": "npm run import:normalized -- --relations <relations.jsonl> --evidence <evidence.jsonl>",
       "default_host": "127.0.0.1",
       "default_port": 4000,
-      "observed_local_node_version": "v22.22.3"
+      "validated_node_version": "v22.22.3"
     }
   },
   "services": [
@@ -41,53 +41,37 @@
       "name": "web",
       "display_name": "Mag7 Atlas Web",
       "kind": "static_site",
-      "status": "implemented_with_real_api_adapter",
+      "status": "prototype_verified",
       "source_root": "/workspace/project/mag7-supply-chain",
+      "source_entrypoint": "src/main.tsx",
       "build_command": "npm run build",
       "run_command": "npm run preview -- --host 127.0.0.1 --port 4174",
-      "artifact_root": "/workspace/project/mag7-supply-chain/dist",
-      "artifacts": [
-        "dist/index.html",
-        "dist/assets/index-BTCoO7xY.js",
-        "dist/assets/index-Dg9xmwqM.css",
-        "dist/assets/dark-world-map.png",
-        "dist/reference/selected-direction-3.png"
-      ],
+      "artifact_root": "dist",
       "hosting_candidates": [
         "GitHub Pages",
         "Cloudflare Pages",
         "Vercel"
       ],
-      "integration_mode": "`src/App.tsx` 通过 `createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? \"\")` 调用 `/api/v1`，默认需要同源 `/api` 代理或显式配置 `VITE_GRAPH_API_BASE_URL`。",
+      "integration_mode": "`src/App.tsx` 通过 `createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? \"\")` 请求 `/api/v1`，未设置时默认依赖同源 `/api` 代理。",
       "prototype_deployable": true,
       "real_data_ready": false,
       "real_data_prerequisites": [
-        "修复 `src/adapters/graphExplorerAdapter.ts` 中 `EvidenceDTO.sourceType=official_doc` 的标签映射缺口，使 `npm run test:contracts` 重新通过。",
-        "将部署文档与环境变量样例从 `API_BASE_URL` 纠正为 `VITE_GRAPH_API_BASE_URL`，或在构建链路中显式桥接两者。",
-        "为静态站点配置同源 `/api` 反向代理，或提供跨域可达的 API 域名并同步 `CORS_ORIGIN`。"
+        "为静态站点配置同源 `/api` 代理，或提供可达的独立 API 域名并同步 `VITE_GRAPH_API_BASE_URL`。",
+        "将前端部署样例中的 `API_BASE_URL` / `GRAPH_SNAPSHOT_VERSION` 旧变量更新为当前实现口径。"
       ]
     },
     {
       "name": "api",
       "display_name": "Mag7 Atlas API",
       "kind": "node_rest_api",
-      "status": "implemented_with_dual_mode",
+      "status": "prototype_verified_mock_runtime_only",
       "source_root": "/workspace/project/mag7-supply-chain/backend",
+      "source_entrypoint": "backend/src/server.ts",
+      "entrypoint": "backend/dist/backend/src/server.js",
       "build_command": "npm run build",
       "run_command": "npm start",
-      "source_entrypoint": "/workspace/project/mag7-supply-chain/backend/src/server.ts",
-      "entrypoint": "/workspace/project/mag7-supply-chain/backend/dist/backend/src/server.js",
       "import_command": "npm run import:normalized -- --relations <relations.jsonl> --evidence <evidence.jsonl>",
-      "artifact_root": "/workspace/project/mag7-supply-chain/backend/dist",
-      "artifacts": [
-        "dist/backend/src/server.js",
-        "dist/backend/src/app.js",
-        "dist/backend/src/modules/companies/routes.js",
-        "dist/backend/src/modules/graph/routes.js",
-        "dist/backend/src/modules/health/routes.js",
-        "dist/backend/src/scripts/import-normalized-package.js",
-        "dist/packages/contracts/src/index.js"
-      ],
+      "artifact_root": "backend/dist",
       "hosting_candidates": [
         "Railway",
         "Render",
@@ -116,9 +100,9 @@
       "prototype_deployable": true,
       "real_data_ready": false,
       "real_data_prerequisites": [
-        "提供可连通的 Neo4j 5.x 与 Redis 7.x 生产绑定。",
-        "对真实模式执行一次 `npm run import:normalized` 导入并验证 `GET /api/v1/health` 返回依赖状态 `up`。",
-        "在带真实后端依赖的运行态下复核 companies/detail/overview/subgraph/evidence/path/stats 查询。"
+        "提供可连通的 Neo4j 5.x 与 Redis 7.x 正式绑定。",
+        "在真实依赖已配置的运行态重新执行 `npm run import:normalized`，确认导入不是 `source: mock`。",
+        "对 `GET /api/v1/health`、detail、overview、search、suggest、subgraph、path、stats、evidence 进行 live Neo4j/Redis 验收。"
       ]
     },
     {
@@ -158,7 +142,7 @@
         9000,
         9001
       ],
-      "notes": "当前前后端运行路径未直接消费对象存储，但其仍是证据原文、整理数据与导出流程的预留资源。"
+      "notes": "当前 prototype 运行链路未直接依赖对象存储；正式证据归档与数据导出仍需该类资源。"
     }
   ],
   "env_bindings": {
@@ -172,7 +156,7 @@
         "API_BASE_URL",
         "GRAPH_SNAPSHOT_VERSION"
       ],
-      "current_behavior": "代码只读取 `VITE_GRAPH_API_BASE_URL`；若未设置，则浏览器请求同源 `/api/v1/*`。仓库根 `.env.example` 仍记录旧变量 `API_BASE_URL`，与当前实现不一致。"
+      "current_behavior": "代码只读取 `VITE_GRAPH_API_BASE_URL`；若未设置，则浏览器请求同源 `/api/v1/*`。仓库根 `.env.example` 仍保留旧变量名称。"
     },
     "api": {
       "required_for_full_mode": [
@@ -191,35 +175,14 @@
         "NEO4J_URI",
         "REDIS_URL"
       ]
-    },
-    "supporting_services": {
-      "neo4j": [
-        "NEO4J_USER",
-        "NEO4J_PASSWORD",
-        "NEO4J_DB",
-        "NEO4J_URI"
-      ],
-      "redis": [
-        "REDIS_URL"
-      ],
-      "minio": [
-        "MINIO_ROOT_USER",
-        "MINIO_ROOT_PASSWORD",
-        "MINIO_BUCKET_RAW",
-        "MINIO_BUCKET_CURATED",
-        "MINIO_BUCKET_EXPORTS",
-        "OBJECT_STORAGE_ENDPOINT",
-        "OBJECT_STORAGE_REGION",
-        "OBJECT_STORAGE_FORCE_PATH_STYLE"
-      ]
     }
   },
   "domains": {
-    "strategy": "前端与后端建议拆分 origin 并由 Cloudflare 管理 DNS/证书；若前端继续使用相对路径 `/api/v1`，必须提供同源反向代理。",
+    "strategy": "前端与后端建议拆分 origin 并由 Cloudflare 管理 DNS/证书；若前端继续使用相对路径 `/api/v1`，则必须提供同源反向代理。",
     "web": {
       "production_domain": null,
       "domain_required": true,
-      "assumption": "可部署为根域或 `www` 子域，用于展示交互式供应链图谱。"
+      "assumption": "可部署为根域或 `www` 子域。"
     },
     "api": {
       "production_domain": null,
@@ -279,68 +242,70 @@
     "deployment_runner_only": true,
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
-    "summary": "可批准“静态前端原型”或“前端 + mock/degraded backend”部署，但这与真实供应链数据上线必须分开决策；一旦启用正式域名、Cloudflare 路由、Neo4j、Redis 或对象存储，即属于人工审批范围。",
+    "summary": "可申请审批静态前端 prototype，或带 mock/degraded backend 的演示环境；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须单独人工批准。",
     "reasons": [
       "真实数据上线依赖 Neo4j 与 Redis 等有状态资源。",
       "Cloudflare 域名、DNS、反向代理与证书变更会影响外部流量。",
-      "对象存储/数据导入流程会承载证据与图谱数据。"
+      "对象存储与导入流程会承载证据与图谱数据。"
     ],
     "human_decision_required": [
-      "是否现在只部署静态前端原型。",
-      "是否同时部署处于 mock/degraded 状态的 backend。",
+      "是否现在仅批准 prototype 部署。",
+      "是否同时暴露 mock/degraded backend 作为演示 API。",
       "是否为 web/api 分配正式域名并连接 Cloudflare。",
-      "是否开通 Neo4j、Redis、对象存储等正式付费或有状态资源。",
-      "是否等待前端契约测试修复及真实依赖验证完成后，再推进真实数据上线审批。"
+      "是否在 live Neo4j/Redis 验收完成前暂停 real_data_launch。"
     ]
   },
   "deployment_tiers": {
     "prototype": {
       "allowed": true,
-      "readiness": "ready_for_manual_approval",
+      "readiness": "passed",
       "scope": [
         "静态前端站点",
         "可选 mock/degraded backend"
       ],
+      "evidence": [
+        "前端 `npm run build` 通过。",
+        "前端 `npm run test:contracts` 通过（9/9）。",
+        "后端 `npm run build` 通过。",
+        "后端 `npm test` 通过（20/20）。",
+        "`GET /api/v1/health` 返回 200，当前为 mock/degraded 运行态。"
+      ],
       "limitations": [
         "未配置 `VITE_GRAPH_API_BASE_URL` 且无同源代理时，前端只能访问同源 `/api/v1`。",
-        "当前本地健康检查仅证明 backend mock 模式可用，不代表真实图数据库已接通。",
-        "前端共享 contracts 回归测试尚未完全通过。"
+        "当前健康检查只证明 mock/degraded 运行态可用，不代表真实图数据库已接通。"
       ]
     },
     "real_data_launch": {
       "allowed": false,
-      "readiness": "not_ready",
+      "readiness": "failed",
       "blocking_conditions": [
-        "`npm run test:contracts` 失败：`src/adapters/graphExplorerAdapter.ts` 未覆盖 `official_doc` 证据类型标签映射。",
-        "仓库根环境变量样例仍使用旧变量 `API_BASE_URL`，与前端当前读取的 `VITE_GRAPH_API_BASE_URL` 不一致。",
-        "尚未在配置 Neo4j/Redis 的真实模式下完成导入、健康检查与查询核验。",
-        "生产域名、Cloudflare 连接与有状态资源尚未进入批准后的真实部署流程。"
+        "当前环境没有可用的 live Neo4j/Redis 运行时，`/api/v1/health` 仍返回 `repositoryMode=mock`。",
+        "`npm run import:normalized -- --relations ... --evidence ...` 当前输出 `source: mock`，未写入真实图库。",
+        "全量包 in-memory real-shape 测试与 mock runtime 只能证明接口语义和数据形状，不构成真实 Neo4j+Redis 运行时验收。",
+        "正式域名、Cloudflare 连接及有状态资源审批尚未完成。"
       ]
     }
   },
   "verification": {
     "date": "2026-06-14",
     "commands": [
-      "cd /workspace/project/mag7-supply-chain && npm run build",
+      "cd /workspace/project/mag7-supply-chain/backend && node -v",
       "cd /workspace/project/mag7-supply-chain && npm run test:contracts",
       "cd /workspace/project/mag7-supply-chain/backend && npm run build",
       "cd /workspace/project/mag7-supply-chain/backend && npm test",
       "cd /workspace/project/mag7-supply-chain/backend && npm start",
       "curl -s http://127.0.0.1:4000/api/v1/health",
-      "curl -s \"http://127.0.0.1:4000/api/v1/companies?q=app\"",
-      "curl -s \"http://127.0.0.1:4000/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true\"",
-      "cd /workspace/project/mag7-supply-chain && npm run preview -- --host 127.0.0.1 --port 4174",
-      "curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:4174/"
+      "cd /workspace/project/mag7-supply-chain/backend && npm run import:normalized -- --relations /workspace/agents/evidence-collector/output/mag7-full-package/relations.jsonl --evidence /workspace/agents/evidence-collector/output/mag7-full-package/evidence.jsonl",
+      "curl -s -o /tmp/devops-bad.json -w \"%{http_code}\" \"http://127.0.0.1:4000/api/v1/companies/search\" && cat /tmp/devops-bad.json"
     ],
     "results": {
-      "frontend_build": "ok",
-      "frontend_contract_tests": "failed: EvidenceDTO.sourceType=official_doc label mapping missing in src/adapters/graphExplorerAdapter.ts",
+      "validated_node_version": "v22.22.3",
+      "frontend_contract_tests": "passed: 9/9",
       "backend_build": "ok",
-      "backend_tests": "17/17 passed",
+      "backend_tests": "20/20 passed",
       "api_health": "200 degraded mock",
-      "api_company_query": "200 mock",
-      "api_subgraph_query": "200 mock",
-      "frontend_preview": "200"
+      "import_normalized": "source=mock companyCount=59 relationCount=56 evidenceCount=58 snapshotCount=2",
+      "invalid_parameter_contract": "400 bad_request"
     }
   },
   "sources": [
@@ -350,15 +315,15 @@
     },
     {
       "type": "workspace_file",
+      "path": "/workspace/project/mag7-supply-chain/src/main.tsx"
+    },
+    {
+      "type": "workspace_file",
       "path": "/workspace/project/mag7-supply-chain/src/App.tsx"
     },
     {
       "type": "workspace_file",
       "path": "/workspace/project/mag7-supply-chain/src/services/graphExplorerApi.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/src/adapters/graphExplorerAdapter.ts"
     },
     {
       "type": "workspace_file",
@@ -378,19 +343,7 @@
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/.env.example"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.input.json"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/agents/frontend-developer/output/frontend-contract-rereview-fix-report.md"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/agents/dev/output/contracts-unification-report.md"
+      "path": "/workspace/agents/devops/output/mag7-live-neo4j-redis-blocker-report.md"
     }
   ]
 }
