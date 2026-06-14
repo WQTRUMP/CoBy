@@ -621,15 +621,15 @@ describe("full package app", () => {
     expect(subgraph.statusCode).toBe(200);
     expect(stats.statusCode).toBe(200);
 
-    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.full.7");
-    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.full.7");
+    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.full.8");
+    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.full.8");
     expect(subgraph.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.full.7",
-      version: "2026.06.14.full.7",
+      id: "snapshot:2026-06-14.full.8",
+      version: "2026.06.14.full.8",
     });
     expect(stats.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.full.7",
-      version: "2026.06.14.full.7",
+      id: "snapshot:2026-06-14.full.8",
+      version: "2026.06.14.full.8",
     });
   });
 
