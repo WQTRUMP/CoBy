@@ -213,4 +213,237 @@ describe("Neo4jGraphRepository", () => {
     expect(subgraph.nodes[0].id).toBe("company:AMZN");
     expect(subgraph.snapshot.id).toBe("snapshot:2026-06-14.2");
   });
+
+  it("counts overview metrics from published snapshot relations touching the company on either side", async () => {
+    let capturedQuery = "";
+
+    const session = {
+      async run(query: string) {
+        capturedQuery = query;
+        return {
+          records: [
+            new FakeRecord({
+              companyName: "NVIDIA",
+              activeSnapshotId: "snapshot:2026-06-14.2",
+              totalRelations: 3,
+              tier1SupplierCount: 2,
+              supplierCount: 2,
+              highRiskRelationCount: 1,
+              evidenceCount: 4,
+              lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+            }),
+          ],
+        };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const overview = await repository.getCompanyOverview("company:NVDA");
+
+    expect(capturedQuery).toContain("(c)<-[:TARGET_OF|SOURCE_OF]-(rel:SupplyRelation)");
+    expect(capturedQuery).toContain("snapshot.status = 'published'");
+    expect(overview).toMatchObject({
+      companyId: "company:NVDA",
+      companyName: "NVIDIA",
+      activeSnapshotId: "snapshot:2026-06-14.2",
+      totalRelations: 3,
+      tier1SupplierCount: 2,
+      supplierCount: 2,
+      highRiskRelationCount: 1,
+      evidenceCount: 4,
+      source: "neo4j",
+    });
+  });
+
+  it("finds a path only from relations inside the requested snapshot scope", async () => {
+    const records = [
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:TSMC",
+            ticker: "TSM",
+            name: "TSMC",
+            companyType: "manufacturer",
+            country: "TW",
+            isMag7: false,
+            marketCapUsd: 910000000000,
+            description: "Semiconductor foundry",
+            aliases: ["Taiwan Semiconductor Manufacturing Company"],
+            active: true,
+            importanceScore: 0.86,
+            primaryRegion: "TW",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "Advanced-node manufacturing partner",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:path:1",
+            relationshipType: "manufacturing",
+            relationshipSubtype: "wafer_foundry",
+            tier: 1,
+            depthFromMag7: 1,
+            confidence: "confirmed",
+            confidenceScore: 0.96,
+            summary: "TSMC manufactures Apple silicon.",
+            productScope: ["Apple silicon"],
+            notes: null,
+            evidenceIds: ["evidence:path:1"],
+            primaryEvidenceId: "evidence:path:1",
+            evidenceCount: 1,
+            snapshotId: "snapshot:2026-06-14.1",
+            status: "approved",
+            sourceMethod: "direct_disclosure",
+            sourceCount: 1,
+            lineageKey: "path-1",
+            lastVerifiedAt: "2026-06-14T00:00:00.000Z",
+            validFrom: "2025-08-06",
+            validTo: null,
+          },
+        },
+        target: {
+          properties: {
+            id: "company:AAPL",
+            ticker: "AAPL",
+            name: "Apple",
+            companyType: "public_company",
+            country: "US",
+            isMag7: true,
+            marketCapUsd: 3100000000000,
+            description: "Consumer hardware and services",
+            aliases: ["Apple Inc."],
+            active: true,
+            importanceScore: 1,
+            primaryRegion: "US",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "Mag7 anchor company",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        evidence: [],
+        snapshot: {
+          properties: {
+            id: "snapshot:2026-06-14.1",
+            version: "2026.06.14.1",
+            status: "published",
+            publishedAt: "2026-06-14T00:00:00.000Z",
+            scope: ["company:AAPL"],
+            notes: "test snapshot",
+          },
+        },
+      }),
+      new FakeRecord({
+        source: {
+          properties: {
+            id: "company:SK-HYNIX",
+            ticker: "000660.KS",
+            name: "SK hynix",
+            companyType: "supplier",
+            country: "KR",
+            isMag7: false,
+            marketCapUsd: null,
+            description: "HBM supplier",
+            aliases: [],
+            active: true,
+            importanceScore: 0.74,
+            primaryRegion: "KR",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "HBM supplier",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        rel: {
+          properties: {
+            id: "rel:path:2",
+            relationshipType: "component_supply",
+            relationshipSubtype: "hbm",
+            tier: 2,
+            depthFromMag7: 2,
+            confidence: "strong_evidence",
+            confidenceScore: 0.82,
+            summary: "SK hynix supplies HBM to TSMC packaging flow.",
+            productScope: ["HBM"],
+            notes: null,
+            evidenceIds: ["evidence:path:2"],
+            primaryEvidenceId: "evidence:path:2",
+            evidenceCount: 1,
+            snapshotId: "snapshot:2026-06-14.1",
+            status: "approved",
+            sourceMethod: "media_inference",
+            sourceCount: 1,
+            lineageKey: "path-2",
+            lastVerifiedAt: "2026-06-14T00:00:00.000Z",
+            validFrom: "2025-01-01",
+            validTo: null,
+          },
+        },
+        target: {
+          properties: {
+            id: "company:TSMC",
+            ticker: "TSM",
+            name: "TSMC",
+            companyType: "manufacturer",
+            country: "TW",
+            isMag7: false,
+            marketCapUsd: 910000000000,
+            description: "Semiconductor foundry",
+            aliases: ["Taiwan Semiconductor Manufacturing Company"],
+            active: true,
+            importanceScore: 0.86,
+            primaryRegion: "TW",
+            activeSnapshotId: "snapshot:2026-06-14.1",
+            summary: "Advanced-node manufacturing partner",
+            lastUpdatedAt: "2026-06-14T00:00:00.000Z",
+          },
+        },
+        evidence: [],
+        snapshot: {
+          properties: {
+            id: "snapshot:2026-06-14.1",
+            version: "2026.06.14.1",
+            status: "published",
+            publishedAt: "2026-06-14T00:00:00.000Z",
+            scope: ["company:AAPL"],
+            notes: "test snapshot",
+          },
+        },
+      }),
+    ];
+
+    const session = {
+      async run() {
+        return { records };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const path = await repository.getPath({
+      sourceCompanyId: "company:SK-HYNIX",
+      targetCompanyId: "company:AAPL",
+      maxDepth: 3,
+      snapshot: "published",
+      includeEvidence: false,
+    });
+
+    expect(path.relations.map((relation) => relation.id)).toEqual(["rel:path:2", "rel:path:1"]);
+    expect(path.nodes.map((node) => node.id)).toEqual(
+      expect.arrayContaining(["company:SK-HYNIX", "company:TSMC", "company:AAPL"]),
+    );
+    expect(path.snapshot.id).toBe("snapshot:2026-06-14.1");
+  });
 });
