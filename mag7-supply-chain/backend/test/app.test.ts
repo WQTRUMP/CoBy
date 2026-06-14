@@ -282,6 +282,66 @@ describe("backend app", () => {
     });
   });
 
+  it("maps query validation failures to 400 responses", async () => {
+    const [searchResponse, suggestResponse, subgraphResponse, pathResponse] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/search",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/suggest?q=apple&limit=0",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:AAPL&depth=0",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=99",
+      }),
+    ]);
+
+    for (const response of [searchResponse, suggestResponse, subgraphResponse, pathResponse]) {
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error: "bad_request",
+        message: "Invalid request parameters.",
+      });
+      expect(response.json().details).toEqual(expect.any(Array));
+      expect(response.json().details.length).toBeGreaterThan(0);
+    }
+
+    expect(searchResponse.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "q",
+        }),
+      ]),
+    );
+    expect(suggestResponse.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "limit",
+        }),
+      ]),
+    );
+    expect(subgraphResponse.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "depth",
+        }),
+      ]),
+    );
+    expect(pathResponse.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "maxDepth",
+        }),
+      ]),
+    );
+  });
+
   it("accepts import payload", async () => {
     const response = await app.inject({
       method: "POST",

@@ -17,12 +17,32 @@ export interface AppOptions {
   neo4jHealth: () => Promise<Neo4jHealth>;
 }
 
+interface ValidationLikeError {
+  statusCode?: number;
+  message?: string;
+  validation?: unknown[];
+}
+
 function formatValidationDetails(error: ZodError) {
   return error.issues.map((issue) => ({
     path: issue.path.join(".") || "request",
     code: issue.code,
     message: issue.message,
   }));
+}
+
+function isValidationLikeError(error: unknown): error is ValidationLikeError {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as ValidationLikeError;
+  return (
+    Array.isArray(candidate.validation) ||
+    (typeof candidate.statusCode === "number" &&
+      candidate.statusCode >= 400 &&
+      candidate.statusCode < 500)
+  );
 }
 
 export async function buildApp(options: AppOptions) {
@@ -47,7 +67,7 @@ export async function buildApp(options: AppOptions) {
       });
     }
 
-    if (error.validation || (typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode < 500)) {
+    if (isValidationLikeError(error)) {
       return reply.code(error.statusCode ?? 400).send({
         error: "bad_request",
         message: error.message || "Invalid request parameters.",
