@@ -1,4 +1,4 @@
-import { ArrowsClockwise, CheckCircle, Graph, ShieldCheck } from "@phosphor-icons/react";
+import { ArrowsClockwise, Buildings, Graph, GlobeHemisphereWest } from "@phosphor-icons/react";
 import type { SubgraphDTO } from "../types/contracts";
 
 interface StatusStripProps {
@@ -7,33 +7,33 @@ interface StatusStripProps {
 
 export function StatusStrip({ graph }: StatusStripProps) {
   return (
-    <section className="statusStrip">
-      <div className="statusCard">
+    <section className="statusStrip" aria-label="Key platform metrics">
+      <div className="statusCard light">
+        <Buildings size={18} />
+        <div>
+          <strong>7</strong>
+          <span>Mag7 companies</span>
+        </div>
+      </div>
+      <div className="statusCard light">
         <Graph size={18} />
         <div>
-          <strong>{graph.relations.length}</strong>
-          <span>Visible relations in current subgraph</span>
+          <strong>{graph.company.stats.supplierCount}</strong>
+          <span>Suppliers mapped</span>
         </div>
       </div>
-      <div className="statusCard">
-        <ShieldCheck size={18} />
-        <div>
-          <strong>{Math.round(graph.company.stats.evidenceCoverage * 100)}%</strong>
-          <span>Evidence coverage placeholder</span>
-        </div>
-      </div>
-      <div className="statusCard">
-        <CheckCircle size={18} />
-        <div>
-          <strong>{graph.snapshot.version}</strong>
-          <span>Snapshot contract flowing through the shell</span>
-        </div>
-      </div>
-      <div className="statusCard">
+      <div className="statusCard light">
         <ArrowsClockwise size={18} />
         <div>
-          <strong>{graph.company.lastUpdated}</strong>
-          <span>Latest mock refresh timestamp</span>
+          <strong>{graph.relations.length}</strong>
+          <span>Visible relations</span>
+        </div>
+      </div>
+      <div className="statusCard light">
+        <GlobeHemisphereWest size={18} />
+        <div>
+          <strong>{graph.company.primaryRegion}</strong>
+          <span>Current focus region</span>
         </div>
       </div>
     </section>

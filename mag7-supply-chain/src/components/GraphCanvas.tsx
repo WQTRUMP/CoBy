@@ -1,9 +1,10 @@
-import { CornersOut, CursorClick, MapTrifold, Plus, Minus } from "@phosphor-icons/react";
+import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
 import type { GraphNodeDTO, GraphRelationDTO, SubgraphDTO } from "../types/contracts";
 
 interface GraphCanvasProps {
   activeNodeId: string;
   activeRelationId: string | null;
+  focusNode: GraphNodeDTO;
   graph: SubgraphDTO;
   onNodeSelect: (node: GraphNodeDTO) => void;
   onRelationSelect: (relation: GraphRelationDTO) => void;
@@ -21,36 +22,37 @@ const relationLabels: Record<GraphRelationDTO["relationshipType"], string> = {
 };
 
 export function GraphCanvas(props: GraphCanvasProps) {
-  const { activeNodeId, activeRelationId, graph, onNodeSelect, onRelationSelect, onZoomChange, zoom } = props;
+  const { activeNodeId, activeRelationId, focusNode, graph, onNodeSelect, onRelationSelect, onZoomChange, zoom } = props;
 
   return (
-    <section className="panel canvasPanel">
-      <div className="panelHeader">
+    <section className="graphWorkspace">
+      <div className="workspaceHeader">
         <div>
-          <p className="eyebrow">Graph Canvas</p>
-          <h2>{graph.company.name} supply chain view</h2>
+          <h3>Global Supply Chain Map</h3>
+          <p>Relationship type and tier depth are encoded directly on the dark graph workspace.</p>
         </div>
-        <div className="panelActions">
-          <button className="iconAction" type="button" onClick={() => onZoomChange(Math.max(0.8, zoom - 0.1))}>
-            <Minus size={16} />
-          </button>
-          <button className="iconAction" type="button" onClick={() => onZoomChange(Math.min(1.5, zoom + 0.1))}>
-            <Plus size={16} />
-          </button>
-          <button className="ghostAction" type="button">
-            <CornersOut size={16} />
-            Fullscreen hook
-          </button>
-        </div>
-      </div>
 
-      <div className="canvasLegend">
-        <span><MapTrifold size={15} /> World-map-backed container</span>
-        <span><CursorClick size={15} /> Node and relation selection wired</span>
+        <div className="workspaceTopline">
+          <div className="inlineLegend">
+            <span>Relationship Type</span>
+            <strong>Supply</strong>
+            <strong>Manufacturing</strong>
+            <strong>Logistics</strong>
+            <strong>IP / Technology</strong>
+          </div>
+          <div className="inlineLegend">
+            <span>Tier Depth</span>
+            <strong>1</strong>
+            <strong>2</strong>
+            <strong>3</strong>
+            <strong>4+</strong>
+          </div>
+        </div>
       </div>
 
       <div className="graphViewport">
         <div className="graphViewportOverlay" />
+        <div className="graphDust" />
         <svg viewBox="0 0 100 100" role="img" aria-label={`${graph.company.name} supply chain graph`}>
           <g transform={`scale(${zoom}) translate(${(1 - zoom) * 50} ${(1 - zoom) * 50})`}>
             {graph.relations.map((relation) => {
@@ -73,7 +75,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
               );
             })}
             {graph.nodes.map((node) => {
-              const radius = 2.4 + node.importanceScore * 2.6;
+              const radius = node.kind === "company" ? 5.8 + node.importanceScore * 2.2 : 1.8 + node.importanceScore * 2.8;
               return (
                 <g
                   key={node.id}
@@ -88,6 +90,39 @@ export function GraphCanvas(props: GraphCanvasProps) {
             })}
           </g>
         </svg>
+
+        <div className="miniMapPlaceholder">
+          <div className="miniMapHeader">Mini-map</div>
+          <div className="miniMapFrame" />
+        </div>
+
+        <div className="zoomCluster">
+          <button className="iconButton" type="button" onClick={() => onZoomChange(Math.max(0.8, zoom - 0.1))}>
+            <Minus size={16} />
+          </button>
+          <button className="iconButton" type="button" onClick={() => onZoomChange(Math.min(1.5, zoom + 0.1))}>
+            <Plus size={16} />
+          </button>
+          <button className="iconButton" type="button">
+            <CornersOut size={16} />
+          </button>
+        </div>
+
+        <div className="marketLegend">
+          <span>Market importance by market cap (USD)</span>
+          <div className="marketLegendDots">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
+
+        <div className="focusPill">
+          <strong>{focusNode.label}</strong>
+          <span>{focusNode.secondaryLabel ?? focusNode.region}</span>
+        </div>
       </div>
     </section>
   );

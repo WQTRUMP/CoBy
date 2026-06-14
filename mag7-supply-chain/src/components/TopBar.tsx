@@ -1,9 +1,10 @@
 import { MagnifyingGlass, ScanSmiley, SlidersHorizontal } from "@phosphor-icons/react";
-import type { CompanyDetail } from "../types/contracts";
+import type { CompanyDetail, SubgraphDTO } from "../types/contracts";
 
 interface TopBarProps {
   companies: CompanyDetail[];
   depth: number;
+  graph: SubgraphDTO;
   onDepthChange: (depth: number) => void;
   onCompanySelect: (companyId: string) => void;
   onSearchChange: (value: string) => void;
@@ -12,35 +13,89 @@ interface TopBarProps {
 }
 
 export function TopBar(props: TopBarProps) {
-  const { companies, depth, onCompanySelect, onDepthChange, onSearchChange, search, selectedCompanyId } = props;
+  const { companies, depth, graph, onCompanySelect, onDepthChange, onSearchChange, search, selectedCompanyId } = props;
 
   return (
-    <header className="topbar">
-      <div className="brand">
-        <p className="eyebrow">Mag7 Supply Chain Atlas</p>
-        <div>
-          <h1>证据驱动的图谱探索前端骨架</h1>
-          <span>React + TypeScript shell with mock adapters for `/companies`, `/graph/subgraph`, `/relations/:id/evidence`.</span>
+    <>
+      <header className="globalHeader">
+        <div className="brandLockup">
+          <div className="brandMark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <p className="brandKicker">Mag7</p>
+            <strong>Supply Chain Atlas</strong>
+          </div>
         </div>
-      </div>
 
-      <div className="searchCluster">
-        <label className="searchField">
-          <MagnifyingGlass size={18} />
-          <input
-            aria-label="Search companies and suppliers"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search company, supplier, material, evidence..."
-          />
-        </label>
-        <button className="ghostAction" type="button">
-          <ScanSmiley size={18} />
-          Fullscreen shell
+        <nav className="globalNav" aria-label="Primary">
+          {["Explore", "Companies", "Suppliers", "Insights", "Watchlist"].map((item, index) => (
+            <a className={index === 0 ? "active" : undefined} href="/" key={item} onClick={(event) => event.preventDefault()}>
+              {item}
+            </a>
+          ))}
+        </nav>
+
+        <button className="headerAction" type="button">
+          <ScanSmiley size={16} />
+          My Views
         </button>
-      </div>
+      </header>
 
-      <div className="tickerRail" aria-label="Mag7 companies">
+      <section className="heroGrid">
+        <article className="heroPanel">
+          <p className="sectionEyebrow">Global Supply Chain Intelligence</p>
+          <h1>Trace the hidden infrastructure behind the Magnificent 7</h1>
+          <p className="heroCopy">
+            Explore supplier, manufacturing, software, logistics, and raw-material dependencies with clear evidence seams and
+            graph-first navigation.
+          </p>
+
+          <div className="heroControls">
+            <label className="searchField">
+              <MagnifyingGlass size={18} />
+              <input
+                aria-label="Search companies and suppliers"
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Search company, supplier, or material"
+              />
+            </label>
+
+            <div className="depthSwitcher" aria-label="Graph depth">
+              {[1, 2, 3].map((value) => (
+                <button
+                  key={value}
+                  className={value === depth ? "depthButton active" : "depthButton"}
+                  onClick={() => onDepthChange(value)}
+                  type="button"
+                >
+                  Tier {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        </article>
+
+        <article className="heroCanvasCard">
+          <div className="heroCanvasCopy">
+            <span>{graph.company.shortName} live focus</span>
+            <button className="headerAction secondary" type="button">
+              <SlidersHorizontal size={16} />
+              Filters
+            </button>
+          </div>
+          <div className="heroCanvasGlow">
+            <div className="heroOrbit heroOrbitPrimary" />
+            <div className="heroOrbit heroOrbitSecondary" />
+            <div className="heroFocusBadge">{graph.company.ticker}</div>
+          </div>
+        </article>
+      </section>
+
+      <section className="quickAccessSection" aria-label="Mag7 companies">
         {companies.map((company) => (
           <button
             key={company.id}
@@ -48,30 +103,11 @@ export function TopBar(props: TopBarProps) {
             onClick={() => onCompanySelect(company.id)}
             type="button"
           >
-            <strong>{company.ticker}</strong>
-            <span>{company.shortName}</span>
+            <strong>{company.shortName}</strong>
+            <span>{company.focus}</span>
           </button>
         ))}
-      </div>
-
-      <div className="controlCluster">
-        <div className="depthSwitcher" aria-label="Graph depth">
-          {[1, 2, 3].map((value) => (
-            <button
-              key={value}
-              className={value === depth ? "depthButton active" : "depthButton"}
-              onClick={() => onDepthChange(value)}
-              type="button"
-            >
-              L{value}
-            </button>
-          ))}
-        </div>
-        <button className="ghostAction" type="button">
-          <SlidersHorizontal size={18} />
-          API filters ready
-        </button>
-      </div>
-    </header>
+      </section>
+    </>
   );
 }
