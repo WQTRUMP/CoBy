@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
@@ -27,6 +28,7 @@ import type {
 } from "@mag7/contracts";
 
 const FULL_PACKAGE_DIR = "/workspace/agents/evidence-collector/output/mag7-full-package";
+const FULL_PACKAGE_MANIFEST = `${FULL_PACKAGE_DIR}/mag7-full-package-manifest.json`;
 const MAG7_COMPANY_IDS = [
   "company:AAPL",
   "company:MSFT",
@@ -548,12 +550,17 @@ class RealSampleGraphRepository implements GraphRepository {
 }
 
 let app: Awaited<ReturnType<typeof buildApp>>;
+let latestPublishedSnapshotId = "snapshot:published";
+let latestPublishedSnapshotVersion = "published";
 
 beforeAll(async () => {
-  const pkg = await loadNormalizedImportPackage(
-    `${FULL_PACKAGE_DIR}/relations.jsonl`,
-    `${FULL_PACKAGE_DIR}/evidence.jsonl`,
-  );
+  const [pkg, manifestRaw] = await Promise.all([
+    loadNormalizedImportPackage(`${FULL_PACKAGE_DIR}/relations.jsonl`, `${FULL_PACKAGE_DIR}/evidence.jsonl`),
+    readFile(FULL_PACKAGE_MANIFEST, "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestRaw) as { package_snapshot_id?: string };
+  latestPublishedSnapshotId = manifest.package_snapshot_id ?? latestPublishedSnapshotId;
+  latestPublishedSnapshotVersion = latestPublishedSnapshotId.replace("snapshot:", "").replace(/-/g, ".");
   const prepared = prepareNormalizedImport(pkg);
   const graphRepository = new RealSampleGraphRepository(prepared);
   const neo4jHealth = async (): Promise<Neo4jHealth> => ({
@@ -623,15 +630,15 @@ describe("full package app", () => {
     expect(subgraph.statusCode).toBe(200);
     expect(stats.statusCode).toBe(200);
 
-    expect(detail.json().item.activeSnapshotId).toBe("snapshot:2026-06-14.full.8");
-    expect(overview.json().activeSnapshotId).toBe("snapshot:2026-06-14.full.8");
+    expect(detail.json().item.activeSnapshotId).toBe(latestPublishedSnapshotId);
+    expect(overview.json().activeSnapshotId).toBe(latestPublishedSnapshotId);
     expect(subgraph.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.full.8",
-      version: "2026.06.14.full.8",
+      id: latestPublishedSnapshotId,
+      version: latestPublishedSnapshotVersion,
     });
     expect(stats.json().snapshot).toMatchObject({
-      id: "snapshot:2026-06-14.full.8",
-      version: "2026.06.14.full.8",
+      id: latestPublishedSnapshotId,
+      version: latestPublishedSnapshotVersion,
     });
   });
 
