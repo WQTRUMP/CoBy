@@ -2,7 +2,7 @@ import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
 import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
 
 interface GraphCanvasProps {
-  activeNodeId: string;
+  activeNodeId: string | null;
   activeRelationId: string | null;
   focusNode: GraphNodeViewModel;
   graph: GraphViewModel;

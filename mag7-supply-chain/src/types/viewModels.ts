@@ -1,7 +1,7 @@
 import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO } from "@mag7/contracts";
 
 export interface GraphQuery {
-  companyId: string;
+  companyId?: string | null;
   depth: number;
   search?: string;
 }

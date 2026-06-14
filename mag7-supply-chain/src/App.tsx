@@ -10,7 +10,7 @@ import type { EvidenceViewModel, GraphNodeViewModel, GraphRelationViewModel } fr
 const graphExplorerApi = createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? "");
 
 export function App() {
-  const [selectedCompanyId, setSelectedCompanyId] = useState("company:TSLA");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [depth, setDepth] = useState(2);
   const [search, setSearch] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -30,7 +30,7 @@ export function App() {
   );
 
   const graph = explorer.graph;
-  const [activeNodeId, setActiveNodeId] = useState("company:TSLA");
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [activeRelationId, setActiveRelationId] = useState<string | null>(null);
   const [activeEvidence, setActiveEvidence] = useState<EvidenceViewModel[]>([]);
 
@@ -64,6 +64,10 @@ export function App() {
       return;
     }
 
+    if (!explorer.loading && graph.focusCompany.id !== selectedCompanyId) {
+      setSelectedCompanyId(graph.focusCompany.id);
+    }
+
     if (!graph.nodes.some((node) => node.id === activeNodeId)) {
       setActiveNodeId(graph.focusCompany.id);
     }
@@ -71,7 +75,7 @@ export function App() {
     if (activeRelationId && !graph.relations.some((relation) => relation.id === activeRelationId)) {
       setActiveRelationId(graph.relations[0]?.id ?? null);
     }
-  }, [activeNodeId, activeRelationId, graph]);
+  }, [activeNodeId, activeRelationId, explorer.loading, graph, selectedCompanyId]);
 
   function handleCompanySelect(companyId: string) {
     startTransition(() => {
@@ -97,7 +101,7 @@ export function App() {
   }
 
   if (!graph) {
-    return <div className="loadingShell">Loading graph shell…</div>;
+    return <div className="loadingShell">{explorer.error ?? "Loading graph shell…"}</div>;
   }
 
   const focusNode = activeNode ?? graph.nodes[0];
@@ -177,6 +181,7 @@ export function App() {
       </section>
 
       {explorer.loading ? <div className="loadingToast">Refreshing graph…</div> : null}
+      {!explorer.loading && explorer.error ? <div className="loadingToast">{explorer.error}</div> : null}
     </main>
   );
 }

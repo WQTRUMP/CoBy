@@ -361,11 +361,15 @@ describe("backend app", () => {
     expect(prepared.companies.map((company) => company.id)).toContain("company:AAPL");
     expect(prepared.companies.map((company) => company.id)).toContain("company:TSMC");
     expect(prepared.relations[0]).toMatchObject({
-      sourceCompanyId: "company:TSMC",
-      targetCompanyId: "company:AAPL",
       productScope: ["Apple silicon"],
       evidenceIds: ["evidence:apple:2025-08-06:tsmc-arizona"],
       primaryEvidenceId: "evidence:apple:2025-08-06:tsmc-arizona",
+    });
+    expect(prepared.relationEdges[0]).toEqual({
+      relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
+      sourceCompanyId: "company:TSMC",
+      targetCompanyId: "company:AAPL",
+      snapshotId: "snapshot:2026-06-14.1",
     });
   });
 });

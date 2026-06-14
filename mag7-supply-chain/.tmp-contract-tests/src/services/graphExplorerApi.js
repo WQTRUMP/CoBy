@@ -1,4 +1,4 @@
-import { companyDetailResponseSchema, companyListResponseSchema, companyOverviewSchema, relationEvidenceResponseSchema, subgraphQuerySchema, subgraphSchema, } from "../../packages/contracts/src/index.js";
+import { companyDetailResponseSchema, companyListResponseSchema, companyOverviewSchema, relationEvidenceResponseSchema, subgraphQuerySchema, subgraphSchema, } from "@mag7/contracts";
 export const graphApiContract = {
     companies: "/api/v1/companies",
     company: "/api/v1/companies/:companyId",
@@ -6,6 +6,14 @@ export const graphApiContract = {
     subgraph: "/api/v1/graph/subgraph",
     evidence: "/api/v1/relations/:relationId/evidence",
 };
+export class ApiRequestError extends Error {
+    status;
+    constructor(status, statusText) {
+        super(`API request failed: ${status} ${statusText}`);
+        this.name = "ApiRequestError";
+        this.status = status;
+    }
+}
 export function createHttpGraphExplorerApi(baseUrl = "") {
     return {
         async listCompanies(query) {
@@ -48,7 +56,7 @@ async function request(input, schema) {
         },
     });
     if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        throw new ApiRequestError(response.status, response.statusText);
     }
     const payload = await response.json();
     return schema.parse(payload);

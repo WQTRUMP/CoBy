@@ -31,6 +31,16 @@ export const graphApiContract = {
   evidence: "/api/v1/relations/:relationId/evidence",
 } as const;
 
+export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`API request failed: ${status} ${statusText}`);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
 export function createHttpGraphExplorerApi(baseUrl = ""): GraphExplorerApi {
   return {
     async listCompanies(query) {
@@ -90,7 +100,7 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw new ApiRequestError(response.status, response.statusText);
   }
 
   const payload: unknown = await response.json();

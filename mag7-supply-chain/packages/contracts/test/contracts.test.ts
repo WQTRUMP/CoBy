@@ -5,7 +5,7 @@ import {
   standardizedImportEvidenceRecordSchema,
   standardizedImportRelationRecordSchema,
   subgraphSchema,
-} from "../src/index.js";
+} from "../src/index.ts";
 
 describe("@mag7/contracts", () => {
   it("keeps normalized relation records lossless and accepts new relationship types", () => {

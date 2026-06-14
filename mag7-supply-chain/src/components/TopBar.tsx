@@ -9,7 +9,7 @@ interface TopBarProps {
   onCompanySelect: (companyId: string) => void;
   onSearchChange: (value: string) => void;
   search: string;
-  selectedCompanyId: string;
+  selectedCompanyId: string | null;
 }
 
 export function TopBar(props: TopBarProps) {

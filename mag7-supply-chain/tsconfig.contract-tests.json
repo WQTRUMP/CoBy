@@ -11,6 +11,7 @@
   },
   "include": [
     "src/adapters/**/*.ts",
+    "src/hooks/**/*.ts",
     "src/mocks/**/*.ts",
     "src/services/**/*.ts",
     "src/types/**/*.ts"

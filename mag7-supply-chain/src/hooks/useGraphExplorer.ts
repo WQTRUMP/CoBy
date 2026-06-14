@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { adaptCompanyOptions, adaptGraphViewModel, adaptRelationEvidence } from "../adapters/graphExplorerAdapter";
-import type { GraphExplorerApi } from "../services/graphExplorerApi";
+import { ApiRequestError, type GraphExplorerApi } from "../services/graphExplorerApi";
 import type {
   CompanyOptionViewModel,
   EvidenceViewModel,
@@ -8,10 +8,12 @@ import type {
   GraphRelationViewModel,
   GraphViewModel,
 } from "../types/viewModels";
+import { resolveFallbackCompanyId } from "./graphExplorerSelection";
 
 interface ExplorerState {
   companies: CompanyOptionViewModel[];
   graph: GraphViewModel | null;
+  error: string | null;
   loading: boolean;
 }
 
@@ -19,6 +21,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
   const [state, setState] = useState<ExplorerState>({
     companies: [],
     graph: null,
+    error: null,
     loading: true,
   });
   const [relationEvidenceById, setRelationEvidenceById] = useState<Record<string, EvidenceViewModel[]>>({});
@@ -27,41 +30,95 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     let alive = true;
 
     async function load() {
-      setState((current) => ({ ...current, loading: true }));
-      const [companies, company, overview, subgraph] = await Promise.all([
-        api.listCompanies(query.search),
-        api.getCompany(query.companyId),
-        api.getCompanyOverview(query.companyId),
-        api.getSubgraph({
-          companyId: query.companyId,
-          depth: query.depth,
-          snapshot: "published",
-          includeEvidence: true,
-        }),
-      ]);
+      setState((current) => ({ ...current, error: null, loading: true }));
 
-      if (!alive) return;
+      try {
+        const companiesResponse = await api.listCompanies(query.search);
+        const companies = adaptCompanyOptions(companiesResponse);
+        const requestedCompanyId = query.companyId?.trim() || null;
+        const fallbackCompanyId = resolveFallbackCompanyId(companies, requestedCompanyId);
+        const initialCompanyId = requestedCompanyId ?? fallbackCompanyId;
 
-      const graph = adaptGraphViewModel({
-        company,
-        overview,
-        subgraph,
-        query,
-      });
+        if (!initialCompanyId) {
+          if (!alive) return;
 
-      setRelationEvidenceById(
-        Object.fromEntries(
-          graph.relations
-            .filter((relation) => relation.evidence.length > 0)
-            .map((relation) => [relation.id, relation.evidence]),
-        ),
-      );
+          setRelationEvidenceById({});
+          setState({
+            companies,
+            graph: null,
+            error: "No companies are available for this view.",
+            loading: false,
+          });
+          return;
+        }
 
-      setState({
-        companies: adaptCompanyOptions(companies),
-        graph,
-        loading: false,
-      });
+        const loadGraph = async (companyId: string) => {
+          const [company, overview, subgraph] = await Promise.all([
+            api.getCompany(companyId),
+            api.getCompanyOverview(companyId),
+            api.getSubgraph({
+              companyId,
+              depth: query.depth,
+              snapshot: "published",
+              includeEvidence: true,
+            }),
+          ]);
+
+          return adaptGraphViewModel({
+            company,
+            overview,
+            subgraph,
+            query: {
+              ...query,
+              companyId,
+            },
+          });
+        };
+
+        let graph: GraphViewModel;
+
+        try {
+          graph = await loadGraph(initialCompanyId);
+        } catch (error) {
+          const canFallback =
+            requestedCompanyId !== null &&
+            fallbackCompanyId !== null &&
+            fallbackCompanyId !== requestedCompanyId &&
+            error instanceof ApiRequestError &&
+            error.status === 404;
+
+          if (!canFallback) {
+            throw error;
+          }
+
+          graph = await loadGraph(fallbackCompanyId);
+        }
+
+        if (!alive) return;
+
+        setRelationEvidenceById(
+          Object.fromEntries(
+            graph.relations
+              .filter((relation) => relation.evidence.length > 0)
+              .map((relation) => [relation.id, relation.evidence]),
+          ),
+        );
+
+        setState({
+          companies,
+          graph,
+          error: null,
+          loading: false,
+        });
+      } catch (error) {
+        if (!alive) return;
+
+        setState((current) => ({
+          ...current,
+          error: error instanceof Error ? error.message : "Failed to load graph explorer.",
+          loading: false,
+        }));
+      }
     }
 
     void load();
