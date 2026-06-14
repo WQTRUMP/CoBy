@@ -75,15 +75,22 @@ export function adaptRelationEvidence(response, relation) {
     return response.items.map((item) => adaptEvidence(item, relation.confidence));
 }
 function adaptCompanyOption(company) {
+    const enhancedCompany = company;
+    const displayName = getPreferredDisplayName(enhancedCompany);
+    const canonicalName = getCanonicalName(enhancedCompany);
     return {
         id: company.id,
         ticker: company.ticker ?? company.name.slice(0, 4).toUpperCase(),
         name: company.name,
-        shortName: getShortName(company),
-        focus: company.name,
+        displayName,
+        canonicalName,
+        shortName: getShortName({ name: displayName }),
+        focus: displayName,
+        hierarchySummary: formatHierarchySummary(enhancedCompany.entityProfile, "company"),
         primaryRegion: company.primaryRegion,
         marketCapUsd: company.marketCapUsd,
         isMag7: company.isMag7,
+        entityProfile: enhancedCompany.entityProfile ?? null,
     };
 }
 function adaptRelation(relation, companyId) {
@@ -108,8 +115,13 @@ function adaptRelation(relation, companyId) {
         evidenceDateResolution: relation.evidenceDateResolution ?? null,
         evidenceDateResolutionLabel: formatDateResolution(relation.evidenceDateResolution),
         validFrom: relation.validFrom ?? null,
+        validFromResolution: relation.validFromResolution ?? null,
+        validFromResolutionLabel: formatDateResolution(relation.validFromResolution),
         validTo: relation.validTo ?? null,
+        validToResolution: relation.validToResolution ?? null,
+        validToResolutionLabel: formatDateResolution(relation.validToResolution),
         validityLabel: formatValidityLabel(relation.validFrom, relation.validTo),
+        validityNote: relation.validityNote ?? null,
         evidenceCount: relation.evidenceCount,
         evidence: (relation.evidence ?? []).map((item) => adaptEvidence(item, relation.confidence)),
         isDirectRelation: relation.sourceId === companyId || relation.targetId === companyId,
@@ -123,6 +135,14 @@ function adaptEvidence(evidence, confidence) {
         sourceType: evidence.sourceType,
         sourceTypeLabel: SOURCE_TYPE_LABELS[evidence.sourceType],
         publishedAt: evidence.publishedAt,
+        publishedAtResolution: evidence.publishedAtResolution,
+        publishedAtResolutionLabel: formatDateResolution(evidence.publishedAtResolution) ?? "Not specified",
+        publishedAtSemantic: getEvidencePrimaryDateSemantic(evidence.publishedAtResolution),
+        reportedPeriodEnd: evidence.coverageEnd ?? null,
+        reportedPeriodEndResolutionLabel: formatDateResolution(evidence.coverageEndResolution),
+        retrievedAt: evidence.retrievedAt,
+        retrievedAtSemantic: "retrieved_at_surrogate",
+        compatibilityNote: getEvidenceCompatibilityNote(evidence.publishedAtResolution, evidence.publishedAt),
         url: evidence.url,
         citation: evidence.citationText,
         excerpt: evidence.excerpt,
@@ -164,8 +184,12 @@ function buildNodeLayout(nodes, relations, companyId) {
         const y = bucket.length === 1 ? 50 : 19 + rowStep * index;
         return {
             id: node.id,
-            label: node.label,
-            secondaryLabel: node.company?.ticker ?? node.country ?? node.entityType,
+            label: getPreferredNodeLabel(node),
+            secondaryLabel: describeNodeSecondaryLabel(node),
+            displayName: getPreferredNodeLabel(node),
+            canonicalName: node.company ? getCanonicalName(node.company) : null,
+            hierarchySummary: formatHierarchySummary(node.company?.entityProfile, ENTITY_KIND_BY_TYPE[node.entityType]),
+            kindLabel: humanizeNodeKind(ENTITY_KIND_BY_TYPE[node.entityType]),
             kind: ENTITY_KIND_BY_TYPE[node.entityType],
             region: node.company?.country ?? node.country ?? "Global",
             importanceScore: node.importanceScore ?? node.company?.importanceScore ?? 0.45,
@@ -270,6 +294,84 @@ function collectRelationshipSubtypeOptions(relations) {
     }));
 }
 function getShortName(company) {
-    return company.aliases?.[0]?.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "") ??
-        company.name.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "");
+    return company.name.replace(/,?\s+(Inc|Inc\.|Corporation|Corp\.|Ltd\.|Limited|Holdings|Platforms)$/i, "");
+}
+function getPreferredDisplayName(company) {
+    return company.displayName ?? company.entityProfile?.displayName ?? company.canonicalName ?? company.name;
+}
+function getCanonicalName(company) {
+    return company.canonicalName ?? company.entityProfile?.canonicalName ?? company.name;
+}
+function getPreferredNodeLabel(node) {
+    if (node.company) {
+        return getPreferredDisplayName(node.company);
+    }
+    return node.label;
+}
+function describeNodeSecondaryLabel(node) {
+    const kind = humanizeNodeKind(ENTITY_KIND_BY_TYPE[node.entityType]);
+    const ticker = node.company?.ticker;
+    const canonicalName = node.company ? getCanonicalName(node.company) : null;
+    const pieces = [kind];
+    if (ticker) {
+        pieces.push(ticker);
+    }
+    if (canonicalName && canonicalName !== getPreferredNodeLabel(node)) {
+        pieces.push(canonicalName);
+    }
+    return pieces.join(" · ");
+}
+function formatHierarchySummary(entityProfile, kind) {
+    const base = kind === "facility"
+        ? "Facility node mapped under its operating group."
+        : "Search and detail views distinguish group, brand, legal entity, and facility layers.";
+    if (!entityProfile) {
+        return base;
+    }
+    const parts = [
+        `Group: ${entityProfile.canonicalName}`,
+        `Display: ${entityProfile.displayName}`,
+        entityProfile.legalEntities.length > 0 ? `Legal: ${entityProfile.legalEntities.map((item) => item.name).join(", ")}` : null,
+        entityProfile.brands.length > 0 ? `Brands: ${entityProfile.brands.map((item) => item.name).join(", ")}` : null,
+        entityProfile.aliases.some((item) => item.aliasType === "facility")
+            ? `Facilities: ${entityProfile.aliases.filter((item) => item.aliasType === "facility").map((item) => item.name).join(", ")}`
+            : "Facilities: represented as graph nodes or facility aliases when available",
+    ].filter(Boolean);
+    return parts.join(" | ");
+}
+function humanizeNodeKind(kind) {
+    if (kind === "company")
+        return "Group / Company";
+    if (kind === "facility")
+        return "Facility";
+    if (kind === "product")
+        return "Product";
+    if (kind === "technology")
+        return "Technology";
+    return "Material";
+}
+function getEvidencePrimaryDateSemantic(resolution) {
+    const normalized = resolution?.trim().toLowerCase();
+    if (normalized === "published_at")
+        return "published_at";
+    if (normalized === "filing_period")
+        return "reported_period_end";
+    if (normalized === "undated")
+        return "retrieved_at_surrogate";
+    if (normalized === "month" || normalized === "quarter" || normalized === "year")
+        return "month-normalized compatibility";
+    return normalized ?? "published_at";
+}
+function getEvidenceCompatibilityNote(resolution, publishedAt) {
+    const normalized = resolution?.trim().toLowerCase();
+    if (normalized === "month" || normalized === "quarter" || normalized === "year") {
+        return `Legacy month-normalized inputs are rendered as ${normalized}-level values; ${publishedAt} may be a surrogate boundary, not a day-exact publication timestamp.`;
+    }
+    if (normalized === "undated") {
+        return "Undated evidence falls back to a retrieved_at surrogate and should not be read as a source-published date.";
+    }
+    if (normalized === "filing_period") {
+        return "This value represents the reported period end, not the document publication date.";
+    }
+    return null;
 }

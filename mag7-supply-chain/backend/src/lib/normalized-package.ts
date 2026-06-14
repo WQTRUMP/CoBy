@@ -3,18 +3,20 @@ import { z } from "zod";
 
 import {
   standardizedImportEvidenceRecordSchema,
+  standardizedImportPackageSchema,
   standardizedImportRelationRecordSchema,
   type DateResolution,
   type EntityAliasRecord,
   type EntityProfile,
   type StandardizedImportEvidenceRecord,
   type ImportEntityRef,
-  type StandardizedImportPackage,
   type StandardizedImportRelationRecord,
 } from "@mag7/contracts";
 export type NormalizedRelationRecord = StandardizedImportRelationRecord;
 export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
-export type NormalizedImportPackage = StandardizedImportPackage;
+export type NormalizedRelationInput = z.input<typeof standardizedImportRelationRecordSchema>;
+export type NormalizedEvidenceInput = z.input<typeof standardizedImportEvidenceRecordSchema>;
+export type NormalizedImportPackage = z.input<typeof standardizedImportPackageSchema>;
 
 interface CompanySeed {
   id: string;
@@ -681,6 +683,53 @@ function getCompanySeed(slug: string, name: string, isMag7: boolean) {
   return companyRegistry.get(slug) ?? deriveFallbackCompany(slug, name, isMag7);
 }
 
+function normalizeLegacyResolutionValue(value: unknown) {
+  if (value === "month-normalized") {
+    return "month";
+  }
+
+  if (value === "reported_period_end") {
+    return "filing_period";
+  }
+
+  if (value === "retrieved_at_surrogate") {
+    return "undated";
+  }
+
+  return value;
+}
+
+function normalizeLegacyImportRecord(record: unknown) {
+  if (!record || typeof record !== "object") {
+    return record;
+  }
+
+  const original = record as Record<string, unknown>;
+  const normalized = { ...original };
+
+  for (const key of [
+    "evidence_date_resolution",
+    "valid_from_resolution",
+    "valid_to_resolution",
+    "published_at_resolution",
+    "coverage_start_resolution",
+    "coverage_end_resolution",
+  ]) {
+    if (key in normalized) {
+      normalized[key] = normalizeLegacyResolutionValue(normalized[key]);
+    }
+  }
+
+  if (original.evidence_date_resolution === "month-normalized") {
+    normalized.evidence_date_normalized =
+      normalized.evidence_date_normalized ??
+      (typeof normalized.evidence_date === "string" ? normalized.evidence_date : null);
+    normalized.evidence_date_is_normalized = normalized.evidence_date_is_normalized ?? true;
+  }
+
+  return normalized;
+}
+
 function buildImportCompanyNode(seed: CompanySeed, ref: ImportEntityRef | undefined, sourceLabel: string): ImportCompanyNode {
   const entityProfile = mergeEntityProfile(seed.entityProfile, ref, sourceLabel);
   const canonicalName = ref?.entity_id === seed.id ? seed.canonicalName : seed.canonicalName;
@@ -725,7 +774,7 @@ export async function readNormalizedJsonlFile<T>(
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const parsed = JSON.parse(line) as unknown;
+      const parsed = normalizeLegacyImportRecord(JSON.parse(line) as unknown);
       return schema.parse(parsed, {
         path: [filePath, index + 1],
       });
@@ -736,8 +785,7 @@ export async function loadNormalizedImportPackage(
   relationFile: string,
   evidenceFile: string,
 ): Promise<NormalizedImportPackage> {
-  const [relations, evidence]: [NormalizedRelationRecord[], NormalizedEvidenceRecord[]] =
-    await Promise.all([
+  const [relations, evidence] = await Promise.all([
     readNormalizedJsonlFile(relationFile, standardizedImportRelationRecordSchema),
     readNormalizedJsonlFile(evidenceFile, standardizedImportEvidenceRecordSchema),
   ]);
@@ -749,20 +797,38 @@ export async function loadNormalizedImportPackage(
 }
 
 export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedNormalizedImport {
+  const relations = pkg.relations.map((relation) =>
+    standardizedImportRelationRecordSchema.parse(
+      normalizeLegacyImportRecord(relation),
+    ) as StandardizedImportRelationRecord,
+  );
+  const evidence = pkg.evidence.map((item) =>
+    standardizedImportEvidenceRecordSchema.parse(
+      normalizeLegacyImportRecord(item),
+    ) as StandardizedImportEvidenceRecord,
+  );
   const companyMap = new Map<string, ImportCompanyNode>();
   const snapshotMap = new Map<string, ImportSnapshotNode>();
 
-  for (const relation of pkg.relations) {
+  for (const relation of relations) {
     const companySeed = getCompanySeed(relation.company_slug, relation.company, true);
     const supplierSeed = getCompanySeed(relation.supplier_slug, relation.supplier, false);
 
     companyMap.set(
       companySeed.id,
-      buildImportCompanyNode(companySeed, relation.company_entity_ref, "relation.company_entity_ref"),
+      buildImportCompanyNode(
+        companyMap.get(companySeed.id) ?? companySeed,
+        relation.company_entity_ref,
+        "relation.company_entity_ref",
+      ),
     );
     companyMap.set(
       supplierSeed.id,
-      buildImportCompanyNode(supplierSeed, relation.supplier_entity_ref, "relation.supplier_entity_ref"),
+      buildImportCompanyNode(
+        companyMap.get(supplierSeed.id) ?? supplierSeed,
+        relation.supplier_entity_ref,
+        "relation.supplier_entity_ref",
+      ),
     );
 
     const existingSnapshot = snapshotMap.get(relation.snapshot_id);
@@ -781,7 +847,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
   return {
     companies: [...companyMap.values()],
     snapshots: [...snapshotMap.values()],
-    relations: pkg.relations.map((relation) => ({
+    relations: relations.map((relation) => ({
       id: relation.relation_id,
       relationshipType: relation.relationship_type,
       relationshipSubtype: relation.relationship_subtype,
@@ -797,13 +863,19 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       snapshotId: relation.snapshot_id,
       status: relation.status,
       evidenceDate: relation.evidence_date,
-      evidenceDateResolution: relation.evidence_date_resolution,
+      evidenceDateResolution: normalizeLegacyResolutionValue(relation.evidence_date_resolution) as DateResolution,
       evidenceDateNormalized: relation.evidence_date_normalized ?? null,
       evidenceDateIsNormalized: relation.evidence_date_is_normalized ?? false,
       validFrom: relation.valid_from ?? null,
-      validFromResolution: relation.valid_from_resolution ?? null,
+      validFromResolution:
+        relation.valid_from_resolution == null
+          ? null
+          : normalizeLegacyResolutionValue(relation.valid_from_resolution) as DateResolution,
       validTo: relation.valid_to ?? null,
-      validToResolution: relation.valid_to_resolution ?? null,
+      validToResolution:
+        relation.valid_to_resolution == null
+          ? null
+          : normalizeLegacyResolutionValue(relation.valid_to_resolution) as DateResolution,
       validityNote: relation.validity_note ?? null,
       sourceMethod: relation.source_method,
       sourceCount: relation.source_count,
@@ -814,24 +886,30 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       sourceReportPath: relation.source_report_path,
       lastVerifiedAt: relation.last_verified_at,
     })),
-    relationEdges: pkg.relations.map((relation) => ({
+    relationEdges: relations.map((relation) => ({
       relationId: relation.relation_id,
       sourceCompanyId: getCompanySeed(relation.supplier_slug, relation.supplier, false).id,
       targetCompanyId: getCompanySeed(relation.company_slug, relation.company, true).id,
       snapshotId: relation.snapshot_id,
     })),
-    evidence: pkg.evidence.map((evidence) => ({
+    evidence: evidence.map((evidence) => ({
       id: evidence.evidence_id,
       sourceType: evidence.source_type,
       title: evidence.title,
       publisher: evidence.publisher,
       url: evidence.source_url,
       publishedAt: evidence.published_at,
-      publishedAtResolution: evidence.published_at_resolution,
+      publishedAtResolution: normalizeLegacyResolutionValue(evidence.published_at_resolution) as DateResolution,
       coverageStart: evidence.coverage_start ?? null,
       coverageEnd: evidence.coverage_end ?? null,
-      coverageStartResolution: evidence.coverage_start_resolution ?? null,
-      coverageEndResolution: evidence.coverage_end_resolution ?? null,
+      coverageStartResolution:
+        evidence.coverage_start_resolution == null
+          ? null
+          : normalizeLegacyResolutionValue(evidence.coverage_start_resolution) as DateResolution,
+      coverageEndResolution:
+        evidence.coverage_end_resolution == null
+          ? null
+          : normalizeLegacyResolutionValue(evidence.coverage_end_resolution) as DateResolution,
       retrievedAt: evidence.retrieved_at,
       excerpt: evidence.excerpt,
       pageRef: evidence.page_ref ?? null,
@@ -845,7 +923,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       sourceReportPath: evidence.source_report_path,
       notes: evidence.notes ?? null,
     })),
-    evidenceBindings: pkg.evidence.map((evidence) => ({
+    evidenceBindings: evidence.map((evidence) => ({
       relationId: evidence.relation_id,
       evidenceId: evidence.evidence_id,
     })),

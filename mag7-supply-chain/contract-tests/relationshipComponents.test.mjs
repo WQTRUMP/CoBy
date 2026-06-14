@@ -3,6 +3,7 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { CompanySidebar } from "../.tmp-contract-tests/src/components/CompanySidebar.js";
 import { EvidencePanel } from "../.tmp-contract-tests/src/components/EvidencePanel.js";
 import { GraphCanvas } from "../.tmp-contract-tests/src/components/GraphCanvas.js";
 import { TopBar } from "../.tmp-contract-tests/src/components/TopBar.js";
@@ -52,6 +53,7 @@ test("renders relationship filters with real type and subtype options", () => {
   assert.match(markup, /Relationship types/);
   assert.match(markup, /Component Supply/);
   assert.match(markup, /Battery Cells \(1\)/);
+  assert.match(markup, /canonical groups, brands, legal entities, and facility aliases separately/i);
 });
 
 test("renders graph legend with concrete relationship labels instead of generic buckets", () => {
@@ -83,6 +85,7 @@ test("renders graph legend with concrete relationship labels instead of generic 
   assert.match(markup, /Raw Material Supply/);
   assert.doesNotMatch(markup, />Supply</);
   assert.doesNotMatch(markup, /IP \/ Technology/);
+  assert.match(markup, /group anchors, brand\/legal naming, and facility operators/i);
 });
 
 test("renders service relationships with service semantics instead of component-supply language", () => {
@@ -110,8 +113,13 @@ test("renders service relationships with service semantics instead of component-
         evidenceDateResolution: "day",
         evidenceDateResolutionLabel: "Day-level",
         validFrom: "2025-01-01",
+        validFromResolution: "day",
+        validFromResolutionLabel: "Day-level",
         validTo: null,
+        validToResolution: null,
+        validToResolutionLabel: null,
         validityLabel: "2025-01-01 onward",
+        validityNote: "Relationship remains active unless superseded by a later filing.",
         evidenceCount: 0,
         evidence: [],
         isDirectRelation: true,
@@ -124,4 +132,78 @@ test("renders service relationships with service semantics instead of component-
   assert.doesNotMatch(markup, /Component Supply/);
   assert.match(markup, /Day-level/);
   assert.match(markup, /2025-01-01 onward/);
+  assert.match(markup, /Validity note/);
+});
+
+test("renders entity-layer guidance in the company sidebar without falling back to aliases[0]", () => {
+  const graph = adaptGraphViewModel({
+    company: {
+      item: {
+        ...getCompanyResponse("company:TSLA").item,
+        name: "Tesla, Inc.",
+        canonicalName: "Tesla, Inc.",
+        displayName: "Tesla Energy",
+        aliases: ["Legacy Alias"],
+        entityProfile: {
+          canonicalName: "Tesla, Inc.",
+          displayName: "Tesla Energy",
+          legalEntities: [
+            {
+              id: "alias:legal",
+              name: "Tesla Manufacturing LLC",
+              normalizedName: "tesla manufacturing llc",
+              aliasType: "legal_entity",
+              isPrimary: true,
+            },
+          ],
+          brands: [
+            {
+              id: "alias:brand",
+              name: "Powerwall",
+              normalizedName: "powerwall",
+              aliasType: "brand",
+              isPrimary: true,
+            },
+          ],
+          aliases: [
+            {
+              id: "alias:facility",
+              name: "Gigafactory Texas",
+              normalizedName: "gigafactory texas",
+              aliasType: "facility",
+              isPrimary: false,
+            },
+          ],
+        },
+      },
+      source: "mock",
+    },
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph: getSubgraphResponse("company:TSLA", 2, true),
+    query: {
+      companyId: "company:TSLA",
+      depth: 2,
+      search: "",
+    },
+  });
+
+  const markup = renderToStaticMarkup(
+    React.createElement(CompanySidebar, {
+      activeNode: graph.nodes[0],
+      activeRelation: graph.relations[0],
+      activeTab: "overview",
+      company: graph.focusCompany,
+      evidence: [],
+      evidenceSummary: graph.evidenceOverview,
+      onRelationSelect() {},
+      onTabChange() {},
+      relations: graph.relations,
+    }),
+  );
+
+  assert.match(markup, /Tesla Energy/);
+  assert.match(markup, /Tesla, Inc\./);
+  assert.match(markup, /Group \/ brand \/ legal entity \/ facility/);
+  assert.match(markup, /Gigafactory Texas/);
+  assert.doesNotMatch(markup, /Legacy Alias/);
 });

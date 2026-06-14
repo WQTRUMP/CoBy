@@ -22,6 +22,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
         <div>
           <h3>Global Supply Chain Map</h3>
           <p>Relationship type and tier depth are encoded directly on the dark graph workspace.</p>
+          <p>Nodes distinguish group anchors, brand/legal naming, and facility operators instead of flattening all aliases into one surface.</p>
         </div>
 
         <div className="workspaceTopline">
@@ -114,8 +115,9 @@ export function GraphCanvas(props: GraphCanvasProps) {
         </div>
 
         <div className="focusPill">
-          <strong>{focusNode.label}</strong>
+          <strong>{focusNode.displayName}</strong>
           <span>{focusNode.secondaryLabel ?? focusNode.region}</span>
+          <small>{focusNode.hierarchySummary}</small>
         </div>
       </div>
     </section>

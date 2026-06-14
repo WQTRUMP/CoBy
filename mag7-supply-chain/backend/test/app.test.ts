@@ -176,6 +176,15 @@ describe("backend app", () => {
     expect(subgraphResponse.statusCode).toBe(200);
     expect(subgraphResponse.headers["x-cache"]).toBe("miss");
     expect(subgraphResponse.json().snapshot.id).toBe("snapshot:2026-06-14.1");
+    expect(subgraphResponse.json().relations[0]).toMatchObject({
+      evidenceDate: "2024",
+      evidenceDateResolution: "year",
+      evidenceDateNormalized: "2024-01-01",
+      evidenceDateIsNormalized: true,
+      validFrom: "2024",
+      validFromResolution: "year",
+      validToResolution: null,
+    });
 
     expect(pathResponse.statusCode).toBe(200);
     expect(pathResponse.json().relations).toHaveLength(2);

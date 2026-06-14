@@ -21,7 +21,62 @@ test("adapts company list items from shared contract responses", () => {
 
   assert.equal(companies[0]?.id, "company:TSLA");
   assert.equal(companies[0]?.shortName, "Tesla");
+  assert.equal(companies[0]?.displayName, "Tesla");
+  assert.equal(companies[0]?.canonicalName, "Tesla");
   assert.equal(companies[0]?.primaryRegion, "North America");
+});
+
+test("prefers displayName and canonical entity profile fields over aliases for company presentation", () => {
+  const company = adaptCompanyProfile(
+    {
+      item: {
+        ...getCompanyResponse("company:TSLA").item,
+        name: "Tesla, Inc.",
+        canonicalName: "Tesla, Inc.",
+        displayName: "Tesla Energy",
+        aliases: ["Legacy Alias"],
+        entityProfile: {
+          canonicalName: "Tesla, Inc.",
+          displayName: "Tesla Energy",
+          legalEntities: [
+            {
+              id: "alias:legal",
+              name: "Tesla Manufacturing LLC",
+              normalizedName: "tesla manufacturing llc",
+              aliasType: "legal_entity",
+              isPrimary: true,
+            },
+          ],
+          brands: [
+            {
+              id: "alias:brand",
+              name: "Powerwall",
+              normalizedName: "powerwall",
+              aliasType: "brand",
+              isPrimary: true,
+            },
+          ],
+          aliases: [
+            {
+              id: "alias:facility",
+              name: "Gigafactory Texas",
+              normalizedName: "gigafactory texas",
+              aliasType: "facility",
+              isPrimary: false,
+            },
+          ],
+        },
+      },
+      source: "mock",
+    },
+    getCompanyOverviewResponse("company:TSLA"),
+  );
+
+  assert.equal(company.displayName, "Tesla Energy");
+  assert.equal(company.canonicalName, "Tesla, Inc.");
+  assert.equal(company.shortName, "Tesla Energy");
+  assert.match(company.hierarchySummary, /Group: Tesla, Inc\./);
+  assert.match(company.hierarchySummary, /Facilities: Gigafactory Texas/);
 });
 
 test("preserves non-direct relations, notes, tier, and evidence aggregation in the graph view-model", () => {
@@ -49,6 +104,8 @@ test("preserves non-direct relations, notes, tier, and evidence aggregation in t
   assert.equal(upstreamRelation.evidenceDateResolution, "quarter");
   assert.equal(upstreamRelation.evidenceDateResolutionLabel, "Quarter-level");
   assert.equal(upstreamRelation.validFrom, "2024-01-01");
+  assert.equal(upstreamRelation.validFromResolution, null);
+  assert.equal(upstreamRelation.validFromResolutionLabel, null);
   assert.equal(upstreamRelation.validityLabel, "2024-01-01 onward");
 
   assert.equal(graph.focusCompany.overview.relationCount, 3);
@@ -110,6 +167,7 @@ test("maps relation evidence endpoint payloads into evidence cards with relation
   assert.equal(evidence.length, 3);
   assert.equal(evidence[0]?.sourceTypeLabel, "10-K");
   assert.equal(evidence[0]?.confidence, "strong_evidence");
+  assert.equal(evidence[0]?.publishedAtSemantic, "day");
   assert.equal(
     evidence.find((item) => item.sourceType === "official_doc")?.sourceTypeLabel,
     "Official Document",
@@ -148,6 +206,71 @@ test("keeps the official_doc contract source type mapped for frontend evidence c
 
   assert.equal(evidence[0]?.sourceType, "official_doc");
   assert.equal(evidence[0]?.sourceTypeLabel, "Official Document");
+});
+
+test("maps evidence date semantics and compatibility notes for reported periods and normalized surrogates", () => {
+  const evidence = adaptRelationEvidence(
+    {
+      items: [
+        {
+          id: "evidence:filing-period",
+          sourceType: "supplier_report",
+          title: "Quarterly Supplier Summary",
+          publisher: "Test Supplier",
+          url: "https://example.com/report",
+          publishedAt: "2025-03-31",
+          publishedAtResolution: "filing_period",
+          coverageStart: "2025-01-01",
+          coverageEnd: "2025-03-31",
+          coverageStartResolution: "day",
+          coverageEndResolution: "day",
+          retrievedAt: "2026-06-14T00:00:00.000Z",
+          excerpt: "Fixture for filing period semantics.",
+          pageRef: null,
+          language: "en",
+          hash: "sha256:filing-period",
+          sourceDomain: "example.com",
+          citationText: "Fixture for filing period semantics.",
+          reliabilityTier: 2,
+          licenseNote: null,
+          parserVersion: "contract-test",
+        },
+        {
+          id: "evidence:normalized-month",
+          sourceType: "media",
+          title: "Monthly industry note",
+          publisher: "Example Media",
+          url: "https://example.com/monthly",
+          publishedAt: "2025-03-01",
+          publishedAtResolution: "month",
+          coverageStart: null,
+          coverageEnd: null,
+          coverageStartResolution: null,
+          coverageEndResolution: null,
+          retrievedAt: "2026-06-14T00:00:00.000Z",
+          excerpt: "Fixture for normalized month compatibility.",
+          pageRef: null,
+          language: "en",
+          hash: "sha256:normalized-month",
+          sourceDomain: "example.com",
+          citationText: "Fixture for normalized month compatibility.",
+          reliabilityTier: 2,
+          licenseNote: null,
+          parserVersion: "contract-test",
+        },
+      ],
+      total: 2,
+      source: "contract-test",
+      generatedAt: "2026-06-14T00:00:00.000Z",
+    },
+    { confidence: "confirmed" },
+  );
+
+  assert.equal(evidence[0]?.publishedAtSemantic, "reported_period_end");
+  assert.equal(evidence[0]?.reportedPeriodEnd, "2025-03-31");
+  assert.match(evidence[0]?.compatibilityNote ?? "", /reported period end/);
+  assert.equal(evidence[1]?.publishedAtSemantic, "month-normalized compatibility");
+  assert.match(evidence[1]?.compatibilityNote ?? "", /month-normalized/);
 });
 
 test("filters graph relations by relationship type and subtype while preserving filter options", () => {

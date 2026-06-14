@@ -27,6 +27,8 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
             <strong>{relation.sourceMethodLabel ?? "Not specified"}</strong>
             <span>Evidence precision</span>
             <strong>{relation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+            <span>Validity note</span>
+            <strong>{relation.validityNote ?? "No additional note"}</strong>
             <span>Validity</span>
             <strong>{relation.validityLabel}</strong>
           </div>
@@ -46,9 +48,26 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
             </div>
             <strong>{item.title}</strong>
             <p>{item.citation}</p>
+            <div className="metaGrid compact">
+              <span>Primary date semantic</span>
+              <strong>{item.publishedAtSemantic}</strong>
+              <span>Primary date</span>
+              <strong>
+                {item.publishedAt} ({item.publishedAtResolutionLabel})
+              </strong>
+              <span>Reported period end</span>
+              <strong>
+                {item.reportedPeriodEnd
+                  ? `${item.reportedPeriodEnd} (${item.reportedPeriodEndResolutionLabel ?? "Unspecified resolution"})`
+                  : "Not provided"}
+              </strong>
+              <span>Retrieved surrogate</span>
+              <strong>{item.retrievedAt}</strong>
+            </div>
+            {item.compatibilityNote ? <p>{item.compatibilityNote}</p> : null}
             <div className="evidenceFooter">
               <span>{item.publisher}</span>
-              <span>{item.publishedAt}</span>
+              <span>{item.publishedAtSemantic}</span>
             </div>
             <a href={item.url} target="_blank" rel="noreferrer">
               <LinkSimple size={14} />
@@ -63,8 +82,14 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
         <div className="provenanceGrid">
           <span>Document</span>
           <strong>{evidence[0]?.sourceTypeLabel ?? "10-K / Report"}</strong>
-          <span>Filed date</span>
+          <span>published_at</span>
           <strong>{evidence[0]?.publishedAt ?? "Pending source binding"}</strong>
+          <span>reported_period_end</span>
+          <strong>{evidence[0]?.reportedPeriodEnd ?? "Not provided"}</strong>
+          <span>retrieved_at_surrogate</span>
+          <strong>{evidence[0]?.retrievedAt ?? "Pending source binding"}</strong>
+          <span>month-normalized compatibility</span>
+          <strong>{evidence[0]?.compatibilityNote ?? "No compatibility mapping note"}</strong>
           <span>Issuer</span>
           <strong>{evidence[0]?.publisher ?? "Company / publisher"}</strong>
           <span>Access</span>

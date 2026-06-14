@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adaptCompanyOptions, adaptGraphViewModel, adaptRelationEvidence } from "../adapters/graphExplorerAdapter";
 import { ApiRequestError, type GraphExplorerApi } from "../services/graphExplorerApi";
+import type { CompanyDetailResponseDTO, CompanyOverviewDTO, SubgraphDTO } from "@mag7/contracts";
 import type {
   CompanyOptionViewModel,
   EvidenceViewModel,
@@ -13,20 +14,27 @@ import { resolveFallbackCompanyId } from "./graphExplorerSelection";
 
 interface ExplorerState {
   companies: CompanyOptionViewModel[];
-  graph: GraphViewModel | null;
   error: string | null;
   loading: boolean;
+}
+
+interface RawGraphState {
+  company: CompanyDetailResponseDTO;
+  overview: CompanyOverviewDTO;
+  subgraph: SubgraphDTO;
 }
 
 export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
   const [state, setState] = useState<ExplorerState>({
     companies: [],
-    graph: null,
     error: null,
     loading: true,
   });
+  const [rawGraph, setRawGraph] = useState<RawGraphState | null>(null);
   const [relationEvidenceById, setRelationEvidenceById] = useState<Record<string, EvidenceViewModel[]>>({});
   const queryKey = getGraphQueryKey(query);
+  const requestCompanyId = query.companyId?.trim() || null;
+  const searchQuery = query.search?.trim() ?? "";
 
   useEffect(() => {
     let alive = true;
@@ -37,17 +45,16 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
       try {
         const companiesResponse = await api.listCompanies(query.search);
         const companies = adaptCompanyOptions(companiesResponse);
-        const requestedCompanyId = query.companyId?.trim() || null;
-        const fallbackCompanyId = resolveFallbackCompanyId(companies, requestedCompanyId);
-        const initialCompanyId = requestedCompanyId ?? fallbackCompanyId;
+        const fallbackCompanyId = resolveFallbackCompanyId(companies, requestCompanyId);
+        const initialCompanyId = requestCompanyId ?? fallbackCompanyId;
 
         if (!initialCompanyId) {
           if (!alive) return;
 
+          setRawGraph(null);
           setRelationEvidenceById({});
           setState({
             companies,
-            graph: null,
             error: "No companies are available for this view.",
             loading: false,
           });
@@ -66,26 +73,18 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
             }),
           ]);
 
-          return adaptGraphViewModel({
-            company,
-            overview,
-            subgraph,
-            query: {
-              ...query,
-              companyId,
-            },
-          });
+          return { company, overview, subgraph };
         };
 
-        let graph: GraphViewModel;
+        let nextRawGraph: RawGraphState;
 
         try {
-          graph = await loadGraph(initialCompanyId);
+          nextRawGraph = await loadGraph(initialCompanyId);
         } catch (error) {
           const canFallback =
-            requestedCompanyId !== null &&
+            requestCompanyId !== null &&
             fallbackCompanyId !== null &&
-            fallbackCompanyId !== requestedCompanyId &&
+            fallbackCompanyId !== requestCompanyId &&
             error instanceof ApiRequestError &&
             error.status === 404;
 
@@ -93,28 +92,22 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
             throw error;
           }
 
-          graph = await loadGraph(fallbackCompanyId);
+          nextRawGraph = await loadGraph(fallbackCompanyId);
         }
 
         if (!alive) return;
 
-        setRelationEvidenceById(
-          Object.fromEntries(
-            graph.relations
-              .filter((relation) => relation.evidence.length > 0)
-              .map((relation) => [relation.id, relation.evidence]),
-          ),
-        );
+        setRawGraph(nextRawGraph);
 
         setState({
           companies,
-          graph,
           error: null,
           loading: false,
         });
       } catch (error) {
         if (!alive) return;
 
+        setRawGraph(null);
         setState((current) => ({
           ...current,
           error: error instanceof Error ? error.message : "Failed to load graph explorer.",
@@ -128,7 +121,32 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     return () => {
       alive = false;
     };
-  }, [api, queryKey]);
+  }, [api, query.depth, requestCompanyId, searchQuery]);
+
+  const graph = useMemo<GraphViewModel | null>(() => {
+    if (!rawGraph) {
+      return null;
+    }
+
+    return adaptGraphViewModel({
+      company: rawGraph.company,
+      overview: rawGraph.overview,
+      subgraph: rawGraph.subgraph,
+      query,
+    });
+  }, [queryKey, query, rawGraph]);
+
+  useEffect(() => {
+    if (!graph) {
+      setRelationEvidenceById({});
+      return;
+    }
+
+    setRelationEvidenceById((current) => ({
+      ...Object.fromEntries(graph.relations.filter((relation) => relation.evidence.length > 0).map((relation) => [relation.id, relation.evidence])),
+      ...current,
+    }));
+  }, [graph]);
 
   async function loadRelationEvidence(relation: GraphRelationViewModel | null) {
     if (!relation) {
@@ -148,6 +166,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
 
   return {
     ...state,
+    graph,
     relationEvidenceById,
     loadRelationEvidence,
   };

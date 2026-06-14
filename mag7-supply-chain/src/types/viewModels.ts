@@ -1,4 +1,4 @@
-import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO } from "@mag7/contracts";
+import type { BackendSource, EvidenceDTO, RelationDTO, SnapshotDTO, EntityProfile } from "@mag7/contracts";
 
 export interface GraphQuery {
   companyId?: string | null;
@@ -12,11 +12,15 @@ export interface CompanyOptionViewModel {
   id: string;
   ticker: string;
   name: string;
+  displayName: string;
+  canonicalName: string;
   shortName: string;
   focus: string;
+  hierarchySummary: string;
   primaryRegion: string;
   marketCapUsd: number | null;
   isMag7: boolean;
+  entityProfile: EntityProfile | null;
 }
 
 export interface CompanyProfileViewModel extends CompanyOptionViewModel {
@@ -52,6 +56,10 @@ export interface GraphNodeViewModel {
   id: string;
   label: string;
   secondaryLabel: string;
+  displayName: string;
+  canonicalName: string | null;
+  hierarchySummary: string;
+  kindLabel: string;
   kind: GraphNodeKind;
   region: string;
   importanceScore: number;
@@ -68,6 +76,14 @@ export interface EvidenceViewModel {
   sourceType: EvidenceDTO["sourceType"];
   sourceTypeLabel: string;
   publishedAt: string;
+  publishedAtResolution: string;
+  publishedAtResolutionLabel: string;
+  publishedAtSemantic: string;
+  reportedPeriodEnd: string | null;
+  reportedPeriodEndResolutionLabel: string | null;
+  retrievedAt: string;
+  retrievedAtSemantic: string;
+  compatibilityNote: string | null;
   url: string;
   citation: string;
   excerpt: string;
@@ -96,8 +112,13 @@ export interface GraphRelationViewModel {
   evidenceDateResolution: string | null;
   evidenceDateResolutionLabel: string | null;
   validFrom: string | null;
+  validFromResolution: string | null;
+  validFromResolutionLabel: string | null;
   validTo: string | null;
+  validToResolution: string | null;
+  validToResolutionLabel: string | null;
   validityLabel: string;
+  validityNote: string | null;
   evidenceCount: number;
   evidence: EvidenceViewModel[];
   isDirectRelation: boolean;

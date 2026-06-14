@@ -80,6 +80,10 @@ export function TopBar(props: TopBarProps) {
             Explore supplier, manufacturing, software, logistics, and raw-material dependencies with clear evidence seams and
             graph-first navigation.
           </p>
+          <p className="heroCopy subtle">
+            Search resolves canonical groups, brands, legal entities, and facility aliases separately so names like Google,
+            Alphabet, Google LLC, and Google Cloud are not flattened into one label.
+          </p>
 
           <div className="heroControls">
             <label className="searchField">
@@ -185,6 +189,7 @@ export function TopBar(props: TopBarProps) {
           >
             <strong>{company.shortName}</strong>
             <span>{company.focus}</span>
+            <small>{company.hierarchySummary}</small>
           </button>
         ))}
       </section>

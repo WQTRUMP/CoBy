@@ -155,7 +155,7 @@ function buildSubgraph(
   const snapshot = pickLatestSnapshot(
     relations
       .map((relation) => prepared.snapshots.find((snapshotItem) => snapshotItem.id === relation.snapshotId) ?? null)
-      .filter((snapshotItem): snapshotItem is SnapshotDTO => Boolean(snapshotItem)),
+      .filter((snapshotItem): snapshotItem is PreparedNormalizedImport["snapshots"][number] => Boolean(snapshotItem)) as SnapshotDTO[],
   );
 
   return {
@@ -239,6 +239,7 @@ class RealSampleGraphRepository implements GraphRepository {
 
         return (
           company.name.toLowerCase().includes(normalized) ||
+          company.displayName?.toLowerCase().includes(normalized) ||
           company.ticker?.toLowerCase().includes(normalized) ||
           company.aliases.some((alias) => alias.toLowerCase().includes(normalized))
         );
@@ -390,7 +391,7 @@ class RealSampleGraphRepository implements GraphRepository {
     const snapshot = pickLatestSnapshot(
       scopedRelations
         .map((relation) => this.prepared.snapshots.find((snapshotItem) => snapshotItem.id === relation.snapshotId) ?? null)
-        .filter((snapshot): snapshot is SnapshotDTO => Boolean(snapshot)),
+        .filter((snapshot): snapshot is PreparedNormalizedImport["snapshots"][number] => Boolean(snapshot)) as SnapshotDTO[],
     );
 
     return {
@@ -445,7 +446,7 @@ beforeEach(() => {
 });
 
 afterAll(async () => {
-  await app.close();
+  await app?.close();
 });
 
 describe("full package app", () => {

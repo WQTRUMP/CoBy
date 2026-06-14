@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Buildings, ChartBar, Database, LinkBreak, Path, Stack } from "@phosphor-icons/react";
-import { EvidencePanel } from "./EvidencePanel";
+import { EvidencePanel } from "./EvidencePanel.js";
 import type {
   CompanyProfileViewModel,
   EvidenceSummaryViewModel,
@@ -8,7 +8,7 @@ import type {
   GraphNodeViewModel,
   GraphRelationViewModel,
 } from "../types/viewModels";
-import { graphApiContract } from "../services/graphExplorerApi";
+import { graphApiContract } from "../services/graphExplorerApi.js";
 
 interface CompanySidebarProps {
   activeNode: GraphNodeViewModel | null;
@@ -32,7 +32,8 @@ export function CompanySidebar(props: CompanySidebarProps) {
           <div className="detailLogo">{company.ticker.slice(0, 2)}</div>
           <div>
             <p className="sectionEyebrow compact">{company.shortName}</p>
-            <h3>{company.name}</h3>
+            <h3>{company.displayName}</h3>
+            <p>{company.canonicalName}</p>
             <span className="tierBadge">Tier 1 suppliers</span>
           </div>
         </div>
@@ -64,8 +65,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
           <>
             <div className="detailCard">
               <p className="sectionEyebrow compact">Current focus</p>
-              <strong>{activeNode?.label ?? company.shortName}</strong>
-              <p>{activeNode ? `${activeNode.kind} in ${activeNode.region}` : company.summary}</p>
+              <strong>{activeNode?.displayName ?? company.displayName}</strong>
+              <p>{activeNode ? `${activeNode.kindLabel} in ${activeNode.region}` : company.summary}</p>
+              <p>{activeNode?.hierarchySummary ?? company.hierarchySummary}</p>
             </div>
 
             {activeRelation ? (
@@ -81,11 +83,44 @@ export function CompanySidebar(props: CompanySidebarProps) {
                   <strong>{activeRelation.sourceMethodLabel ?? "Not specified"}</strong>
                   <span>Evidence precision</span>
                   <strong>{activeRelation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+                  <span>Valid from</span>
+                  <strong>
+                    {activeRelation.validFrom
+                      ? `${activeRelation.validFrom} (${activeRelation.validFromResolutionLabel ?? "Unspecified resolution"})`
+                      : "Not specified"}
+                  </strong>
+                  <span>Valid to</span>
+                  <strong>
+                    {activeRelation.validTo
+                      ? `${activeRelation.validTo} (${activeRelation.validToResolutionLabel ?? "Unspecified resolution"})`
+                      : "Open"}
+                  </strong>
                   <span>Validity</span>
                   <strong>{activeRelation.validityLabel}</strong>
+                  <span>Validity note</span>
+                  <strong>{activeRelation.validityNote ?? "No additional note"}</strong>
                 </div>
               </div>
             ) : null}
+
+            <div className="detailCard">
+              <p className="sectionEyebrow compact">Entity layers</p>
+              <strong>Group / brand / legal entity / facility</strong>
+              <p>{company.hierarchySummary}</p>
+              <ul className="detailList">
+                <li>Group: {company.canonicalName}</li>
+                <li>Display: {company.displayName}</li>
+                <li>
+                  Legal entities: {company.entityProfile?.legalEntities.map((item) => item.name).join(", ") || "No legal entity aliases in payload"}
+                </li>
+                <li>Brands: {company.entityProfile?.brands.map((item) => item.name).join(", ") || "No brand aliases in payload"}</li>
+                <li>
+                  Facilities:{" "}
+                  {company.entityProfile?.aliases.filter((item) => item.aliasType === "facility").map((item) => item.name).join(", ") ||
+                    "Facility nodes stay separate in the graph when available"}
+                </li>
+              </ul>
+            </div>
 
             <div className="detailMetricGrid">
               <MetricCard icon={<Buildings size={18} />} label="Primary region" value={company.primaryRegion} />
@@ -111,6 +146,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
                     <span className="miniBadge semantic">{relation.relationshipTypeLabel}</span>
                     <strong>{relation.summary}</strong>
                     <p>{relation.relationshipSemanticLabel}</p>
+                    <p>{relation.relationshipSubtypeLabel ?? "Subtype not specified"}</p>
                   </button>
                 ))}
               </div>
