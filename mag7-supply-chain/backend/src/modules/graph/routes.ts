@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 
 import { subgraphQuerySchema } from "../../../../packages/contracts/src/index.js";
 
@@ -28,5 +29,25 @@ export async function registerGraphRoutes(app: FastifyInstance) {
     reply.header("x-cache", "miss");
     reply.header("x-snapshot-version", subgraph.snapshot.version);
     return subgraph;
+  });
+
+  app.get("/api/v1/relations/:relationId/evidence", async (request, reply) => {
+    const params = z.object({ relationId: z.string() }).parse(request.params);
+    const evidence = await app.graphRepository.getRelationEvidence(params.relationId);
+
+    if (evidence.length === 0) {
+      reply.code(404);
+      return {
+        error: "relation_evidence_not_found",
+        relationId: params.relationId,
+      };
+    }
+
+    return {
+      relationId: params.relationId,
+      items: evidence,
+      total: evidence.length,
+      source: app.graphRepository.source,
+    };
   });
 }

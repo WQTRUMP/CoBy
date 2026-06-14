@@ -16,4 +16,37 @@ export async function registerCompanyRoutes(app: FastifyInstance) {
       source: app.graphRepository.source,
     };
   });
+
+  app.get("/api/v1/companies/:companyId", async (request, reply) => {
+    const params = z.object({ companyId: z.string() }).parse(request.params);
+    const company = await app.graphRepository.getCompany(params.companyId);
+
+    if (!company) {
+      reply.code(404);
+      return {
+        error: "company_not_found",
+        companyId: params.companyId,
+      };
+    }
+
+    return {
+      item: company,
+      source: app.graphRepository.source,
+    };
+  });
+
+  app.get("/api/v1/companies/:companyId/overview", async (request, reply) => {
+    const params = z.object({ companyId: z.string() }).parse(request.params);
+    const overview = await app.graphRepository.getCompanyOverview(params.companyId);
+
+    if (!overview) {
+      reply.code(404);
+      return {
+        error: "company_not_found",
+        companyId: params.companyId,
+      };
+    }
+
+    return overview;
+  });
 }
