@@ -99,7 +99,11 @@ test("maps relation evidence endpoint payloads into evidence cards with relation
     confidence: "strong_evidence",
   });
 
-  assert.equal(evidence.length, 2);
+  assert.equal(evidence.length, 3);
   assert.equal(evidence[0]?.sourceTypeLabel, "10-K");
   assert.equal(evidence[0]?.confidence, "strong_evidence");
+  assert.equal(
+    evidence.find((item) => item.sourceType === "official_doc")?.sourceTypeLabel,
+    "Official Document",
+  );
 });

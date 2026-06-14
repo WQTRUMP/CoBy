@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
 import {
@@ -398,6 +398,10 @@ beforeAll(async () => {
   });
 });
 
+beforeEach(() => {
+  cache.clear();
+});
+
 afterAll(async () => {
   await app.close();
 });
@@ -405,21 +409,29 @@ afterAll(async () => {
 describe("full package app", () => {
   it("serves detail, overview, and subgraph for all 7 Mag7 companies from the full package", async () => {
     for (const companyId of MAG7_COMPANY_IDS) {
-      const [detail, overview, subgraph] = await Promise.all([
+      const [detail, overview, subgraph, stats] = await Promise.all([
         app.inject({ method: "GET", url: `/api/v1/companies/${encodeURIComponent(companyId)}` }),
         app.inject({ method: "GET", url: `/api/v1/companies/${encodeURIComponent(companyId)}/overview` }),
         app.inject({
           method: "GET",
           url: `/api/v1/graph/subgraph?companyId=${encodeURIComponent(companyId)}&depth=3&snapshot=published&includeEvidence=true`,
         }),
+        app.inject({
+          method: "GET",
+          url: `/api/v1/graph/stats?snapshot=published&companyId=${encodeURIComponent(companyId)}`,
+        }),
       ]);
 
       expect(detail.statusCode).toBe(200);
       expect(overview.statusCode).toBe(200);
       expect(subgraph.statusCode).toBe(200);
+      expect(stats.statusCode).toBe(200);
+      expect(detail.headers["x-cache"]).toBe("miss");
+      expect(overview.headers["x-cache"]).toBe("miss");
       expect(detail.json().item.id).toBe(companyId);
       expect(overview.json().companyId).toBe(companyId);
       expect(subgraph.json().relations.length).toBeGreaterThan(0);
+      expect(stats.json().relationCount).toBeGreaterThan(0);
     }
   });
 
@@ -462,5 +474,27 @@ describe("full package app", () => {
       total: 2,
       source: "neo4j",
     });
+  });
+
+  it("reuses Redis-style cache keys for companies list/detail/overview/search/suggest and graph queries", async () => {
+    const requests = [
+      "/api/v1/companies?isMag7=true&page=1&pageSize=7",
+      "/api/v1/companies/company:AAPL",
+      "/api/v1/companies/company:AAPL/overview",
+      "/api/v1/companies/search?q=amazon&limit=5",
+      "/api/v1/companies/suggest?q=tes&limit=5",
+      "/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=false",
+      "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=false",
+      "/api/v1/graph/stats?snapshot=published&companyId=company:AAPL",
+    ];
+
+    for (const url of requests) {
+      const first = await app.inject({ method: "GET", url });
+      const second = await app.inject({ method: "GET", url });
+
+      expect(first.statusCode).toBe(200);
+      expect(first.headers["x-cache"]).toBe("miss");
+      expect(second.headers["x-cache"]).toBe("hit");
+    }
   });
 });

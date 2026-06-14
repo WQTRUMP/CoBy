@@ -29,6 +29,7 @@ const SOURCE_TYPE_LABELS: Record<EvidenceDTO["sourceType"], string> = {
   media: "Media",
   industry_report: "Industry Report",
   press_release: "Press Release",
+  official_doc: "Official Document",
 };
 
 const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], GraphNodeKind> = {

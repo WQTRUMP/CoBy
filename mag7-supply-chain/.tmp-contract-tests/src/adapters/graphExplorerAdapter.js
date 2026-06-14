@@ -5,6 +5,7 @@ const SOURCE_TYPE_LABELS = {
     media: "Media",
     industry_report: "Industry Report",
     press_release: "Press Release",
+    official_doc: "Official Document",
 };
 const ENTITY_KIND_BY_TYPE = {
     Company: "company",
