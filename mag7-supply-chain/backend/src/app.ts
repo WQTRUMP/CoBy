@@ -8,7 +8,7 @@ import { registerGraphRoutes } from "./modules/graph/routes.js";
 import { registerHealthRoutes } from "./modules/health/routes.js";
 import { registerImportRoutes } from "./modules/imports/routes.js";
 import { registerSchemaRoutes } from "./modules/schema/routes.js";
-import type { GraphRepository, Neo4jHealth } from "./lib/neo4j.js";
+import type { GraphRepository, Neo4jHealth, RuntimeMode } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
 import { isDependencyUnavailableError } from "./lib/dependency-failures.js";
 import { toRequestValidationError } from "./lib/request-validation.js";
@@ -17,6 +17,7 @@ export interface AppOptions {
   cacheClient: CacheClient;
   graphRepository: GraphRepository;
   neo4jHealth: () => Promise<Neo4jHealth>;
+  runtimeMode: RuntimeMode;
 }
 
 interface ValidationLikeError {
@@ -65,6 +66,7 @@ export async function buildApp(options: AppOptions) {
   app.decorate("cacheClient", options.cacheClient);
   app.decorate("graphRepository", options.graphRepository);
   app.decorate("neo4jHealth", options.neo4jHealth);
+  app.decorate("runtimeMode", options.runtimeMode);
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {

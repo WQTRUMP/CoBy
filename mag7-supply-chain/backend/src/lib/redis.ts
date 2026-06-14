@@ -1,6 +1,7 @@
 import { createClient } from "redis";
 
 import { env } from "../config/env.js";
+import type { RuntimeMode } from "./neo4j.js";
 import type { DependencyStatus } from "./neo4j.js";
 import { toDependencyDetail } from "./dependency-failures.js";
 
@@ -8,6 +9,7 @@ export interface RedisHealth {
   status: DependencyStatus;
   enabled: boolean;
   detail: string;
+  required: boolean;
 }
 
 export interface CacheClient {
@@ -46,7 +48,7 @@ class NoopCacheClient implements CacheClient {
   constructor(private readonly reason: DisabledReason = {
     status: "not_configured",
     detail: "REDIS_URL is not configured; cache disabled",
-  }) {}
+  }, private readonly required = false) {}
 
   async get() {
     return null;
@@ -60,6 +62,7 @@ class NoopCacheClient implements CacheClient {
     return {
       ...this.reason,
       enabled: false,
+      required: this.required,
     };
   }
 
@@ -71,7 +74,7 @@ class RedisCacheClient implements CacheClient {
   private detail = REDIS_STARTUP_DETAIL;
   private status: DependencyStatus = "down";
 
-  constructor(private readonly client: RedisClientLike) {}
+  constructor(private readonly client: RedisClientLike, private readonly required: boolean) {}
 
   get enabled() {
     return this.available;
@@ -134,18 +137,20 @@ class RedisCacheClient implements CacheClient {
         status: this.status,
         enabled: false,
         detail: this.detail,
+        required: this.required,
       };
     }
 
     try {
       await this.client.ping();
-      return { status: "up" as const, enabled: true, detail: this.detail };
+      return { status: "up" as const, enabled: true, detail: this.detail, required: this.required };
     } catch (error) {
       await this.disable(`Redis unavailable; cache disabled: ${toDependencyDetail(error, "Redis ping failed")}`);
       return {
         status: "down" as const,
         enabled: false,
         detail: this.detail,
+        required: this.required,
       };
     }
   }
@@ -169,14 +174,26 @@ class RedisCacheClient implements CacheClient {
 
 interface CreateCacheClientOptions {
   url?: string;
+  mode?: RuntimeMode;
   createClient?: RedisClientFactory;
 }
 
 export async function createCacheClient(options: CreateCacheClientOptions = {}): Promise<CacheClient> {
+  const mode = options.mode ?? env.GRAPH_RUNTIME_MODE;
   const url = options.url ?? env.REDIS_URL;
+  const required = mode === "live";
 
   if (!url) {
-    return new NoopCacheClient();
+    return new NoopCacheClient(
+      {
+        status: "not_configured",
+        detail:
+          mode === "prototype"
+            ? "REDIS_URL is not configured; GRAPH_RUNTIME_MODE=prototype disables cache by default"
+            : "REDIS_URL is not configured; GRAPH_RUNTIME_MODE=live requires Redis for acceptance",
+      },
+      required,
+    );
   }
 
   const factory =
@@ -191,7 +208,7 @@ export async function createCacheClient(options: CreateCacheClientOptions = {}):
       }) as RedisClientLike);
   const client = factory({ url });
   client.on("error", () => undefined);
-  const cacheClient = new RedisCacheClient(client);
+  const cacheClient = new RedisCacheClient(client, required);
   const connectPromise = client.connect();
   connectPromise.catch(() => undefined);
 

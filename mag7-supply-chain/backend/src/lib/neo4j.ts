@@ -1,6 +1,6 @@
 import neo4j, { type Driver } from "neo4j-driver";
 
-import { env } from "../config/env.js";
+import { env, type AppEnv } from "../config/env.js";
 import type {
   CompanyDetailDTO,
   CompanyListItemDTO,
@@ -28,10 +28,12 @@ import {
 } from "./dependency-failures.js";
 
 export type DependencyStatus = "up" | "down" | "not_configured";
+export type RuntimeMode = AppEnv["GRAPH_RUNTIME_MODE"];
 
 export interface Neo4jHealth {
   status: DependencyStatus;
   detail: string;
+  required: boolean;
 }
 
 export interface GraphRepository {
@@ -1135,6 +1137,14 @@ export interface Neo4jClientBundle {
   close: () => Promise<void>;
 }
 
+interface CreateNeo4jBundleOptions {
+  mode?: RuntimeMode;
+  uri?: string;
+  username?: string;
+  password?: string;
+  database?: string;
+}
+
 function wrapRepositoryWithDependencyGuard(repository: GraphRepository): GraphRepository {
   return new Proxy(repository, {
     get(target, property, receiver) {
@@ -1163,22 +1173,97 @@ function wrapRepositoryWithDependencyGuard(repository: GraphRepository): GraphRe
   });
 }
 
-export function createNeo4jBundle(): Neo4jClientBundle {
-  if (!env.NEO4J_URI) {
+class UnavailableGraphRepository implements GraphRepository {
+  source = "neo4j" as const;
+
+  constructor(private readonly detail: string) {}
+
+  private unavailable(): never {
+    throw new DependencyUnavailableError(
+      "neo4j",
+      this.detail,
+      "Live graph mode requires a reachable Neo4j dependency.",
+    );
+  }
+
+  async listCompanies() {
+    return this.unavailable();
+  }
+
+  async searchCompanies() {
+    return this.unavailable();
+  }
+
+  async suggestCompanies() {
+    return this.unavailable();
+  }
+
+  async getCompany() {
+    return this.unavailable();
+  }
+
+  async getCompanyOverview() {
+    return this.unavailable();
+  }
+
+  async getSubgraph() {
+    return this.unavailable();
+  }
+
+  async getPath() {
+    return this.unavailable();
+  }
+
+  async getGraphStats() {
+    return this.unavailable();
+  }
+
+  async getRelationEvidence() {
+    return this.unavailable();
+  }
+
+  async importNormalizedPackage() {
+    return this.unavailable();
+  }
+}
+
+export function createNeo4jBundle(options: CreateNeo4jBundleOptions = {}): Neo4jClientBundle {
+  const mode = options.mode ?? env.GRAPH_RUNTIME_MODE;
+  const uri = options.uri ?? env.NEO4J_URI;
+  const username = options.username ?? env.NEO4J_USERNAME;
+  const password = options.password ?? env.NEO4J_PASSWORD;
+  const database = options.database ?? env.NEO4J_DATABASE;
+
+  if (!uri) {
+    if (mode === "prototype") {
+      const repository = new MockGraphRepository();
+      return {
+        repository,
+        health: async () => ({
+          status: "not_configured",
+          detail: "NEO4J_URI is not configured; GRAPH_RUNTIME_MODE=prototype allows mock repository fallback",
+          required: false,
+        }),
+        close: async () => undefined,
+      };
+    }
+
+    const detail = "NEO4J_URI is not configured; GRAPH_RUNTIME_MODE=live requires a reachable Neo4j instance";
     const repository = new MockGraphRepository();
     return {
-      repository,
+      repository: new UnavailableGraphRepository(detail),
       health: async () => ({
         status: "not_configured",
-        detail: "NEO4J_URI is not configured; using mock repository",
+        detail,
+        required: true,
       }),
       close: async () => undefined,
     };
   }
 
-  const driver = neo4j.driver(env.NEO4J_URI, neo4j.auth.basic(env.NEO4J_USERNAME, env.NEO4J_PASSWORD));
+  const driver = neo4j.driver(uri, neo4j.auth.basic(username, password));
   const repository = wrapRepositoryWithDependencyGuard(
-    new Neo4jGraphRepository(driver, env.NEO4J_DATABASE),
+    new Neo4jGraphRepository(driver, database),
   );
 
   return {
@@ -1186,11 +1271,12 @@ export function createNeo4jBundle(): Neo4jClientBundle {
     health: async () => {
       try {
         await driver.getServerInfo();
-        return { status: "up", detail: "Neo4j connection healthy" };
+        return { status: "up", detail: "Neo4j connection healthy", required: true };
       } catch (error) {
         return {
           status: "down",
           detail: error instanceof Error ? error.message : "Neo4j connection failed",
+          required: true,
         };
       }
     },
