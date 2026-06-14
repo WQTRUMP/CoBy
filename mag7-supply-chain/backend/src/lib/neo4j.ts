@@ -1,7 +1,13 @@
 import neo4j, { type Driver } from "neo4j-driver";
 
 import { env } from "../config/env.js";
-import type { SubgraphDTO, SubgraphQuery } from "../../../packages/contracts/src/index.js";
+import type {
+  CompanyDTO,
+  EvidenceDTO,
+  RelationDTO,
+  SubgraphDTO,
+  SubgraphQuery,
+} from "../../../packages/contracts/src/index.js";
 import { mockCompanies, mockSubgraph } from "./mock-data.js";
 
 export type DependencyStatus = "up" | "down" | "not_configured";
@@ -13,7 +19,7 @@ export interface Neo4jHealth {
 
 export interface GraphRepository {
   source: "neo4j" | "mock";
-  listCompanies(query?: string): Promise<typeof mockCompanies>;
+  listCompanies(query?: string): Promise<CompanyDTO[]>;
   getSubgraph(query: SubgraphQuery): Promise<SubgraphDTO>;
 }
 
@@ -36,7 +42,7 @@ class MockGraphRepository implements GraphRepository {
   async getSubgraph(query: SubgraphQuery) {
     const filtered = {
       ...mockSubgraph,
-      relations: mockSubgraph.relations.filter((relation) => {
+      relations: mockSubgraph.relations.filter((relation: RelationDTO) => {
         const matchesCompany =
           relation.sourceId === query.companyId || relation.targetId === query.companyId;
         const matchesDepth = relation.depthFromMag7 <= query.depth;
@@ -51,7 +57,9 @@ class MockGraphRepository implements GraphRepository {
       ? filtered
       : {
           ...filtered,
-          relations: filtered.relations.map(({ evidence, ...relation }) => relation),
+          relations: filtered.relations.map(
+            ({ evidence, ...relation }: RelationDTO) => relation,
+          ),
         };
   }
 }
@@ -187,9 +195,9 @@ class Neo4jGraphRepository implements GraphRepository {
             validFrom: typeof relation.validFrom === "string" ? relation.validFrom : null,
             validTo: typeof relation.validTo === "string" ? relation.validTo : null,
             evidence: query.includeEvidence
-              ? items.map((evidence) => ({
+              ? items.map((evidence): EvidenceDTO => ({
                   id: String(evidence.id),
-                  sourceType: String(evidence.sourceType) as SubgraphDTO["relations"][number]["evidence"][number]["sourceType"],
+                  sourceType: String(evidence.sourceType) as EvidenceDTO["sourceType"],
                   title: String(evidence.title),
                   publisher: String(evidence.publisher),
                   url: String(evidence.url),

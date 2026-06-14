@@ -1,4 +1,4 @@
-import { createClient, type RedisClientType } from "redis";
+import { createClient } from "redis";
 
 import { env } from "../config/env.js";
 import type { DependencyStatus } from "./neo4j.js";
@@ -41,7 +41,7 @@ class NoopCacheClient implements CacheClient {
 class RedisCacheClient implements CacheClient {
   enabled = true;
 
-  constructor(private readonly client: RedisClientType) {}
+  constructor(private readonly client: ReturnType<typeof createClient>) {}
 
   async get(key: string) {
     return this.client.get(key);

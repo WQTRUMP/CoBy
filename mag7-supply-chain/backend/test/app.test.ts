@@ -4,6 +4,7 @@ import { buildApp } from "../src/app.js";
 import { mockSubgraph } from "../src/lib/mock-data.js";
 import type { CacheClient } from "../src/lib/redis.js";
 import type { GraphRepository, Neo4jHealth } from "../src/lib/neo4j.js";
+import type { GraphNodeDTO } from "../../packages/contracts/src/index.js";
 
 const cache = new Map<string, string>();
 
@@ -28,8 +29,9 @@ const graphRepository: GraphRepository = {
   source: "mock",
   async listCompanies() {
     return mockSubgraph.nodes
-      .filter((node) => node.entityType === "Company" && node.company)
-      .map((node) => node.company!);
+      .filter((node: GraphNodeDTO) => node.entityType === "Company" && Boolean(node.company))
+      .map((node: GraphNodeDTO) => node.company!)
+      .filter(Boolean);
   },
   async getSubgraph() {
     return mockSubgraph;

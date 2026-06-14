@@ -114,7 +114,9 @@ export const subgraphQuerySchema = z.object({
   depth: z.coerce.number().int().min(1).max(5).default(2),
   relationshipTypes: z
     .union([relationshipTypeSchema, z.array(relationshipTypeSchema)])
-    .transform((value) => (Array.isArray(value) ? value : [value]))
+    .transform((value: z.infer<typeof relationshipTypeSchema> | Array<z.infer<typeof relationshipTypeSchema>>) =>
+      Array.isArray(value) ? value : [value],
+    )
     .optional(),
   snapshot: z.string().default("published"),
   includeEvidence: z.coerce.boolean().default(false),
