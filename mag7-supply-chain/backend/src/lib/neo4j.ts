@@ -154,6 +154,10 @@ function mapRelationRecord(
     sourceId: sourceCompany.id,
     targetId: targetCompany.id,
     relationshipType: String(relation.relationshipType) as RelationDTO["relationshipType"],
+    skuGranularity:
+      typeof relation.skuGranularity === "string"
+        ? relation.skuGranularity as RelationDTO["skuGranularity"]
+        : null,
     tier: toNumber(relation.tier) ?? 1,
     depthFromMag7: toNumber(relation.depthFromMag7) ?? 1,
     confidence: String(relation.confidence) as RelationDTO["confidence"],
@@ -416,6 +420,10 @@ function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO
   return {
     id: String(properties.id),
     sourceType: String(properties.sourceType) as EvidenceDTO["sourceType"],
+    skuGranularity:
+      typeof properties.skuGranularity === "string"
+        ? properties.skuGranularity as EvidenceDTO["skuGranularity"]
+        : null,
     title: String(properties.title),
     publisher: String(properties.publisher),
     url: String(properties.url),

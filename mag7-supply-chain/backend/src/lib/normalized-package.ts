@@ -1,13 +1,16 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 
 import {
+  skuGranularitySchema,
   standardizedImportEvidenceRecordSchema,
   standardizedImportPackageSchema,
   standardizedImportRelationRecordSchema,
   type DateResolution,
   type EntityAliasRecord,
   type EntityProfile,
+  type SkuGranularity,
   type StandardizedImportEvidenceRecord,
   type ImportEntityRef,
   type StandardizedImportRelationRecord,
@@ -16,7 +19,9 @@ export type NormalizedRelationRecord = StandardizedImportRelationRecord;
 export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
 export type NormalizedRelationInput = z.input<typeof standardizedImportRelationRecordSchema>;
 export type NormalizedEvidenceInput = z.input<typeof standardizedImportEvidenceRecordSchema>;
-export type NormalizedImportPackage = z.input<typeof standardizedImportPackageSchema>;
+export type NormalizedImportPackage = z.input<typeof standardizedImportPackageSchema> & {
+  skuGranularityByRelationId?: Record<string, SkuGranularity>;
+};
 
 interface CompanySeed {
   id: string;
@@ -50,6 +55,7 @@ export interface ImportCompanyNode extends CompanySeed {
 export interface ImportRelationNode {
   id: string;
   relationshipType: StandardizedImportRelationRecord["relationship_type"];
+  skuGranularity: SkuGranularity | null;
   relationshipSubtype: string;
   tier: number;
   depthFromMag7: number;
@@ -91,6 +97,7 @@ export interface ImportRelationEdge {
 export interface ImportEvidenceNode {
   id: string;
   sourceType: StandardizedImportEvidenceRecord["source_type"];
+  skuGranularity: SkuGranularity | null;
   title: string;
   publisher: string;
   url: string;
@@ -707,6 +714,39 @@ function normalizeLegacyResolutionValue(value: unknown) {
   return value;
 }
 
+function normalizeLegacySkuGranularityValue(value: unknown): SkuGranularity | null {
+  if (value == null) {
+    return null;
+  }
+
+  const candidate = value === "target_sku_or_official_component" ? "platform_component_sku" : value;
+  const parsed = skuGranularitySchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
+
+function extractSkuGranularityFromNotes(notes: unknown): SkuGranularity | null {
+  if (typeof notes !== "string") {
+    return null;
+  }
+
+  const match = notes.match(/sku_granularity=([a-z_]+)/i);
+  return match ? normalizeLegacySkuGranularityValue(match[1].toLowerCase()) : null;
+}
+
+function applySkuGranularityHints(
+  record: Record<string, unknown>,
+  relationSkuGranularity: SkuGranularity | null,
+) {
+  const explicitSkuGranularity = normalizeLegacySkuGranularityValue(record.sku_granularity);
+  return {
+    ...record,
+    sku_granularity:
+      explicitSkuGranularity ??
+      relationSkuGranularity ??
+      extractSkuGranularityFromNotes(record.notes),
+  };
+}
+
 function normalizeLegacyImportRecord(record: unknown) {
   if (!record || typeof record !== "object") {
     return record;
@@ -736,6 +776,55 @@ function normalizeLegacyImportRecord(record: unknown) {
   }
 
   return normalized;
+}
+
+async function discoverManifestSkuGranularityMap(
+  relationFile: string,
+  manifestFile?: string,
+): Promise<Record<string, SkuGranularity>> {
+  const candidatePath = manifestFile ?? join(dirname(relationFile), "mag7-full-package-manifest.json");
+
+  try {
+    await access(candidatePath);
+  } catch {
+    return {};
+  }
+
+  const manifest = JSON.parse(await readFile(candidatePath, "utf8")) as unknown;
+  const relationMap: Record<string, SkuGranularity> = {};
+  const stack: unknown[] = [manifest];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== "object") {
+      continue;
+    }
+
+    if (Array.isArray(current)) {
+      stack.push(...current);
+      continue;
+    }
+
+    const record = current as Record<string, unknown>;
+    for (const value of Object.values(record)) {
+      stack.push(value);
+    }
+
+    if (record.sku_granularity && typeof record.sku_granularity === "object" && !Array.isArray(record.sku_granularity)) {
+      for (const [relationId, skuGranularity] of Object.entries(record.sku_granularity as Record<string, unknown>)) {
+        if (!relationId.startsWith("rel:")) {
+          continue;
+        }
+
+        const normalized = normalizeLegacySkuGranularityValue(skuGranularity);
+        if (normalized) {
+          relationMap[relationId] = normalized;
+        }
+      }
+    }
+  }
+
+  return relationMap;
 }
 
 function buildImportCompanyNode(seed: CompanySeed, ref: ImportEntityRef | undefined, sourceLabel: string): ImportCompanyNode {
@@ -792,27 +881,67 @@ export async function readNormalizedJsonlFile<T>(
 export async function loadNormalizedImportPackage(
   relationFile: string,
   evidenceFile: string,
+  manifestFile?: string,
 ): Promise<NormalizedImportPackage> {
-  const [relations, evidence] = await Promise.all([
-    readNormalizedJsonlFile(relationFile, standardizedImportRelationRecordSchema),
-    readNormalizedJsonlFile(evidenceFile, standardizedImportEvidenceRecordSchema),
+  const [relationsRaw, evidenceRaw, skuGranularityByRelationId] = await Promise.all([
+    readFile(relationFile, "utf8"),
+    readFile(evidenceFile, "utf8"),
+    discoverManifestSkuGranularityMap(relationFile, manifestFile),
   ]);
+
+  const relations = relationsRaw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) =>
+      standardizedImportRelationRecordSchema.parse(
+        applySkuGranularityHints(
+          normalizeLegacyImportRecord(JSON.parse(line) as unknown) as Record<string, unknown>,
+          null,
+        ),
+        { path: [relationFile, index + 1] },
+      ),
+    );
+
+  const evidence = evidenceRaw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const normalized = normalizeLegacyImportRecord(JSON.parse(line) as unknown) as Record<string, unknown>;
+      const relationId = typeof normalized.relation_id === "string" ? normalized.relation_id : null;
+      return standardizedImportEvidenceRecordSchema.parse(
+        applySkuGranularityHints(
+          normalized,
+          relationId ? skuGranularityByRelationId[relationId] ?? null : null,
+        ),
+        { path: [evidenceFile, index + 1] },
+      );
+    });
 
   return {
     relations,
     evidence,
+    skuGranularityByRelationId,
   };
 }
 
 export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedNormalizedImport {
+  const skuGranularityByRelationId = pkg.skuGranularityByRelationId ?? {};
   const relations = pkg.relations.map((relation) =>
     standardizedImportRelationRecordSchema.parse(
-      normalizeLegacyImportRecord(relation),
+      applySkuGranularityHints(
+        normalizeLegacyImportRecord(relation) as Record<string, unknown>,
+        null,
+      ),
     ) as StandardizedImportRelationRecord,
   );
   const evidence = pkg.evidence.map((item) =>
     standardizedImportEvidenceRecordSchema.parse(
-      normalizeLegacyImportRecord(item),
+      applySkuGranularityHints(
+        normalizeLegacyImportRecord(item) as Record<string, unknown>,
+        typeof item?.relation_id === "string" ? skuGranularityByRelationId[item.relation_id] ?? null : null,
+      ),
     ) as StandardizedImportEvidenceRecord,
   );
   const companyMap = new Map<string, ImportCompanyNode>();
@@ -858,6 +987,10 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     relations: relations.map((relation) => ({
       id: relation.relation_id,
       relationshipType: relation.relationship_type,
+      skuGranularity:
+        relation.sku_granularity ??
+        skuGranularityByRelationId[relation.relation_id] ??
+        null,
       relationshipSubtype: relation.relationship_subtype,
       tier: relation.tier,
       depthFromMag7: relation.depth_from_mag7,
@@ -903,6 +1036,10 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     evidence: evidence.map((evidence) => ({
       id: evidence.evidence_id,
       sourceType: evidence.source_type,
+      skuGranularity:
+        evidence.sku_granularity ??
+        skuGranularityByRelationId[evidence.relation_id] ??
+        null,
       title: evidence.title,
       publisher: evidence.publisher,
       url: evidence.source_url,

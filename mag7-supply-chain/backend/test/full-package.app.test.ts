@@ -285,6 +285,7 @@ class RealSampleGraphRepository implements GraphRepository {
       const evidence: EvidenceDTO = {
         id: evidenceNode.id,
         sourceType: evidenceNode.sourceType,
+        skuGranularity: evidenceNode.skuGranularity,
         title: evidenceNode.title,
         publisher: evidenceNode.publisher,
         url: evidenceNode.url,
@@ -716,6 +717,75 @@ describe("full package app", () => {
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
       total: 2,
       source: "neo4j",
+    });
+  });
+
+  it("keeps full.15 counts stable while structuring sku granularity from the authoritative snapshot", async () => {
+    const [overview, subgraph, path, evidence] = await Promise.all([
+      app.inject({
+        method: "GET",
+        url: "/api/v1/companies/company:NVDA/overview",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:NVDA&depth=2&snapshot=published&includeEvidence=true",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:nvidia-mms4a20-800g-dr4-single-port-osfp-transceiver&targetCompanyId=company:NVDA&maxDepth=1&snapshot=published&includeEvidence=true",
+      }),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/relations/rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver/evidence",
+      }),
+    ]);
+
+    expect(overview.statusCode).toBe(200);
+    expect(subgraph.statusCode).toBe(200);
+    expect(path.statusCode).toBe(200);
+    expect(evidence.statusCode).toBe(200);
+
+    expect(overview.json()).toMatchObject({
+      companyId: "company:NVDA",
+      totalRelations: 62,
+      evidenceCount: 77,
+      source: "neo4j",
+    });
+    expect(subgraph.json().relations.length).toBeGreaterThan(0);
+    const relationById = new Map(
+      subgraph
+        .json()
+        .relations
+        .map((relation: RelationDTO) => [relation.id, relation]),
+    );
+    expect(relationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")).toMatchObject({
+      skuGranularity: "target_sku",
+    });
+    expect(relationById.get("rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver")).toMatchObject({
+      skuGranularity: "platform_component_sku",
+    });
+    expect(relationById.get("rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology")).toMatchObject({
+      skuGranularity: "family_only",
+    });
+
+    expect(path.json().relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+          skuGranularity: "target_sku",
+        }),
+      ]),
+    );
+
+    expect(evidence.json()).toMatchObject({
+      relationId: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+      total: 1,
+      source: "neo4j",
+      items: [
+        expect.objectContaining({
+          skuGranularity: "target_sku",
+        }),
+      ],
     });
   });
 

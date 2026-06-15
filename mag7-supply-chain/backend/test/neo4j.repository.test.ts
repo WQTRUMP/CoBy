@@ -39,6 +39,7 @@ describe("Neo4jGraphRepository", () => {
           properties: {
             id: "rel:apple:tsmc:manufacturing:apple-silicon",
             relationshipType: "manufacturing",
+            skuGranularity: "family_only",
             relationshipSubtype: "wafer_foundry",
             tier: 1,
             depthFromMag7: 1,
@@ -84,6 +85,7 @@ describe("Neo4jGraphRepository", () => {
             properties: {
               id: "evidence:apple:tsmc",
               sourceType: "press_release",
+              skuGranularity: "family_only",
               title: "Apple newsroom",
               publisher: "Apple",
               url: "https://example.com/apple",
@@ -146,6 +148,7 @@ describe("Neo4jGraphRepository", () => {
       id: "rel:apple:tsmc:manufacturing:apple-silicon",
       sourceId: "company:TSMC",
       targetId: "company:AAPL",
+      skuGranularity: "family_only",
       relationshipSubtype: "wafer_foundry",
       productScope: ["Apple silicon"],
       evidenceIds: ["evidence:apple:tsmc"],
@@ -154,6 +157,7 @@ describe("Neo4jGraphRepository", () => {
     expect(subgraph.relations[0].evidence?.[0]).toMatchObject({
       id: "evidence:apple:tsmc",
       sourceType: "press_release",
+      skuGranularity: "family_only",
     });
   });
 

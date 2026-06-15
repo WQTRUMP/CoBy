@@ -53,6 +53,60 @@ describe("@mag7/contracts", () => {
     expect(parsed.evidence_date_resolution).toBe("day");
   });
 
+  it("accepts sku_granularity on relation and evidence records while normalizing legacy aliases", () => {
+    const relation = standardizedImportRelationRecordSchema.parse({
+      relation_id: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+      snapshot_id: "snapshot:2026-06-15.full.15",
+      company: "NVIDIA",
+      company_slug: "nvidia",
+      supplier: "NVIDIA MMS4A20 800G DR4 single-port OSFP transceiver",
+      supplier_slug: "nvidia-mms4a20-800g-dr4-single-port-osfp-transceiver",
+      tier: 1,
+      depth_from_mag7: 1,
+      relationship_type: "component_supply",
+      sku_granularity: "target_sku",
+      relationship_subtype: "official_optical_transceiver_component_of_quantum_x800",
+      product_scope: ["Quantum-X800 QM3x00 switches", "MMS4A20 800G DR4 single-port OSFP transceiver"],
+      evidence_ids: ["evidence:nvidia:mms4a20:1"],
+      primary_evidence_id: "evidence:nvidia:mms4a20:1",
+      evidence_date: "2025-07-23",
+      evidence_date_resolution: "day",
+      evidence_excerpt: "The NVIDIA MMS4A20 ... is used to link the Quantum-X800 QM3x00 switches.",
+      source_url: "https://example.com/nvidia-mms4a20",
+      confidence_label: "confirmed",
+      confidence_score: 0.95,
+      source_method: "direct_disclosure",
+      source_count: 1,
+      status: "approved",
+      summary: "NVIDIA MMS4A20 is a target-SKU component of Quantum-X800 QM3x00.",
+      lineage_key: "NVIDIA|MMS4A20|component_supply|Quantum-X800 QM3x00",
+      source_report_path: "output/nvidia-sku.md",
+      last_verified_at: "2026-06-15T00:41:55Z",
+    });
+
+    const evidence = standardizedImportEvidenceRecordSchema.parse({
+      evidence_id: "evidence:nvidia:mms4a20:1",
+      relation_id: relation.relation_id,
+      source_type: "official_doc",
+      title: "NVIDIA MMS4A20 800G DR4 Single-Port OSFP Transceiver",
+      publisher: "NVIDIA Docs",
+      source_url: "https://example.com/nvidia-mms4a20",
+      source_domain: "example.com",
+      sku_granularity: "target_sku_or_official_component",
+      published_at: "2025-07-23",
+      published_at_resolution: "day",
+      retrieved_at: "2026-06-15T00:41:55Z",
+      excerpt: "The NVIDIA MMS4A20 ... is used to link the Quantum-X800 QM3x00 switches.",
+      citation_text: "The NVIDIA MMS4A20 ... is used to link the Quantum-X800 QM3x00 switches.",
+      reliability_tier: 1,
+      parser_version: "manual-normalization-v3",
+      source_report_path: "output/nvidia-sku.md",
+    });
+
+    expect(relation.sku_granularity).toBe("target_sku");
+    expect(evidence.sku_granularity).toBe("platform_component_sku");
+  });
+
   it("maps legacy month-normalized v2 inputs into canonical v3 date fields", () => {
     const parsed = standardizedImportRelationRecordSchema.parse({
       relation_id: "rel:alphabet:tsmc:manufacturing:tensor",

@@ -691,6 +691,7 @@ describe("backend app", () => {
       enums: {
         date_resolution: expect.arrayContaining(["month", "published_at"]),
         alias_type: expect.arrayContaining(["canonical", "legal_entity", "brand", "facility"]),
+        sku_granularity: expect.arrayContaining(["target_sku", "platform_component_sku", "family_only"]),
       },
     });
   });
