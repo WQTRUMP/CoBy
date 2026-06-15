@@ -1,0 +1,57 @@
+{
+  "schema": "wanman.superseded-document-map",
+  "version": 1,
+  "current_package": "full18-live-acceptance-final",
+  "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+  "replaces": [
+    {
+      "old_path": "infra/deployment/live-acceptance-runbook.md",
+      "old_scope": "full.17 自助运行包旧口径",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "同名入口已升级为 full.18 最终执行包"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance.env.example",
+      "old_scope": "full.17 默认 snapshot 与输出目录",
+      "new_path": "infra/deployment/live-acceptance.env.example",
+      "reason": "默认值已切换到 full.18 published=312/410"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance-evidence-template.md",
+      "old_scope": "full.17 证据模板",
+      "new_path": "infra/deployment/live-acceptance-evidence-template.md",
+      "reason": "证据模板已升级为 full.18 最终链与禁止回退 mock 约束"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock-runbook.md",
+      "old_scope": "full.17 外部解阻塞手册",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "被 full.18 最终 provider-neutral runbook supersede，仅保留审计用途"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock-checklist.json",
+      "old_scope": "full.17 机器可读清单",
+      "new_path": "infra/deployment/full18-live-acceptance-final-checklist.json",
+      "reason": "最终执行清单已切换到 full.18 正式链与 Cloudflare 顺序"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock.env.template",
+      "old_scope": "full.17 外部 env 模板",
+      "new_path": "infra/deployment/live-acceptance.env.example",
+      "reason": "统一改用通用 live acceptance env 模板"
+    },
+    {
+      "old_path": "output/full18-launch-doc-refresh-v4/cloudflare-handoff-v4.md",
+      "old_scope": "Cloudflare 决策摘要",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "其 Cloudflare/域名接入顺序已吸收进最终执行手册"
+    }
+  ],
+  "historical_only": [
+    "770fdf5c-ede6-40bb-a6f8-17bc28d90448",
+    "1fcbf8ac-8a1e-434b-9ac5-60f86374f83c",
+    "c1be4b86-a800-4d45-977e-86ddca5fc378",
+    "69ab6247-3cc2-4c8a-b2b7-45294225be1b",
+    "e14b3746-88f1-4c2c-921c-0e88e63db23c"
+  ]
+}

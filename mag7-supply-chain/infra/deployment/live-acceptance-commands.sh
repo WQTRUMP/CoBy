@@ -19,7 +19,9 @@ usage() {
   REPO_ROOT                  默认 /workspace/project/mag7-supply-chain
   BACKEND_DIR                默认 $REPO_ROOT/backend
   PACKAGE_DIR                默认 /workspace/agents/evidence-collector/output/mag7-full-package
-  EXPECTED_PACKAGE_SNAPSHOT  默认 snapshot:2026-06-15.full.17
+  EXPECTED_PACKAGE_SNAPSHOT  默认 snapshot:2026-06-15.full.18
+  EXPECTED_RELATION_COUNT    默认 312
+  EXPECTED_EVIDENCE_COUNT    默认 410
   API_BASE                   默认 http://127.0.0.1:4000
   HOST                       默认 127.0.0.1
   PORT                       默认 4000
@@ -71,7 +73,9 @@ REPO_ROOT="${REPO_ROOT:-/workspace/project/mag7-supply-chain}"
 BACKEND_DIR="${BACKEND_DIR:-$REPO_ROOT/backend}"
 PACKAGE_DIR="${PACKAGE_DIR:-/workspace/agents/evidence-collector/output/mag7-full-package}"
 PACKAGE_MANIFEST="${PACKAGE_DIR}/mag7-full-package-manifest.json"
-EXPECTED_PACKAGE_SNAPSHOT="${EXPECTED_PACKAGE_SNAPSHOT:-snapshot:2026-06-15.full.17}"
+EXPECTED_PACKAGE_SNAPSHOT="${EXPECTED_PACKAGE_SNAPSHOT:-snapshot:2026-06-15.full.18}"
+EXPECTED_RELATION_COUNT="${EXPECTED_RELATION_COUNT:-312}"
+EXPECTED_EVIDENCE_COUNT="${EXPECTED_EVIDENCE_COUNT:-410}"
 API_BASE="${API_BASE:-http://127.0.0.1:4000}"
 
 export HOST="${HOST:-127.0.0.1}"
@@ -83,7 +87,7 @@ export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
 export NEO4J_DATABASE="${NEO4J_DATABASE:-}"
 export REDIS_URL="${REDIS_URL:-}"
 
-OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-full17-XXXXXX)}"
+OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-full18-XXXXXX)}"
 mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR/http" "$OUTPUT_DIR/logs" "$OUTPUT_DIR/docker"
 
 PREFLIGHT_JSON="$OUTPUT_DIR/preflight.json"
@@ -127,6 +131,7 @@ write_minimal_prerequisites() {
         "Node.js v22.22.3 + npm + curl + jq",
         "可达的 Neo4j 5.26 兼容实例",
         "可达的 Redis 7.4 兼容实例",
+        "若需要对外 smoke 或同源 `/api` 联调，准备一个可临时托管 Node API 的运行器和待接入的 Cloudflare Zone",
         "live 模式环境变量：NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL",
         "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 全部成功返回"
       ],
@@ -438,6 +443,8 @@ jq -n \
   --arg packageDir "$PACKAGE_DIR" \
   --arg packageManifest "$PACKAGE_MANIFEST" \
   --arg expectedSnapshot "$EXPECTED_PACKAGE_SNAPSHOT" \
+  --arg expectedRelationCount "$EXPECTED_RELATION_COUNT" \
+  --arg expectedEvidenceCount "$EXPECTED_EVIDENCE_COUNT" \
   --arg packageSnapshot "$PACKAGE_SNAPSHOT_ID" \
   --arg packageVersion "$PACKAGE_VERSION" \
   --arg relationCount "$RELATION_COUNT" \
@@ -459,6 +466,10 @@ jq -n \
     packageDir: $packageDir,
     packageManifest: $packageManifest,
     expectedPackageSnapshot: $expectedSnapshot,
+    expectedCounts: {
+      relations: ($expectedRelationCount | tonumber),
+      evidence: ($expectedEvidenceCount | tonumber)
+    },
     packageSnapshotId: $packageSnapshot,
     packageVersion: $packageVersion,
     packageCounts: {
@@ -485,10 +496,12 @@ jq -n \
 command -v node >/dev/null 2>&1 || fail_stage "preflight" "node_missing" "缺少 Node.js" "当前运行器未安装 node。"
 command -v npm >/dev/null 2>&1 || fail_stage "preflight" "npm_missing" "缺少 npm" "当前运行器未安装 npm。"
 command -v curl >/dev/null 2>&1 || fail_stage "preflight" "curl_missing" "缺少 curl" "当前运行器未安装 curl。"
-test -f "$PACKAGE_MANIFEST" || fail_stage "preflight" "package_manifest_missing" "找不到 full.17 数据包 manifest" "$PACKAGE_MANIFEST 不存在。"
+test -f "$PACKAGE_MANIFEST" || fail_stage "preflight" "package_manifest_missing" "找不到 full.18 数据包 manifest" "$PACKAGE_MANIFEST 不存在。"
 test -f "$PACKAGE_DIR/relations.jsonl" || fail_stage "preflight" "relations_missing" "找不到 relations.jsonl" "$PACKAGE_DIR/relations.jsonl 不存在。"
 test -f "$PACKAGE_DIR/evidence.jsonl" || fail_stage "preflight" "evidence_missing" "找不到 evidence.jsonl" "$PACKAGE_DIR/evidence.jsonl 不存在。"
-[[ "$PACKAGE_SNAPSHOT_ID" = "$EXPECTED_PACKAGE_SNAPSHOT" ]] || fail_stage "preflight" "snapshot_mismatch" "数据包 snapshot 与 full.17 不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $EXPECTED_PACKAGE_SNAPSHOT。"
+[[ "$PACKAGE_SNAPSHOT_ID" = "$EXPECTED_PACKAGE_SNAPSHOT" ]] || fail_stage "preflight" "snapshot_mismatch" "数据包 snapshot 与 full.18 不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $EXPECTED_PACKAGE_SNAPSHOT。"
+[[ "$RELATION_COUNT" = "$EXPECTED_RELATION_COUNT" ]] || fail_stage "preflight" "relation_count_mismatch" "published relations 行数与 full.18 不一致" "检测到 $RELATION_COUNT，预期 $EXPECTED_RELATION_COUNT。"
+[[ "$EVIDENCE_COUNT" = "$EXPECTED_EVIDENCE_COUNT" ]] || fail_stage "preflight" "evidence_count_mismatch" "published evidence 行数与 full.18 不一致" "检测到 $EVIDENCE_COUNT，预期 $EXPECTED_EVIDENCE_COUNT。"
 
 case "$MODE" in
   auto)

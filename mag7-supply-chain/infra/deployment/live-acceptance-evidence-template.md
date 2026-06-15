@@ -1,4 +1,4 @@
-# Mag7 full.17 live 验收证据模板
+# Mag7 full.18 live 验收证据模板
 
 ## 1. 执行摘要
 
@@ -8,11 +8,10 @@
 - 请求模式：`auto` / `docker` / `external`
 - 实际模式：`docker` / `external` / `unavailable`
 - 结果结论：`通过` / `失败`
-- 唯一正式链：`ac99e36b + ec276475 -> 1b401c37`
-- `authoritative snapshot`：`snapshot:2026-06-15.full.17`
-- `round17` 定性：`no-op merge`
-- `formal net new`：`Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
-- 使用数据包：`snapshot:2026-06-15.full.17`
+- 唯一正式链：`7b0963ea -> fd7161a9 -> fb8bc7b2`
+- `authoritative snapshot`：`snapshot:2026-06-15.full.18`
+- published：`312 relations / 410 evidence`
+- all-candidates：`328 relations / 439 evidence`
 - 证据目录：
 
 ## 2. 前置条件
@@ -22,18 +21,21 @@
 - curl 版本：
 - jq 版本：
 - Docker/Compose 版本：
-- package version：
 - `relations.jsonl` 行数：
 - `evidence.jsonl` 行数：
+- Cloudflare/域名阶段：
+  - `未接入`
+  - `仅预备记录`
+  - `已接入最终路由`
 
 ## 3. 执行命令
 
 ```bash
 source infra/deployment/live-acceptance.env.example
-bash infra/deployment/live-acceptance-commands.sh --mode auto --output-dir <your-output-dir>
+bash infra/deployment/live-acceptance-commands.sh --mode external --output-dir <your-output-dir>
 ```
 
-如使用 external，请补充最小输入（可脱敏主机名和口令）：
+如使用 external，请补充最小输入：
 
 ```dotenv
 GRAPH_RUNTIME_MODE=live
@@ -42,6 +44,9 @@ NEO4J_USERNAME=
 NEO4J_PASSWORD=
 NEO4J_DATABASE=
 REDIS_URL=
+EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
+EXPECTED_RELATION_COUNT=312
+EXPECTED_EVIDENCE_COUNT=410
 ```
 
 ## 4. preflight / mode-selection
@@ -52,9 +57,11 @@ REDIS_URL=
 {}
 ```
 
-需要说明：
+必须说明：
 
-- 是否命中 `snapshot:2026-06-15.full.17`
+- 是否命中 `snapshot:2026-06-15.full.18`
+- `relations=312`
+- `evidence=410`
 - 自动选择结果是 `docker` 还是 `external`
 - 若失败，失败码是什么
 
@@ -141,7 +148,14 @@ REDIS_URL=
 {}
 ```
 
-## 8. 失败时必交文件
+## 8. Cloudflare / 域名状态
+
+- 使用同源 `/api` 代理，还是 `api.<domain>` 分域：
+- 若已切 Cloudflare 路由，切换时间：
+- 最终域名 smoke 是否复跑：
+- 若未复跑，原因：
+
+## 9. 失败时必交文件
 
 - `result.json`
 - `minimal-external-prerequisites.json`
@@ -153,10 +167,11 @@ REDIS_URL=
 - `http/*.json` 中已产出的部分文件
 - `docker/docker-compose-ps.txt`、`docker/neo4j.log`、`docker/redis.log`（若走 docker）
 
-## 9. 最终判定
+## 10. 最终判定
 
 - `result.json.passed`：
 - 是否满足 `real_data_launch` 通过门槛：
 - 若未通过，唯一阻塞原因：
+- 是否已接入 Cloudflare 最终路由：
 - `/opt/wanman/products.json` 状态（为空数组时只能写 `unknown:no_product_inventory`）：
 - 下一步动作：
