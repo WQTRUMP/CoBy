@@ -12,6 +12,10 @@
 
 ## 2. 当前 authoritative 结论
 
+- 唯一正式链固定为 `ac99e36b + ec276475 -> 1b401c37`，不得再引用任何 superseded 链作为正式依据。
+- `authoritative snapshot` 固定为 `snapshot:2026-06-15.full.17`。
+- `round17` 的正式定性是 `no-op merge`，不是 `full.18` 新正式轮次。
+- `formal net new` 固定为 `Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`。
 - `prototype`：可单独部署，但仅限显式 `GRAPH_RUNTIME_MODE=prototype`。
 - `real_data_launch`：截至 `2026-06-15` 仍 `blocked`。
 - 唯一 authoritative 阻塞不是“本机缺 Docker”本身，而是仍缺一套基于 `snapshot:2026-06-15.full.17` 的真实 Neo4j/Redis 写库成功证据，以及 `health/detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence` 全链路 live 成功返回证据。

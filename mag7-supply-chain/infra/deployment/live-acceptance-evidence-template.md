@@ -8,6 +8,10 @@
 - 请求模式：`auto` / `docker` / `external`
 - 实际模式：`docker` / `external` / `unavailable`
 - 结果结论：`通过` / `失败`
+- 唯一正式链：`ac99e36b + ec276475 -> 1b401c37`
+- `authoritative snapshot`：`snapshot:2026-06-15.full.17`
+- `round17` 定性：`no-op merge`
+- `formal net new`：`Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
 - 使用数据包：`snapshot:2026-06-15.full.17`
 - 证据目录：
 

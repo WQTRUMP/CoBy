@@ -11,6 +11,23 @@
     "readiness": "prototype_passed_real_data_launch_blocked",
     "summary": "prototype 口径已通过，但仅覆盖显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路。默认运行态已统一为 `GRAPH_RUNTIME_MODE=live`；缺少 Neo4j/Redis 时，`/api/v1/health` 只暴露 live 失败语义，业务接口与导入入口返回结构化 `503 dependency_unavailable`，不再静默回退 mock。real_data_launch 仍不通过，唯一核心原因是缺少 live Neo4j/Redis 真实导入与运行时 HTTP 闭环验收。"
   },
+  "authoritative_supply_chain_release": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.17",
+    "formal_chain": {
+      "baseline_commit": "ac99e36b",
+      "merge_input_commit": "ec276475",
+      "published_commit": "1b401c37",
+      "expression": "ac99e36b + ec276475 -> 1b401c37"
+    },
+    "round17_status": "no-op merge",
+    "formal_net_new_by_company": {
+      "Apple": 0,
+      "Alphabet": 0,
+      "Meta": 0,
+      "Tesla": 0
+    },
+    "superseded_chain_policy": "任何 superseded 链或 full.18 口径都不能作为当前正式部署、验收或对外说明依据。"
+  },
   "runtime": {
     "frontend": {
       "type": "static_site",

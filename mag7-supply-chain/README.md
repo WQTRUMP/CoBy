@@ -190,6 +190,9 @@ curl http://127.0.0.1:4173/api/v1/health
 
 当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：
 
+- 唯一正式链：`ac99e36b + ec276475 -> 1b401c37`；`authoritative snapshot = snapshot:2026-06-15.full.17`
+- `round17` 定性：`no-op merge`，不得再把任何 `full.18` 或 superseded 链表述成正式依据
+- 正式增量口径：`formal net new = Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
 - `prototype`：可发布。允许前端静态站点接独立 API；仅当后端显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许使用 `repositoryMode=mock` / `source=mock` 的原型演示链路。
 - `real_data_launch`：不通过。当前仍缺 live Neo4j / Redis 依赖下的导入闭环、健康检查与业务接口验收。
 - 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。
@@ -206,16 +209,16 @@ set -a
 source infra/deployment/live-acceptance.env.example
 set +a
 bash infra/deployment/live-acceptance-commands.sh \
-  --services-mode docker \
-  --output-dir /tmp/mag7-live-acceptance-full13
+  --mode docker \
+  --output-dir /tmp/mag7-live-acceptance-full17
 ```
 
 如果当前环境没有 Docker，但已有外部 Neo4j / Redis，可改用：
 
 ```bash
 bash infra/deployment/live-acceptance-commands.sh \
-  --services-mode external \
-  --output-dir /tmp/mag7-live-acceptance-full13
+  --mode external \
+  --output-dir /tmp/mag7-live-acceptance-full17
 ```
 
 相关文件：
