@@ -72,6 +72,9 @@ function routeRequiresLiveDependencies(url: string) {
 export async function buildApp(options: AppOptions) {
   const app = Fastify({
     logger: false,
+    routerOptions: {
+      maxParamLength: 256,
+    },
   });
 
   await app.register(cors, {

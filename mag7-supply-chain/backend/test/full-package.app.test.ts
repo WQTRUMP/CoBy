@@ -1014,52 +1014,67 @@ describe("full package app", () => {
     expect(response.json().items[0].publishedAtResolution).not.toBe("published_at");
   });
 
-  it("keeps promoted full20-wave1 relation evidence reachable for NVIDIA Siemens and Tesla Panasonic Kansas", async () => {
-    const repository = new RealSampleGraphRepository(preparedFullPackage);
+  it("keeps promoted full20-wave1 relation evidence reachable over HTTP for long relation ids", async () => {
+    const nvidiaRelationId =
+      "rel:nvidia:siemens:professional_service:n18-13-gb200_nvl72_power_and_automation_reference_architecture";
+    const teslaRelationId =
+      "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion";
+
     const [nvidiaSubgraph, nvidiaEvidence, teslaSubgraph, teslaEvidence] = await Promise.all([
-      repository.getSubgraph({
-        companyId: "company:NVDA",
-        depth: 3,
-        snapshot: "published",
-        includeEvidence: true,
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:NVDA&depth=3&snapshot=published&includeEvidence=true",
       }),
-      repository.getRelationEvidence(
-        "rel:nvidia:siemens:professional_service:n18-13-gb200_nvl72_power_and_automation_reference_architecture",
-      ),
-      repository.getSubgraph({
-        companyId: "company:TSLA",
-        depth: 3,
-        snapshot: "published",
-        includeEvidence: true,
+      app.inject({
+        method: "GET",
+        url: `/api/v1/relations/${encodeURIComponent(nvidiaRelationId)}/evidence`,
       }),
-      repository.getRelationEvidence(
-        "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion",
-      ),
+      app.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:TSLA&depth=3&snapshot=published&includeEvidence=true",
+      }),
+      app.inject({
+        method: "GET",
+        url: `/api/v1/relations/${encodeURIComponent(teslaRelationId)}/evidence`,
+      }),
     ]);
 
+    expect(nvidiaSubgraph.statusCode).toBe(200);
+    expect(teslaSubgraph.statusCode).toBe(200);
+    expect(nvidiaEvidence.statusCode).toBe(200);
+    expect(teslaEvidence.statusCode).toBe(200);
+
     expect(
-      nvidiaSubgraph.relations.some(
-        (relation) =>
-          relation.id ===
-          "rel:nvidia:siemens:professional_service:n18-13-gb200_nvl72_power_and_automation_reference_architecture",
-      ),
+      nvidiaSubgraph.json().relations.some((relation: RelationDTO) => relation.id === nvidiaRelationId),
     ).toBe(true);
     expect(
-      teslaSubgraph.relations.some(
-        (relation) =>
-          relation.id ===
-          "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion",
-      ),
+      teslaSubgraph.json().relations.some((relation: RelationDTO) => relation.id === teslaRelationId),
     ).toBe(true);
 
-    expect(nvidiaEvidence.map((item) => item.id)).toEqual([
-      "evidence:nvidia:siemens:2026-02-01:N18-13:2",
-      "evidence:nvidia:siemens:2025-12-03:N18-13:1",
-    ]);
-    expect(teslaEvidence.map((item) => item.id)).toEqual([
-      "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
-      "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
-    ]);
+    expect(nvidiaEvidence.json()).toMatchObject({
+      relationId: nvidiaRelationId,
+      total: 2,
+      items: [
+        expect.objectContaining({
+          id: "evidence:nvidia:siemens:2026-02-01:N18-13:2",
+        }),
+        expect.objectContaining({
+          id: "evidence:nvidia:siemens:2025-12-03:N18-13:1",
+        }),
+      ],
+    });
+    expect(teslaEvidence.json()).toMatchObject({
+      relationId: teslaRelationId,
+      total: 2,
+      items: [
+        expect.objectContaining({
+          id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
+        }),
+        expect.objectContaining({
+          id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
+        }),
+      ],
+    });
   });
 
   it("reuses Redis-style cache keys for companies list/detail/overview/search/suggest and graph queries", async () => {
