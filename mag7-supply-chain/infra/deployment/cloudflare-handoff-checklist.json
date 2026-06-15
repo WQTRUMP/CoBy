@@ -1,7 +1,7 @@
 {
   "schema": "wanman.cloudflare-handoff-checklist",
   "version": 1,
-  "generated_at": "2026-06-15T23:15:00Z",
+  "generated_at": "2026-06-15T23:45:00Z",
   "generated_by": "devops",
   "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
   "decision_summary": {
@@ -11,13 +11,17 @@
     "candidate_only_delta": "23 relations / 41 evidence",
     "real_data_launch": "不再因 full.19 live 运行时闭环而 blocked，现已进入待 human 批准部署阶段"
   },
+  "audit_only_exclusions": [
+    "6e45bce1"
+  ],
   "cloudflare_connection_gate": {
     "human_action_required": true,
     "trusted_runner_only": true,
     "forbidden": [
       "代理人直接使用 Cloudflare 凭据",
       "在未获 Wanman 控制面批准前切换正式流量",
-      "把 candidate-only 350/476 描述成已发布 live 数据"
+      "把 candidate-only 350/476 描述成已发布 live 数据",
+      "把 6e45bce1 当成任何最终部署输入"
     ]
   },
   "required_human_fields": [
@@ -98,7 +102,8 @@
   "boundary_assertions": [
     "authoritative snapshot 仍为 snapshot:2026-06-15.full.18。",
     "published 327/435 与 all-candidates 350/476 边界不变。",
-    "candidate-only relation 在 published live 图中必须继续不可取证。",
+    "candidate-only relation 在 published live 图中必须继续不可取证，live evidence 读取应返回 404 relation_evidence_not_found。",
+    "唯一正式结论源只能是 code-reviewer-6 的 full19-live-e2e-formal-review-v3 报告；6e45bce1 仅保留审计用途。",
     "real_data_launch 的技术阻塞已解除，但正式外部部署仍需 human 批准。"
   ]
 }

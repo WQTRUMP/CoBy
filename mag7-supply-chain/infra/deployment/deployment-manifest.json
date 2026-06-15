@@ -1,7 +1,7 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-15T23:15:00Z",
+  "generated_at": "2026-06-15T23:45:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
@@ -9,7 +9,7 @@
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
     "readiness": "prototype_passed_real_data_launch_ready_for_human_decision",
-    "summary": "唯一正式结论源已更新为 full.19 真实 live 终审 v3。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；published 视图固定为 327 relations / 435 evidence，all-candidates 固定为 350 relations / 476 evidence，candidate-only 差额 23 / 41 继续成立。source=neo4j 的真实导入与同一套 live 运行时下的 HTTP 回读已经成立，因此 real_data_launch 不再因 full.19 live 运行时闭环缺失而 blocked；后续仅待 human/控制面完成 Cloudflare 与付费资源部署决策。"
+    "summary": "唯一正式结论源只能是 full.19 真实 live 终审 v3。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；published 视图固定为 327 relations / 435 evidence，all-candidates 固定为 350 relations / 476 evidence，candidate-only 差额 23 / 41 继续成立且其 live evidence 读取继续返回 404 relation_evidence_not_found。source=neo4j 的真实导入与同一套 live 运行时下的 HTTP 回读已经成立，因此 real_data_launch 不再因 full.19 live 运行时闭环缺失而 blocked；后续仅待 human/控制面完成 Cloudflare 与付费资源部署决策。"
   },
   "authoritative_supply_chain_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
@@ -38,7 +38,10 @@
       "allowed_formal_source": [
         "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
       ],
-      "notes": "本 manifest 的数据 readiness、published/all-candidates 边界、real_data_launch 阻塞状态只接受上述正式复审 v3 作为最终结论源。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
+      "excluded_audit_only_inputs": [
+        "6e45bce1"
+      ],
+      "notes": "本 manifest 的数据 readiness、published/all-candidates 边界、candidate-only 404 负样本、real_data_launch 阻塞状态只接受上述正式复审 v3 作为最终结论源。6e45bce1 仅保留审计用途，不得作为任何最终输入。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
     }
   },
   "runtime": {
@@ -134,7 +137,7 @@
       "live_verification_summary": [
         "source=neo4j 的真实导入摘要为 327 relations / 435 evidence。",
         "同一套 live 运行时下，health/detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 均已完成 HTTP 回读。",
-        "candidate-only relation 的 live evidence 读取继续返回 404，证明 350/476 仍停留在 contracts/all-candidates 边界。"
+        "candidate-only relation 的 live evidence 读取继续返回 404 relation_evidence_not_found，证明 350/476 仍停留在 contracts/all-candidates 边界。"
       ]
     },
     {
@@ -285,8 +288,6 @@
       "allowed": true,
       "readiness": "ready_for_human_decision",
       "evidence": [
-        "full19-live-runtime-unblock-report.md：真实导入 source=neo4j，relationCount=327，evidenceCount=435。",
-        "full19-live-e2e-verify-v2-report.md：health/detail/overview/search/suggest/subgraph/path/stats/evidence 均完成 live HTTP 回读。",
         "full19-live-e2e-formal-review-v3-report.md：正式裁定 real_data_launch 不再因 full.19 live 运行时闭环而继续 blocked。"
       ],
       "remaining_gates": [
@@ -299,10 +300,7 @@
   "verification": {
     "date": "2026-06-15",
     "workspace_evidence": [
-      "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
-      "/workspace/agents/devops/output/full19-live-runtime-unblock/full19-live-runtime-unblock-report.md",
-      "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-report.md",
-      "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-diff-matrix.md"
+      "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
     ],
     "current_repo_runtime_facts": [
       "/workspace/project/mag7-supply-chain/package.json",
@@ -316,18 +314,6 @@
     {
       "type": "workspace_file",
       "path": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/agents/devops/output/full19-live-runtime-unblock/full19-live-runtime-unblock-report.md"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-report.md"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-diff-matrix.md"
     },
     {
       "type": "workspace_file",

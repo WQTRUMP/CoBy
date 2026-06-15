@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-15T23:15:00Z",
+  "generated_at": "2026-06-15T23:45:00Z",
   "generated_by": "devops",
   "inventory_status": "pending_human_approval",
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
@@ -16,13 +16,16 @@
     "relations": 23,
     "evidence": 41
   },
+  "audit_only_exclusions": [
+    "6e45bce1"
+  ],
   "products": [
     {
       "name": "mag7-supply-chain",
       "display_name": "Mag7 供应链交互式探索平台",
       "kind": "interactive_supply_chain_platform",
       "readiness": "real_data_launch_ready_for_human_decision",
-      "summary": "published 327/435 已在 source=neo4j 的真实 live 运行时下完成导入与 HTTP 回读；350/476 仍保留为 all-candidates / candidate-only 边界。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18，本候选清单仅等待 human 批准后才能进入正式产品库存。",
+      "summary": "published 327/435 已在 source=neo4j 的真实 live 运行时下完成导入与 HTTP 回读；350/476 仍保留为 all-candidates / candidate-only 边界，candidate-only live evidence 继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18，6e45bce1 仅保留审计用途不得作为最终输入，本候选清单仅等待 human 批准后才能进入正式产品库存。",
       "urls": {
         "web_health": {
           "path": "/",
@@ -59,7 +62,8 @@
       "runtime_constraints": [
         "默认 GRAPH_RUNTIME_MODE=live；只有显式 GRAPH_RUNTIME_MODE=prototype 时才允许 mock。",
         "真实数据链路必须同时连通 NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL。",
-        "candidate-only relation 不得被写成已发布 live 数据；其 evidence 读取应继续返回 404 relation_evidence_not_found。"
+        "candidate-only relation 不得被写成已发布 live 数据；其 evidence 读取应继续返回 404 relation_evidence_not_found。",
+        "唯一正式结论源只能是 /workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md；6e45bce1 仅保留审计用途。"
       ],
       "monitoring_scope_after_approval": {
         "eligible": [
