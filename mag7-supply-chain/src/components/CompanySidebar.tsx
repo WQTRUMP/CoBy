@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { Buildings, ChartBar, Database, LinkBreak, Path, Stack } from "@phosphor-icons/react";
 import { EvidencePanel } from "./EvidencePanel.js";
 import type {
@@ -27,6 +27,20 @@ interface CompanySidebarProps {
   relations: GraphRelationViewModel[];
 }
 
+export const companySidebarTabOrder = ["overview", "evidence", "financials"] as const;
+export type CompanySidebarTab = (typeof companySidebarTabOrder)[number];
+
+export function getNextCompanySidebarTab(currentTab: CompanySidebarTab, key: string): CompanySidebarTab | null {
+  if (key !== "ArrowLeft" && key !== "ArrowRight") {
+    return null;
+  }
+
+  const currentIndex = companySidebarTabOrder.indexOf(currentTab);
+  const direction = key === "ArrowRight" ? 1 : -1;
+  const nextIndex = (currentIndex + direction + companySidebarTabOrder.length) % companySidebarTabOrder.length;
+  return companySidebarTabOrder[nextIndex];
+}
+
 export function CompanySidebar(props: CompanySidebarProps) {
   const {
     activeNode,
@@ -50,18 +64,31 @@ export function CompanySidebar(props: CompanySidebarProps) {
   const overviewPanelId = "company-panel-overview";
   const evidencePanelId = "company-panel-evidence";
   const financialsPanelId = "company-panel-financials";
-  const tabOrder = ["overview", "evidence", "financials"] as const;
+  const tabRefs = useRef<Record<CompanySidebarTab, HTMLButtonElement | null>>({
+    overview: null,
+    evidence: null,
+    financials: null,
+  });
+  const pendingFocusTabRef = useRef<CompanySidebarTab | null>(null);
 
-  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, tab: (typeof tabOrder)[number]) {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+  useEffect(() => {
+    if (pendingFocusTabRef.current !== activeTab) {
+      return;
+    }
+
+    tabRefs.current[activeTab]?.focus();
+    pendingFocusTabRef.current = null;
+  }, [activeTab]);
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, tab: CompanySidebarTab) {
+    const nextTab = getNextCompanySidebarTab(tab, event.key);
+    if (!nextTab) {
       return;
     }
 
     event.preventDefault();
-    const currentIndex = tabOrder.indexOf(tab);
-    const direction = event.key === "ArrowRight" ? 1 : -1;
-    const nextIndex = (currentIndex + direction + tabOrder.length) % tabOrder.length;
-    onTabChange(tabOrder[nextIndex]);
+    pendingFocusTabRef.current = nextTab;
+    onTabChange(nextTab);
   }
 
   return (
@@ -90,6 +117,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
           id={overviewTabId}
           onClick={() => onTabChange("overview")}
           onKeyDown={(event) => handleTabKeyDown(event, "overview")}
+          ref={(node) => {
+            tabRefs.current.overview = node;
+          }}
           role="tab"
           tabIndex={activeTab === "overview" ? 0 : -1}
           type="button"
@@ -103,6 +133,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
           id={evidenceTabId}
           onClick={() => onTabChange("evidence")}
           onKeyDown={(event) => handleTabKeyDown(event, "evidence")}
+          ref={(node) => {
+            tabRefs.current.evidence = node;
+          }}
           role="tab"
           tabIndex={activeTab === "evidence" ? 0 : -1}
           type="button"
@@ -116,6 +149,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
           id={financialsTabId}
           onClick={() => onTabChange("financials")}
           onKeyDown={(event) => handleTabKeyDown(event, "financials")}
+          ref={(node) => {
+            tabRefs.current.financials = node;
+          }}
           role="tab"
           tabIndex={activeTab === "financials" ? 0 : -1}
           type="button"
