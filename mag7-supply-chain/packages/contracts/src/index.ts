@@ -22,6 +22,12 @@ export const aliasTypeSchema = z.enum([
   "short_name",
   "search_hint",
 ]);
+export const skuGranularitySchema = z.enum([
+  "target_sku",
+  "platform_component_sku",
+  "family_only",
+  "out_of_scope_sku",
+]);
 
 export const knownSourceTypes = [
   "10k",
@@ -169,6 +175,7 @@ export const companyListResponseSchema = z.object({
 export const evidenceSchema = z.object({
   id: z.string(),
   sourceType: sourceTypeSchema,
+  skuGranularity: skuGranularitySchema.nullable().optional(),
   title: z.string(),
   publisher: z.string(),
   url: z.string().url(),
@@ -240,6 +247,7 @@ export const relationSchema = z.object({
   sourceId: z.string(),
   targetId: z.string(),
   relationshipType: relationshipTypeSchema,
+  skuGranularity: skuGranularitySchema.nullable().optional(),
   relationshipSubtype: z.string().nullable().optional(),
   tier: z.number().int().min(1),
   depthFromMag7: z.number().int().min(0),
@@ -356,9 +364,17 @@ const legacyDateResolutionAliasSchema = z.enum([
   "retrieved_at_only",
 ]);
 
+const legacySkuGranularityAliasSchema = z.enum(["target_sku_or_official_component"]);
+
 const dateResolutionCompatSchema = z
   .union([dateResolutionSchema, legacyDateResolutionAliasSchema])
   .transform((value) => legacyDateResolutionAliases[value as keyof typeof legacyDateResolutionAliases] ?? value);
+
+const skuGranularityCompatSchema = z
+  .union([skuGranularitySchema, legacySkuGranularityAliasSchema])
+  .transform((value) =>
+    value === "target_sku_or_official_component" ? "platform_component_sku" : value,
+  );
 
 export const importEntityRefSchema = z.object({
   entity_id: z.string(),
@@ -376,6 +392,7 @@ const standardizedImportRelationRecordBaseSchema = z.object({
   tier: z.number().int().min(1),
   depth_from_mag7: z.number().int().min(0),
   relationship_type: relationshipTypeSchema,
+  sku_granularity: skuGranularityCompatSchema.nullable().optional(),
   relationship_subtype: z.string(),
   product_scope: z.array(z.string()).min(1),
   evidence_ids: z.array(z.string()).min(1),
@@ -464,6 +481,7 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   publisher: z.string(),
   source_url: z.string().url(),
   source_domain: z.string(),
+  sku_granularity: skuGranularityCompatSchema.nullable().optional(),
   published_at: z.string(),
   published_at_resolution: dateResolutionCompatSchema,
   coverage_start: z.string().nullable().optional(),
@@ -553,6 +571,12 @@ export const importRelationsFieldCatalog = [
     type: "string",
     required: true,
     description: "Normalized supply-chain relationship type. Open string to avoid blocking newly promoted edge categories.",
+  },
+  {
+    name: "sku_granularity",
+    type: "enum",
+    required: false,
+    description: "Optional target-SKU specificity marker used to distinguish target SKU, platform component SKU, family-only, and out-of-scope SKU boundaries.",
   },
   {
     name: "relationship_subtype",
@@ -721,6 +745,7 @@ export const importRelationsFieldCatalog = [
 export type BackendSource = z.infer<typeof backendSourceSchema>;
 export type DateResolution = z.infer<typeof dateResolutionSchema>;
 export type AliasType = z.infer<typeof aliasTypeSchema>;
+export type SkuGranularity = z.infer<typeof skuGranularitySchema>;
 export type CompanyDTO = z.infer<typeof companySchema>;
 export type CompanyListItemDTO = z.infer<typeof companyListItemSchema>;
 export type CompanySearchMatchDTO = z.infer<typeof companySearchMatchSchema>;
