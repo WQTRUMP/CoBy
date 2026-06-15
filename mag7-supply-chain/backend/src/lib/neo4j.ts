@@ -15,6 +15,9 @@ import type {
   GraphStatsQuery,
   RelationDTO,
   SearchCompaniesQuery,
+  SkuGranularity,
+  SkuGranularityDetail,
+  SkuGranularitySource,
   SubgraphDTO,
   SubgraphQuery,
   SuggestCompaniesQuery,
@@ -419,7 +422,7 @@ function pickLatestRelationSnapshotId(relations: Array<Pick<RelationDTO, "snapsh
 
 function mapSkuGranularityDetailProperties(
   properties: Record<string, unknown>,
-): RelationDTO["skuGranularityDetail"] | EvidenceDTO["skuGranularityDetail"] {
+): SkuGranularityDetail | null {
   const detailValue =
     typeof properties.skuGranularityDetailValue === "string"
       ? properties.skuGranularityDetailValue
@@ -441,10 +444,10 @@ function mapSkuGranularityDetailProperties(
   }
 
   return {
-    value: detailValue as RelationDTO["skuGranularity"],
+    value: detailValue as SkuGranularity,
     source: hasSource
-      ? properties.skuGranularitySource as NonNullable<RelationDTO["skuGranularityDetail"]>["source"]
-      : "relation_field",
+      ? properties.skuGranularitySource as SkuGranularitySource
+      : "relation_field" satisfies SkuGranularitySource,
     raw: hasRaw ? String(properties.skuGranularityRaw) : null,
     note: hasNote ? String(properties.skuGranularityNote) : null,
     isBackfilled,
