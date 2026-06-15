@@ -560,7 +560,67 @@ class RealSampleGraphRepository implements GraphRepository {
   }
 
   async getRelationEvidence(relationId: string) {
-    return this.evidenceByRelationId.get(relationId) ?? [];
+    const directEvidence = this.evidenceByRelationId.get(relationId);
+    if (directEvidence && directEvidence.length > 0) {
+      return [...directEvidence].sort(
+        (left, right) =>
+          (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || left.id.localeCompare(right.id),
+      );
+    }
+
+    const relation = this.relationById.get(relationId);
+    if (!relation) {
+      return [];
+    }
+
+    const fallbackEvidenceIds =
+      relation.evidenceIds.length > 0
+        ? relation.evidenceIds
+        : relation.primaryEvidenceId
+          ? [relation.primaryEvidenceId]
+          : [];
+
+    return fallbackEvidenceIds
+      .map((evidenceId) => this.prepared.evidence.find((item) => item.id === evidenceId) ?? null)
+      .filter((item): item is PreparedNormalizedImport["evidence"][number] => Boolean(item))
+      .map((evidenceNode) => ({
+        id: evidenceNode.id,
+        sourceType: evidenceNode.sourceType,
+        skuGranularity: evidenceNode.skuGranularity,
+        skuGranularityDetail:
+          evidenceNode.skuGranularityDetailValue && evidenceNode.skuGranularitySource
+            ? {
+                value: evidenceNode.skuGranularityDetailValue,
+                source: evidenceNode.skuGranularitySource,
+                raw: evidenceNode.skuGranularityRaw,
+                note: evidenceNode.skuGranularityNote,
+                isBackfilled: evidenceNode.skuGranularityIsBackfilled,
+              }
+            : null,
+        title: evidenceNode.title,
+        publisher: evidenceNode.publisher,
+        url: evidenceNode.url,
+        publishedAt: evidenceNode.publishedAt,
+        publishedAtResolution: evidenceNode.publishedAtResolution,
+        coverageStart: evidenceNode.coverageStart,
+        coverageEnd: evidenceNode.coverageEnd,
+        coverageStartResolution: evidenceNode.coverageStartResolution,
+        coverageEndResolution: evidenceNode.coverageEndResolution,
+        retrievedAt: evidenceNode.retrievedAt,
+        excerpt: evidenceNode.excerpt,
+        pageRef: evidenceNode.pageRef,
+        language: evidenceNode.language,
+        hash: evidenceNode.hash,
+        sourceDomain: evidenceNode.sourceDomain,
+        citationText: evidenceNode.citationText,
+        reliabilityTier: evidenceNode.reliabilityTier,
+        licenseNote: evidenceNode.licenseNote,
+        parserVersion: evidenceNode.parserVersion,
+      }))
+      .sort(
+        (left, right) =>
+          (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "") || left.id.localeCompare(right.id),
+      );
   }
 
   async importNormalizedPackage(payload: PreparedNormalizedImport) {
@@ -952,6 +1012,54 @@ describe("full package app", () => {
       ],
     });
     expect(response.json().items[0].publishedAtResolution).not.toBe("published_at");
+  });
+
+  it("keeps promoted full20-wave1 relation evidence reachable for NVIDIA Siemens and Tesla Panasonic Kansas", async () => {
+    const repository = new RealSampleGraphRepository(preparedFullPackage);
+    const [nvidiaSubgraph, nvidiaEvidence, teslaSubgraph, teslaEvidence] = await Promise.all([
+      repository.getSubgraph({
+        companyId: "company:NVDA",
+        depth: 3,
+        snapshot: "published",
+        includeEvidence: true,
+      }),
+      repository.getRelationEvidence(
+        "rel:nvidia:siemens:professional_service:n18-13-gb200_nvl72_power_and_automation_reference_architecture",
+      ),
+      repository.getSubgraph({
+        companyId: "company:TSLA",
+        depth: 3,
+        snapshot: "published",
+        includeEvidence: true,
+      }),
+      repository.getRelationEvidence(
+        "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion",
+      ),
+    ]);
+
+    expect(
+      nvidiaSubgraph.relations.some(
+        (relation) =>
+          relation.id ===
+          "rel:nvidia:siemens:professional_service:n18-13-gb200_nvl72_power_and_automation_reference_architecture",
+      ),
+    ).toBe(true);
+    expect(
+      teslaSubgraph.relations.some(
+        (relation) =>
+          relation.id ===
+          "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion",
+      ),
+    ).toBe(true);
+
+    expect(nvidiaEvidence.map((item) => item.id)).toEqual([
+      "evidence:nvidia:siemens:2026-02-01:N18-13:2",
+      "evidence:nvidia:siemens:2025-12-03:N18-13:1",
+    ]);
+    expect(teslaEvidence.map((item) => item.id)).toEqual([
+      "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
+      "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
+    ]);
   });
 
   it("reuses Redis-style cache keys for companies list/detail/overview/search/suggest and graph queries", async () => {

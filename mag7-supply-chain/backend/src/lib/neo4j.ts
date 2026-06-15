@@ -1097,7 +1097,30 @@ export class Neo4jGraphRepository implements GraphRepository {
         { relationId },
       );
 
-      return result.records.map((record) =>
+      if (result.records.length > 0) {
+        return result.records.map((record) =>
+          mapEvidenceProperties(record.get("e").properties as Record<string, unknown>),
+        );
+      }
+
+      const fallbackResult = await session.run(
+        `
+        MATCH (rel:SupplyRelation {id: $relationId})
+        WITH rel,
+             CASE
+               WHEN size(coalesce(rel.evidenceIds, [])) > 0 THEN rel.evidenceIds
+               WHEN rel.primaryEvidenceId IS NOT NULL THEN [rel.primaryEvidenceId]
+               ELSE []
+             END AS fallbackEvidenceIds
+        UNWIND fallbackEvidenceIds AS evidenceId
+        MATCH (e:Evidence {id: evidenceId})
+        RETURN DISTINCT e
+        ORDER BY e.publishedAt DESC, e.id ASC
+        `,
+        { relationId },
+      );
+
+      return fallbackResult.records.map((record) =>
         mapEvidenceProperties(record.get("e").properties as Record<string, unknown>),
       );
     } finally {

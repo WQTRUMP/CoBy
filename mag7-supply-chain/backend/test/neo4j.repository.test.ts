@@ -287,6 +287,101 @@ describe("Neo4jGraphRepository", () => {
     expect(subgraph.snapshot.id).toBe("snapshot:2026-06-14.2");
   });
 
+  it("falls back to relation evidenceIds when promoted relations are visible but SUPPORTED_BY edges are missing", async () => {
+    const queries: string[] = [];
+    let callCount = 0;
+
+    const session = {
+      async run(query: string) {
+        queries.push(query);
+        callCount += 1;
+
+        if (callCount === 1) {
+          return { records: [] };
+        }
+
+        return {
+          records: [
+            new FakeRecord({
+              e: {
+                properties: {
+                  id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
+                  sourceType: "10k",
+                  title: "Tesla Annual Report",
+                  publisher: "Tesla",
+                  url: "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/tsla-20251231.htm",
+                  publishedAt: "2026-02-11",
+                  publishedAtResolution: "day",
+                  retrievedAt: "2026-06-15T23:59:00Z",
+                  excerpt: "Currently, we rely on suppliers such as Panasonic and CATL for these cells.",
+                  pageRef: "not_provided",
+                  language: "zh-CN",
+                  hash: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
+                  sourceDomain: "www.sec.gov",
+                  citationText: "Tesla 10-K confirms Panasonic remains a core cell supplier.",
+                  reliabilityTier: 2,
+                  licenseNote: "Store excerpt only; do not reproduce long passages.",
+                  parserVersion: "manual-normalization-v3",
+                },
+              },
+            }),
+            new FakeRecord({
+              e: {
+                properties: {
+                  id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
+                  sourceType: "official_press_release",
+                  title: "Panasonic Energy begins mass production at new automotive lithium-ion battery factory in Kansas",
+                  publisher: "Panasonic Energy",
+                  url: "https://na.panasonic.com/news/panasonic-energy-begins-mass-production-at-new-automotive-lithium-ion-battery-factory-in-kansas-aiming-for-annual-capacity-of-32-gwh-to-accelerate-us-local-production",
+                  publishedAt: "2025-07-14",
+                  publishedAtResolution: "day",
+                  retrievedAt: "2026-06-15T23:59:00Z",
+                  excerpt:
+                    "Panasonic Energy has also begun mass production of 2170 cells at the second North American facility, the Kansas Factory.",
+                  pageRef: "not_provided",
+                  language: "zh-CN",
+                  hash: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
+                  sourceDomain: "na.panasonic.com",
+                  citationText: "Panasonic official Kansas 2170 mass-production disclosure.",
+                  reliabilityTier: 1,
+                  licenseNote: "Store excerpt only; do not reproduce long passages.",
+                  parserVersion: "manual-normalization-v3",
+                },
+              },
+            }),
+          ],
+        };
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const evidence = await repository.getRelationEvidence(
+      "rel:tesla:panasonic-energy-kansas-factory:manufacturing:battery-cell-manufacturing-2170-us-capacity-expansion",
+    );
+
+    expect(queries).toHaveLength(2);
+    expect(queries[0]).toContain("MATCH (:SupplyRelation {id: $relationId})-[:SUPPORTED_BY]->(e:Evidence)");
+    expect(queries[1]).toContain("coalesce(rel.evidenceIds, [])");
+    expect(queries[1]).toContain("rel.primaryEvidenceId IS NOT NULL");
+    expect(evidence).toMatchObject([
+      {
+        id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:2",
+        sourceType: "10k",
+      },
+      {
+        id: "evidence:tesla:panasonic-energy-kansas-factory:battery-cell-manufacturing-2170-us-capacity-expansion:1",
+        sourceType: "official_press_release",
+      },
+    ]);
+  });
+
   it("prefers the latest relation snapshot fallback over the first relation when snapshot rows are absent", async () => {
     const records = [
       new FakeRecord({
