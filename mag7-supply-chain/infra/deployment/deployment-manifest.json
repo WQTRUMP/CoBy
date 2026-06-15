@@ -26,7 +26,7 @@
       "Meta": 0,
       "Tesla": 0
     },
-    "superseded_chain_policy": "任何 superseded 链或 full.18 口径都不能作为当前正式部署、验收或对外说明依据。"
+    "superseded_chain_policy": "任何 superseded 链或 full.18 口径都不能作为当前正式部署、验收或对外说明依据；20217319、5637c196、3a28e46f、6bf44b53、6277d4df 旧链仅保留审计用途。"
   },
   "runtime": {
     "frontend": {
