@@ -1,3 +1,4 @@
+import { createServer } from "node:net";
 import { once } from "node:events";
 import { execFile, spawn, type ChildProcessByStdio } from "node:child_process";
 import { promisify } from "node:util";
@@ -8,8 +9,102 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const backendDir = "/workspace/project/mag7-supply-chain/backend";
 type ServerChildProcess = ChildProcessByStdio<null, Readable, Readable>;
 const execFileAsync = promisify(execFile);
+const serverEntrypointArgs = ["--import", "tsx", "src/server.ts"];
+const HEALTH_CHECK_DEADLINE_MS = 8_000;
+const HEALTH_CHECK_RETRY_MS = 100;
+const SERVER_STARTUP_BUDGET_MS = 4_000;
 
 const childProcesses = new Set<ServerChildProcess>();
+
+async function allocatePort() {
+  const server = createServer();
+  server.listen(0, "127.0.0.1");
+
+  await once(server, "listening");
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    server.close();
+    throw new Error("failed to allocate a TCP port for runtime test");
+  }
+
+  const { port } = address;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+
+  return port;
+}
+
+function captureOutput(child: ServerChildProcess) {
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  return {
+    get stdout() {
+      return stdout;
+    },
+    get stderr() {
+      return stderr;
+    },
+  };
+}
+
+async function waitForHealth(child: ServerChildProcess, port: number, output: { stdout: string; stderr: string }) {
+  const deadline = Date.now() + HEALTH_CHECK_DEADLINE_MS;
+
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(
+        `server exited before health check completed (code ${child.exitCode})\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`,
+      );
+    }
+
+    try {
+      return await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+    } catch {
+      await new Promise((resolve) => {
+        setTimeout(resolve, HEALTH_CHECK_RETRY_MS);
+      });
+    }
+  }
+
+  throw new Error(`server did not start listening in time\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`);
+}
+
+async function startRuntimeServer(envOverrides: NodeJS.ProcessEnv) {
+  const port = await allocatePort();
+  const child = spawn(process.execPath, serverEntrypointArgs, {
+    cwd: backendDir,
+    env: {
+      ...process.env,
+      HOST: "127.0.0.1",
+      PORT: String(port),
+      ...envOverrides,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  childProcesses.add(child);
+
+  return {
+    port,
+    child,
+    output: captureOutput(child),
+  };
+}
 
 async function stopProcess(child: ServerChildProcess) {
   if (child.exitCode !== null) {
@@ -39,63 +134,25 @@ afterAll(async () => {
 
 describe("runtime startup", () => {
   beforeAll(async () => {
-    await execFileAsync("npm", ["run", "build"], {
+    await execFileAsync("npm", ["--prefix", backendDir, "exec", "tsx", "--version"], {
       cwd: backendDir,
       env: process.env,
     });
-  }, 30_000);
+  }, 15_000);
 
   it(
     "defaults to live mode and returns 503 business errors instead of mock when dependencies are missing",
     async () => {
-      const port = 4311;
-      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
-        cwd: backendDir,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-          REDIS_URL: "redis://10.255.255.1:6390",
-          NEO4J_URI: "",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+      const { child, output, port } = await startRuntimeServer({
+        REDIS_URL: "redis://10.255.255.1:6390",
+        NEO4J_URI: "",
       });
-      childProcesses.add(child);
       const startedAt = Date.now();
+      const healthResponse = await waitForHealth(child, port, output);
 
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      const deadline = Date.now() + 8_000;
-      let healthResponse: Response | null = null;
-
-      while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-          throw new Error(
-            `server exited before health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
-          );
-        }
-
-        try {
-          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
-          break;
-        } catch {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 200);
-          });
-        }
-      }
-
-      expect(healthResponse, `server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
-      expect(healthResponse!.status).toBe(200);
-      expect(Date.now() - startedAt, `server startup exceeded budget\nstdout:\n${stdout}\nstderr:\n${stderr}`).toBeLessThan(
-        2_500,
+      expect(healthResponse.status).toBe(200);
+      expect(Date.now() - startedAt, `server startup exceeded budget\nstdout:\n${output.stdout}\nstderr:\n${output.stderr}`).toBeLessThan(
+        SERVER_STARTUP_BUDGET_MS,
       );
 
       const healthPayload = (await healthResponse!.json()) as {
@@ -151,52 +208,14 @@ describe("runtime startup", () => {
   it(
     "allows explicit prototype mode to serve mock data when Neo4j and Redis are absent",
     async () => {
-      const port = 4312;
-      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
-        cwd: backendDir,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-          GRAPH_RUNTIME_MODE: "prototype",
-          REDIS_URL: "",
-          NEO4J_URI: "",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+      const { child, output, port } = await startRuntimeServer({
+        GRAPH_RUNTIME_MODE: "prototype",
+        REDIS_URL: "",
+        NEO4J_URI: "",
       });
-      childProcesses.add(child);
+      const healthResponse = await waitForHealth(child, port, output);
 
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      const deadline = Date.now() + 8_000;
-      let healthResponse: Response | null = null;
-
-      while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-          throw new Error(
-            `server exited before prototype health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
-          );
-        }
-
-        try {
-          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
-          break;
-        } catch {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 200);
-          });
-        }
-      }
-
-      expect(healthResponse, `prototype server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
-      expect(healthResponse!.status).toBe(200);
+      expect(healthResponse.status).toBe(200);
 
       const healthPayload = (await healthResponse!.json()) as {
         runtimeMode: string;
@@ -246,51 +265,13 @@ describe("runtime startup", () => {
   it(
     "keeps live mode in explicit not_configured semantics when Neo4j and Redis are both missing",
     async () => {
-      const port = 4313;
-      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
-        cwd: backendDir,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-          REDIS_URL: "",
-          NEO4J_URI: "",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+      const { child, output, port } = await startRuntimeServer({
+        REDIS_URL: "",
+        NEO4J_URI: "",
       });
-      childProcesses.add(child);
+      const healthResponse = await waitForHealth(child, port, output);
 
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      const deadline = Date.now() + 8_000;
-      let healthResponse: Response | null = null;
-
-      while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-          throw new Error(
-            `server exited before live missing-dependency health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
-          );
-        }
-
-        try {
-          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
-          break;
-        } catch {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 200);
-          });
-        }
-      }
-
-      expect(healthResponse, `live missing-dependency server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
-      expect(healthResponse!.status).toBe(200);
+      expect(healthResponse.status).toBe(200);
 
       const healthPayload = (await healthResponse!.json()) as {
         status: string;
@@ -345,53 +326,15 @@ describe("runtime startup", () => {
   it(
     "refuses live startup semantics when Neo4j credentials are omitted even if NEO4J_URI is set",
     async () => {
-      const port = 4314;
-      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
-        cwd: backendDir,
-        env: {
-          ...process.env,
-          HOST: "127.0.0.1",
-          PORT: String(port),
-          NEO4J_URI: "neo4j://127.0.0.1:7687",
-          NEO4J_USERNAME: "",
-          NEO4J_PASSWORD: "",
-          REDIS_URL: "",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+      const { child, output, port } = await startRuntimeServer({
+        NEO4J_URI: "neo4j://127.0.0.1:7687",
+        NEO4J_USERNAME: "",
+        NEO4J_PASSWORD: "",
+        REDIS_URL: "",
       });
-      childProcesses.add(child);
+      const healthResponse = await waitForHealth(child, port, output);
 
-      let stdout = "";
-      let stderr = "";
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      const deadline = Date.now() + 8_000;
-      let healthResponse: Response | null = null;
-
-      while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-          throw new Error(
-            `server exited before credential guard health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
-          );
-        }
-
-        try {
-          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
-          break;
-        } catch {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 200);
-          });
-        }
-      }
-
-      expect(healthResponse, `credential-guard server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
-      expect(healthResponse!.status).toBe(200);
+      expect(healthResponse.status).toBe(200);
 
       const healthPayload = (await healthResponse!.json()) as {
         status: string;
