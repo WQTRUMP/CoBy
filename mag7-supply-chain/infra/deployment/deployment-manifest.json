@@ -1,72 +1,50 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-15T00:32:00Z",
+  "generated_at": "2026-06-15T23:15:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
     "display_name": "Mag7 供应链交互式探索平台",
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
-    "readiness": "prototype_passed_real_data_launch_blocked",
-    "summary": "prototype 口径已通过，但仅覆盖显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路。默认运行态已统一为 `GRAPH_RUNTIME_MODE=live`；缺少 Neo4j/Redis 时，`/api/v1/health` 只暴露 live 失败语义，业务接口与导入入口返回结构化 `503 dependency_unavailable`，不再静默回退 mock。real_data_launch 仍不通过，唯一核心原因是缺少 live Neo4j/Redis 真实导入与运行时 HTTP 闭环验收。"
+    "readiness": "prototype_passed_real_data_launch_ready_for_human_decision",
+    "summary": "唯一正式结论源已更新为 full.19 真实 live 终审 v3。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；published 视图固定为 327 relations / 435 evidence，all-candidates 固定为 350 relations / 476 evidence，candidate-only 差额 23 / 41 继续成立。source=neo4j 的真实导入与同一套 live 运行时下的 HTTP 回读已经成立，因此 real_data_launch 不再因 full.19 live 运行时闭环缺失而 blocked；后续仅待 human/控制面完成 Cloudflare 与付费资源部署决策。"
   },
   "authoritative_supply_chain_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "formal_chain": {
-      "promotion_basis_task": "7b0963ea-af31-47ca-ac7e-e63f74054e4d",
-      "formal_review_task": "fd7161a9-9ede-4f24-a7ab-af9a3dd5a632",
-      "devops_refresh_task": "fb8bc7b2-4f87-41a2-a9a9-439e2254a9e1",
-      "expression": "7b0963ea -> fd7161a9 -> fb8bc7b2"
-    },
+    "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
     "counts": {
       "published": {
-        "relations": 312,
-        "evidence": 410
+        "relations": 327,
+        "evidence": 435
       },
       "all_candidates": {
-        "relations": 328,
-        "evidence": 439
+        "relations": 350,
+        "evidence": 476
+      },
+      "candidate_only_delta": {
+        "relations": 23,
+        "evidence": 41
       }
     },
-    "coverage_summary": {
-      "strict_formal_net_new_by_company": {
-        "Microsoft": 9,
-        "NVIDIA": 12,
-        "Amazon": 3
-      },
-      "split_supersede_by_company": {
-        "Amazon": 8
-      },
-      "candidate_only_by_company": {
-        "Microsoft": 7,
-        "NVIDIA": 3,
-        "Amazon": 6
-      }
+    "boundary_summary": {
+      "published_view": "327/435 已在 source=neo4j 的真实 live 图中完成导入与 HTTP 回读。",
+      "candidate_only_boundary": "350/476 仍是 all-candidates / contracts 边界，不得表述成已进入 published live 图。",
+      "authoritative_snapshot_rule": "外层 live 图可出现 snapshot:2026-06-15.full.19-candidate 壳层，但正样本关系仍锚定 snapshot:2026-06-15.full.18，不得把 authoritative snapshot 前移到 full.19。"
     },
-    "final_input_policy": {
-      "authoritative_input_directories": [
-        "/workspace/agents/api-tester-2/output/full18-root-promotion-refresh/",
-        "/workspace/agents/code-reviewer-6/output/full18-root-promotion-formal-review-v3/"
+    "input_policy": {
+      "formal_conclusion_source_only": true,
+      "allowed_formal_source": [
+        "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
       ],
-      "excluded_tasks": [
-        "770fdf5c-ede6-40bb-a6f8-17bc28d90448",
-        "1fcbf8ac-8a1e-434b-9ac5-60f86374f83c",
-        "c1be4b86-a800-4d45-977e-86ddca5fc378",
-        "69ab6247-3cc2-4c8a-b2b7-45294225be1b",
-        "e14b3746-88f1-4c2c-921c-0e88e63db23c"
-      ],
-      "derived_runtime_inputs": [
-        "/workspace/agents/devops/output/full18-launch-doc-refresh-v4/mag7-products-candidate-v4.json"
-      ],
-      "notes": "api-tester-2 与 code-reviewer-6 的上述两个目录是 final full.18 唯一 authoritative inputs。其余文件只允许作为派生输出或运行时上下文，不得替代正式链。"
+      "notes": "本 manifest 的数据 readiness、published/all-candidates 边界、real_data_launch 阻塞状态只接受上述正式复审 v3 作为最终结论源。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
     }
   },
   "runtime": {
     "frontend": {
       "type": "static_site",
       "framework": "React 19 + Vite 6",
-      "node_version": "v22.22.3",
       "validated_node_version": "v22.22.3",
       "source_entrypoint": "src/main.tsx",
       "build_command": "npm run build",
@@ -76,7 +54,6 @@
     "backend": {
       "type": "node_rest_api",
       "framework": "Fastify 5 + TypeScript",
-      "node_version": "v22.22.3",
       "validated_node_version": "v22.22.3",
       "source_entrypoint": "backend/src/server.ts",
       "build_output_entrypoint": "backend/dist/backend/src/server.js",
@@ -92,7 +69,7 @@
       "name": "web",
       "display_name": "Mag7 Atlas Web",
       "kind": "static_site",
-      "status": "prototype_verified",
+      "status": "prototype_verified_ready_for_deployment_handoff",
       "source_root": "/workspace/project/mag7-supply-chain",
       "source_entrypoint": "src/main.tsx",
       "build_command": "npm run build",
@@ -103,19 +80,17 @@
         "Cloudflare Pages",
         "Vercel"
       ],
-      "integration_mode": "`src/App.tsx` 通过 `createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? \"\")` 请求 `/api/v1`；未设置时默认依赖同源 `/api` 代理。",
-      "prototype_deployable": true,
-      "real_data_ready": false,
-      "real_data_prerequisites": [
-        "为静态站点配置同源 `/api` 代理，或提供可达的独立 API 域名并同步 `VITE_GRAPH_API_BASE_URL`。",
-        "保持前端部署文档与根 `.env.example` 使用 `VITE_GRAPH_API_BASE_URL` 当前命名。"
+      "integration_mode": "src/App.tsx 通过 createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_API_BASE_URL ?? \"\") 访问 /api/v1；若未设置 VITE_GRAPH_API_BASE_URL，则依赖同源 /api 代理。",
+      "deployment_notes": [
+        "静态站点可单独部署，但要展示真实图数据必须连通 live API。",
+        "若前后端分域部署，前端必须设置 VITE_GRAPH_API_BASE_URL，后端必须同步 CORS_ORIGIN。"
       ]
     },
     {
       "name": "api",
       "display_name": "Mag7 Atlas API",
       "kind": "node_rest_api",
-      "status": "prototype_verified_live_dependency_guards_verified",
+      "status": "live_verified_ready_for_human_decision",
       "source_root": "/workspace/project/mag7-supply-chain/backend",
       "source_entrypoint": "backend/src/server.ts",
       "entrypoint": "backend/dist/backend/src/server.js",
@@ -134,60 +109,39 @@
       ],
       "operating_modes": [
         {
-          "name": "default_live_missing_dependencies_mode",
-          "enabled_when": "GRAPH_RUNTIME_MODE=live 且 NEO4J_URI 或 REDIS_URL 缺失",
-          "health_status": "degraded",
-          "serves_requests": false,
-          "serves_health_checks": true,
-          "observed_in_verification": true,
-          "observed_business_response": "结构化 503 dependency_unavailable"
-        },
-        {
-          "name": "explicit_prototype_mock_mode",
-          "enabled_when": "显式 GRAPH_RUNTIME_MODE=prototype，且未接入 live Neo4j/Redis",
-          "health_status": "degraded",
-          "serves_requests": true,
-          "observed_in_verification": true
-        },
-        {
-          "name": "neo4j_dependency_fault_mode",
-          "enabled_when": "GRAPH_RUNTIME_MODE=live 且 NEO4J_URI 已配置但 Neo4j 不可达",
-          "health_status": "degraded",
-          "serves_requests": false,
-          "serves_health_checks": true,
-          "observed_in_verification": true,
-          "observed_business_response": "结构化 503 dependency_unavailable"
-        },
-        {
-          "name": "redis_dependency_fault_mode",
-          "enabled_when": "GRAPH_RUNTIME_MODE=live 且 Neo4j 可达，但 REDIS_URL 缺失或 Redis 不可达",
-          "health_status": "degraded",
-          "serves_requests": false,
-          "serves_health_checks": true,
-          "observed_in_verification": true,
-          "observed_business_response": "结构化 503 dependency_unavailable；`/api/v1/health` 仅暴露 live 依赖失败语义，不代表业务接口仍可成功服务。"
-        },
-        {
-          "name": "full_graph_mode",
-          "enabled_when": "NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL 已配置且依赖可达",
+          "name": "default_live_mode",
+          "enabled_when": "GRAPH_RUNTIME_MODE=live 且 Neo4j/Redis 已配置可达",
           "health_status": "ok",
           "serves_requests": true,
-          "observed_in_verification": false
+          "observed_in_formal_verification": true
+        },
+        {
+          "name": "explicit_prototype_mode",
+          "enabled_when": "显式 GRAPH_RUNTIME_MODE=prototype",
+          "health_status": "degraded",
+          "serves_requests": true,
+          "observed_in_formal_verification": true
+        },
+        {
+          "name": "dependency_fault_mode",
+          "enabled_when": "GRAPH_RUNTIME_MODE=live 且 Neo4j 或 Redis 缺失/不可达",
+          "health_status": "degraded",
+          "serves_requests": false,
+          "observed_in_formal_verification": true,
+          "observed_business_response": "结构化 503 dependency_unavailable"
         }
       ],
-      "prototype_deployable": true,
-      "real_data_ready": false,
-      "real_data_prerequisites": [
-        "提供可连通的 Neo4j 5.x 与 Redis 7.x 正式绑定。",
-        "在真实依赖已配置的运行态重新执行 `npm run import:normalized`，确认导入不是 `source: mock`。",
-        "完成 `GET /api/v1/health`、detail、overview、search、suggest、subgraph、path、stats、evidence 的 live Neo4j/Redis 验收。"
+      "live_verification_summary": [
+        "source=neo4j 的真实导入摘要为 327 relations / 435 evidence。",
+        "同一套 live 运行时下，health/detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 均已完成 HTTP 回读。",
+        "candidate-only relation 的 live evidence 读取继续返回 404，证明 350/476 仍停留在 contracts/all-candidates 边界。"
       ]
     },
     {
       "name": "neo4j",
       "display_name": "Neo4j 图数据库",
       "kind": "graph_database",
-      "status": "required_for_real_data_launch",
+      "status": "verified_required_for_real_data_launch",
       "runtime": "neo4j:5.26",
       "provisioning": "stateful_managed_or_self_hosted",
       "local_dev_compose_service": "neo4j",
@@ -200,7 +154,7 @@
       "name": "redis",
       "display_name": "Redis 缓存",
       "kind": "cache",
-      "status": "required_for_real_data_launch",
+      "status": "verified_required_for_real_data_launch",
       "runtime": "redis:7.4-alpine",
       "provisioning": "stateful_managed_or_self_hosted",
       "local_dev_compose_service": "redis",
@@ -220,7 +174,7 @@
         9000,
         9001
       ],
-      "notes": "当前 prototype 运行链路未直接依赖对象存储；正式证据归档与数据导出仍需该类资源。"
+      "notes": "当前正式 live 闭环结论不依赖 MinIO 成功与否，但证据归档与后续导出仍建议保留对象存储能力。"
     }
   ],
   "env_bindings": {
@@ -230,8 +184,7 @@
         "VITE_GRAPH_API_BASE_URL"
       ],
       "optional": [],
-      "documented_but_stale": [],
-      "current_behavior": "代码只读取 `VITE_GRAPH_API_BASE_URL`；若未设置，则浏览器请求同源 `/api/v1/*`。仓库文档与根 `.env.example` 已同步为当前命名。"
+      "current_behavior": "前端代码只读取 VITE_GRAPH_API_BASE_URL；若未设置，则浏览器请求同源 /api/v1/*。"
     },
     "api": {
       "required_for_live_mode": [
@@ -246,24 +199,20 @@
         "HOST",
         "CORS_ORIGIN"
       ],
-      "observed_missing_in_local_verification": [
-        "NEO4J_URI",
-        "REDIS_URL"
-      ],
-      "current_behavior": "默认 `GRAPH_RUNTIME_MODE=live`。缺少 `NEO4J_URI` 或 `REDIS_URL` 时，`/api/v1/health` 返回 `200 degraded` 并暴露 live 依赖失败语义，业务接口与 `POST /api/v1/imports/normalized-package` 返回结构化 `503 dependency_unavailable`。只有显式 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `repositoryMode=mock`。"
+      "current_behavior": "默认 GRAPH_RUNTIME_MODE=live。只有显式 GRAPH_RUNTIME_MODE=prototype 时才允许 mock；live 模式缺依赖时，health 返回 200 degraded，业务/导入接口返回 503 dependency_unavailable。"
     }
   },
   "domains": {
-    "strategy": "前端与后端建议拆分 origin 并由 Cloudflare 管理 DNS/证书；若前端继续使用相对路径 `/api/v1`，则必须提供同源反向代理。",
+    "strategy": "前端与后端建议拆分 origin 并由 Cloudflare 管理 DNS/证书；若前端继续使用相对路径 /api/v1，则必须提供同源反向代理。",
     "web": {
       "production_domain": null,
       "domain_required": true,
-      "assumption": "可部署为根域或 `www` 子域。"
+      "assumption": "可部署为根域或 www 子域。"
     },
     "api": {
       "production_domain": null,
       "domain_required": true,
-      "assumption": "可部署为 `api.<主域>`，或由主站 `/api` 代理到 Node 服务。"
+      "assumption": "可部署为 api.<主域>，或由主站 /api 代理到 Node 服务。"
     }
   },
   "health_check": {
@@ -273,10 +222,7 @@
       "success_criteria": {
         "http_status": 200
       },
-      "observed_local_verification": {
-        "url": "http://127.0.0.1:4174/",
-        "http_status": 200
-      }
+      "local_example_url": "http://127.0.0.1:4174/"
     },
     "api": {
       "method": "GET",
@@ -288,70 +234,33 @@
           "degraded"
         ]
       },
-      "observed_local_verification": {
-        "default_live_missing_dependencies": {
-          "url": "http://127.0.0.1:4400/api/v1/health",
+      "observed_live_verification": {
+        "backend_url": "http://127.0.0.1:4403",
+        "health": {
+          "path": "/api/v1/health",
           "http_status": 200,
-          "body_status": "degraded",
+          "body_status": "ok",
           "runtimeMode": "live",
           "repositoryMode": "neo4j",
-          "mockGraphBoundary": false,
-          "dependencies": {
-            "neo4j": "not_configured",
-            "redis": "not_configured"
-          },
-          "business_endpoint": {
-            "path": "/api/v1/companies?isMag7=true&page=1&pageSize=2",
-            "http_status": 503,
-            "error": "dependency_unavailable",
-            "dependency": "neo4j",
-            "detail_contains": "GRAPH_RUNTIME_MODE=live"
-          }
-        },
-        "neo4j_unreachable_live_mode": {
-          "url": "http://127.0.0.1:4324/api/v1/health",
-          "http_status": 200,
-          "body_status": "degraded",
-          "runtimeMode": "live",
-          "repositoryMode": "neo4j",
-          "mockGraphBoundary": false,
-          "dependencies": {
-            "neo4j": "down",
-            "redis": "not_configured"
-          },
-          "business_endpoint": {
-            "path": "/api/v1/companies/search?q=amazon&limit=5",
-            "http_status": 503,
-            "error": "dependency_unavailable"
-          }
-        },
-        "redis_required_live_contract": {
-          "verification_type": "backend_test_contract",
-          "evidence": "backend/test/app.test.ts:454-530 与 backend/README.md",
-          "http_status": 200,
-          "body_status": "degraded",
-          "runtimeMode": "live",
-          "repositoryMode": "neo4j",
-          "mockGraphBoundary": false,
           "dependencies": {
             "neo4j": "up",
-            "redis": "down"
-          },
-          "business_endpoint": {
-            "path": "/api/v1/companies/search?q=apple&limit=5",
-            "http_status": 503,
-            "error": "dependency_unavailable",
-            "dependency": "redis",
-            "detail_contains": "cache disabled"
-          },
-          "import_endpoint": {
-            "path": "/api/v1/imports/normalized-package",
-            "http_status": 503,
-            "error": "dependency_unavailable",
-            "dependency": "redis"
-          },
-          "observation": "旧的本地 mock 200 样本已移除；当前 Redis live 失败语义以 backend 测试合同为准，要求 health 暴露 degraded，业务与导入接口返回 503 dependency_unavailable。"
-        }
+            "redis": "up"
+          }
+        },
+        "business_endpoints_passed": [
+          "GET /api/v1/companies/company:AAPL",
+          "GET /api/v1/companies/company:AAPL/overview",
+          "GET /api/v1/companies/search?q=amazon&limit=5",
+          "GET /api/v1/companies/suggest?q=tes&limit=5",
+          "GET /api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true",
+          "GET /api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true",
+          "GET /api/v1/stats?snapshot=published&companyId=company:AAPL",
+          "GET /api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
+        ],
+        "negative_boundary_checks": [
+          "candidate-only relation evidence -> 404 relation_evidence_not_found",
+          "company:DOES_NOT_EXIST -> 404 company_not_found"
+        ]
       }
     }
   },
@@ -360,12 +269,8 @@
     "deployment_runner_only": true,
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
-    "summary": "prototype 可单独申请部署审批，但仅限显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路。默认 `GRAPH_RUNTIME_MODE=live` 的 API 只要缺少 Neo4j/Redis，就必须暴露 degraded/503 失败语义；涉及正式域名、Cloudflare 路由、Neo4j、Redis、对象存储的真实上线必须等待 live Neo4j/Redis 真实导入与运行时 HTTP 闭环验收。artifact 成功入库后，应向 human 发送仅限 prototype 的部署决策请求，并明确 real_data_launch 仍不通过。",
-    "reasons": [
-      "真实数据上线依赖 Neo4j 与 Redis 等有状态资源。",
-      "Cloudflare 域名、DNS、反向代理与证书变更会影响外部流量。",
-      "对象存储与导入流程会承载证据与图谱数据。"
-    ]
+    "real_data_launch_allowed_after_approval": true,
+    "summary": "source=neo4j 的真实 live 导入与 HTTP 回读已经成立，因此 real_data_launch 的技术阻塞已解除；但 Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
   },
   "deployment_tiers": {
     "prototype": {
@@ -373,70 +278,68 @@
       "readiness": "passed",
       "scope": [
         "静态前端站点",
-        "显式 GRAPH_RUNTIME_MODE=prototype 的 backend 原型链路"
-      ],
-      "evidence": [
-        "前端 `npm run build` 通过。",
-        "前端 `npm run test:contracts` 通过（9/9）。",
-        "后端 `npm run build` 通过。",
-        "后端 `npm test` 当前复核通过（5 files / 23 tests passed，2026-06-14 17:01 UTC）。",
-        "显式 `GRAPH_RUNTIME_MODE=prototype` 时，`GET /api/v1/health` 返回 200 degraded，且 `repositoryMode=mock`。"
-      ],
-      "limitations": [
-        "未配置 `VITE_GRAPH_API_BASE_URL` 且无同源代理时，前端只能访问同源 `/api/v1`。",
-        "默认 `GRAPH_RUNTIME_MODE=live` 缺依赖时的 `degraded`/`503` 仅证明 guardrail 正确，不代表 prototype 或真实图数据库已接通。"
+        "显式 GRAPH_RUNTIME_MODE=prototype 的原型 API"
       ]
     },
     "real_data_launch": {
-      "allowed": false,
-      "readiness": "failed",
-      "blocking_conditions": [
-        "当前环境没有完成 live Neo4j/Redis 导入与运行时闭环；默认 `GRAPH_RUNTIME_MODE=live` 下执行 `npm run import:normalized` 会直接失败为 `503 dependency_unavailable`，而不是回退 `source: mock`。",
-        "虽已验证默认 live 缺依赖时 `/api/v1/health` 为 degraded，且业务/导入接口返回结构化 `503 dependency_unavailable`，但这些失败语义只证明 guardrail 正确，不构成 live 图数据库导入与查询验收通过。",
-        "全量包 in-memory real-shape 测试与显式 prototype/mock 运行态不能表述成真实 Neo4j+Redis 验收。"
+      "allowed": true,
+      "readiness": "ready_for_human_decision",
+      "evidence": [
+        "full19-live-runtime-unblock-report.md：真实导入 source=neo4j，relationCount=327，evidenceCount=435。",
+        "full19-live-e2e-verify-v2-report.md：health/detail/overview/search/suggest/subgraph/path/stats/evidence 均完成 live HTTP 回读。",
+        "full19-live-e2e-formal-review-v3-report.md：正式裁定 real_data_launch 不再因 full.19 live 运行时闭环而继续 blocked。"
+      ],
+      "remaining_gates": [
+        "human 连接 Cloudflare 并在 Wanman 批准部署",
+        "按最终域名/代理方案填写 Cloudflare account/zone/project/routing 字段",
+        "批准后再由受信部署流程执行外部流量与有状态资源变更"
       ]
     }
   },
   "verification": {
     "date": "2026-06-15",
-    "commands": [
-      "cd /workspace/project/mag7-supply-chain && npm run test:contracts",
-      "cd /workspace/project/mag7-supply-chain/backend && npm run build",
-      "cd /workspace/project/mag7-supply-chain/backend && npm test",
-      "cd /workspace/project/mag7-supply-chain/backend && PORT=4400 HOST=127.0.0.1 npm start",
-      "curl -s http://127.0.0.1:4400/api/v1/health",
-      "curl -s -o /tmp/mag7-default-live-companies.json -w '%{http_code}' 'http://127.0.0.1:4400/api/v1/companies?isMag7=true&page=1&pageSize=2'",
-      "cd /workspace/project/mag7-supply-chain/backend && npm run import:normalized -- --relations /workspace/agents/evidence-collector/output/mag7-full-package/relations.jsonl --evidence /workspace/agents/evidence-collector/output/mag7-full-package/evidence.jsonl",
-      "cd /workspace/project/mag7-supply-chain/backend && PORT=4324 HOST=127.0.0.1 NEO4J_URI=bolt://127.0.0.1:7687 NEO4J_USERNAME=neo4j NEO4J_PASSWORD=test NEO4J_DATABASE=neo4j npm start",
-      "curl -s -i 'http://127.0.0.1:4324/api/v1/companies/search?q=amazon&limit=5'",
-      "curl -s http://127.0.0.1:4324/api/v1/health",
-      "sed -n '454,530p' /workspace/project/mag7-supply-chain/backend/test/app.test.ts"
+    "workspace_evidence": [
+      "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+      "/workspace/agents/devops/output/full19-live-runtime-unblock/full19-live-runtime-unblock-report.md",
+      "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-report.md",
+      "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-diff-matrix.md"
     ],
-    "results": {
-      "validated_node_version": "v22.22.3",
-      "frontend_contract_tests": "passed: 9/9",
-      "backend_build": "ok",
-      "backend_tests": "6 files / 24 tests passed",
-      "api_health": "200 degraded live repositoryMode=neo4j (neo4j=not_configured, redis=not_configured)",
-      "default_live_business_contract": "503 dependency_unavailable (dependency=neo4j)",
-      "import_normalized": "failed: 503 dependency_unavailable (dependency=neo4j, detail contains GRAPH_RUNTIME_MODE=live)",
-      "invalid_parameter_contract": "400 bad_request",
-      "neo4j_unreachable_business_contract": "503 dependency_unavailable",
-      "redis_live_business_contract": "backend/test/app.test.ts 已验证：health=200 degraded 仅暴露 live 依赖失败，companies/import 返回 503 dependency_unavailable (dependency=redis)"
-    }
+    "current_repo_runtime_facts": [
+      "/workspace/project/mag7-supply-chain/package.json",
+      "/workspace/project/mag7-supply-chain/backend/package.json",
+      "/workspace/project/mag7-supply-chain/backend/src/server.ts",
+      "/workspace/project/mag7-supply-chain/src/main.tsx",
+      "/workspace/project/mag7-supply-chain/src/App.tsx"
+    ]
   },
   "sources": [
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/code-reviewer/output/mag7-final-approval-report.md"
+      "path": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/devops/output/mag7-live-neo4j-redis-blocker-report.md"
+      "path": "/workspace/agents/devops/output/full19-live-runtime-unblock/full19-live-runtime-unblock-report.md"
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/dev/output/api-validation-fix-report.md"
+      "path": "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-report.md"
+    },
+    {
+      "type": "workspace_file",
+      "path": "/workspace/agents/api-tester-2/output/full19-live-e2e-verify-v2/full19-live-e2e-verify-v2-diff-matrix.md"
+    },
+    {
+      "type": "workspace_file",
+      "path": "/workspace/project/mag7-supply-chain/package.json"
+    },
+    {
+      "type": "workspace_file",
+      "path": "/workspace/project/mag7-supply-chain/backend/package.json"
+    },
+    {
+      "type": "workspace_file",
+      "path": "/workspace/project/mag7-supply-chain/backend/src/server.ts"
     },
     {
       "type": "workspace_file",
@@ -445,38 +348,6 @@
     {
       "type": "workspace_file",
       "path": "/workspace/project/mag7-supply-chain/src/App.tsx"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/.env.example"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/src/app.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/src/lib/neo4j.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/src/lib/redis.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/test/app.test.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/backend/test/server.runtime.test.ts"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-runbook.md"
-    },
-    {
-      "type": "workspace_file",
-      "path": "/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-commands.sh"
     }
   ]
 }

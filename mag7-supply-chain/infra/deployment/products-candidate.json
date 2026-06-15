@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-06-15T23:15:00Z",
+  "generated_by": "devops",
+  "inventory_status": "pending_human_approval",
+  "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+  "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+  "published_counts": {
+    "relations": 327,
+    "evidence": 435
+  },
+  "all_candidates_counts": {
+    "relations": 350,
+    "evidence": 476
+  },
+  "candidate_only_delta": {
+    "relations": 23,
+    "evidence": 41
+  },
+  "products": [
+    {
+      "name": "mag7-supply-chain",
+      "display_name": "Mag7 供应链交互式探索平台",
+      "kind": "interactive_supply_chain_platform",
+      "readiness": "real_data_launch_ready_for_human_decision",
+      "summary": "published 327/435 已在 source=neo4j 的真实 live 运行时下完成导入与 HTTP 回读；350/476 仍保留为 all-candidates / candidate-only 边界。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18，本候选清单仅等待 human 批准后才能进入正式产品库存。",
+      "urls": {
+        "web_health": {
+          "path": "/",
+          "local_example_url": "http://127.0.0.1:4174/",
+          "expected_http_status": 200
+        },
+        "api_health": {
+          "path": "/api/v1/health",
+          "observed_local_url": "http://127.0.0.1:4403/api/v1/health",
+          "expected_http_status": 200,
+          "allowed_body_status": [
+            "ok",
+            "degraded"
+          ]
+        }
+      },
+      "services": {
+        "web": {
+          "status": "prototype_verified_ready_for_deployment_handoff",
+          "runtime": "React 19 + Vite 6",
+          "validated_node_version": "v22.22.3",
+          "build_command": "npm run build",
+          "run_command": "npm run preview -- --host 127.0.0.1 --port 4174"
+        },
+        "api": {
+          "status": "live_verified_ready_for_human_decision",
+          "runtime": "Fastify 5 + TypeScript",
+          "validated_node_version": "v22.22.3",
+          "build_command": "npm run build",
+          "run_command": "npm start",
+          "import_command": "npm run import:normalized -- --relations <relations.jsonl> --evidence <evidence.jsonl>"
+        }
+      },
+      "runtime_constraints": [
+        "默认 GRAPH_RUNTIME_MODE=live；只有显式 GRAPH_RUNTIME_MODE=prototype 时才允许 mock。",
+        "真实数据链路必须同时连通 NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL。",
+        "candidate-only relation 不得被写成已发布 live 数据；其 evidence 读取应继续返回 404 relation_evidence_not_found。"
+      ],
+      "monitoring_scope_after_approval": {
+        "eligible": [
+          "web root health",
+          "api /api/v1/health",
+          "detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 的 live 抽样巡检"
+        ],
+        "still_excluded": [
+          "350/476 all-candidates 的 candidate-only 数据",
+          "未经批准直接写入 /opt/wanman/products.json 前的正式 uptime 承诺"
+        ]
+      },
+      "system_inventory_gate": {
+        "opt_wanman_products_json_state": "empty_array",
+        "required_context_before_approval": "unknown:no_product_inventory",
+        "meaning": "在 human 批准并正式写入系统库存前，本文件仍是候选，不得宣称已经纳入正式 uptime 覆盖。"
+      },
+      "pending_human_inputs": {
+        "cloudflare.account_id": "pending_human_fill",
+        "cloudflare.zone_id": "pending_human_fill",
+        "cloudflare.project_type": "pending_human_fill",
+        "cloudflare.web_project_name": "mag7-supply-chain-web",
+        "cloudflare.api_routing_mode": "pending_human_choice",
+        "cloudflare.ssl_mode": "pending_human_fill",
+        "cloudflare.preview_enabled": "pending_human_fill",
+        "cloudflare.custom_domain_web": "pending_human_fill",
+        "cloudflare.custom_domain_api": "pending_human_fill"
+      }
+    }
+  ]
+}
