@@ -1,7 +1,7 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-16T00:20:00Z",
+  "generated_at": "2026-06-15T13:27:42Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
@@ -21,7 +21,7 @@
     "decision_scope_summary": "仅允许对 published 327 relations / 435 evidence 发起 Cloudflare 连接与正式部署审批。",
     "non_blocking_residual_risks": [
       "backend/test/server.runtime.test.ts 在全量 npm test 下仍有 timeout 抖动",
-      "旧 312/410 与 328/439 计数仅保留在根 manifest/coverage 的 historical_audit_only 元数据段，历史报告若误引仍可能造成口径混淆",
+      "根层四个 JSONL 已 in-place promotion 为正式 payload；旧 312/410 与 328/439 计数仅保留在根 manifest/coverage 的 historical_audit_only 元数据段，历史报告若误引仍可能造成口径混淆",
       "可访问性 v2 尚无 NVDA/VoiceOver/TalkBack 实机签字"
     ]
   },
