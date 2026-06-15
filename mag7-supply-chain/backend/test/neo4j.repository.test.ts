@@ -153,6 +153,8 @@ describe("Neo4jGraphRepository", () => {
     expect(capturedQuery).toContain("snapshot.status = 'published'");
     expect(capturedQuery).toContain("snapshot.id = $snapshot");
     expect(capturedQuery).toContain("OPTIONAL MATCH (rel)-[:SUPPORTED_BY]->(e:Evidence)");
+    expect(capturedQuery).toContain("WITH DISTINCT root, rel");
+    expect(capturedQuery).not.toContain("WITH root, DISTINCT rel");
     expect(subgraph.relations).toHaveLength(1);
     expect(subgraph.relations[0]).toMatchObject({
       id: "rel:apple:tsmc:manufacturing:apple-silicon",
