@@ -582,13 +582,24 @@ let round19PublishedSnapshotId = "snapshot:published";
 let round19PublishedSnapshotVersion = "published";
 let preparedRound19Package: PreparedNormalizedImport;
 
-async function buildSampleAppFromPackage(packageDir: string, manifestPath: string) {
+async function buildSampleAppFromPackage(
+  packageDir: string,
+  manifestPath: string,
+  snapshotSelector: "package" | "authoritative" = "package",
+) {
   const [pkg, manifestRaw] = await Promise.all([
     loadNormalizedImportPackage(`${packageDir}/relations.jsonl`, `${packageDir}/evidence.jsonl`),
     readFile(manifestPath, "utf8"),
   ]);
-  const manifest = JSON.parse(manifestRaw) as { package_snapshot_id?: string };
-  const snapshotId = manifest.package_snapshot_id ?? "snapshot:published";
+  const manifest = JSON.parse(manifestRaw) as {
+    package_snapshot_id?: string;
+    authoritative_snapshot?: string;
+  };
+  const snapshotId =
+    (snapshotSelector === "authoritative" ? manifest.authoritative_snapshot : manifest.package_snapshot_id) ??
+    manifest.authoritative_snapshot ??
+    manifest.package_snapshot_id ??
+    "snapshot:published";
   const snapshotVersion = snapshotId.replace("snapshot:", "").replace(/-/g, ".");
   const prepared = prepareNormalizedImport(pkg);
   const graphRepository = new RealSampleGraphRepository(prepared);
@@ -613,7 +624,7 @@ async function buildSampleAppFromPackage(packageDir: string, manifestPath: strin
 
 beforeAll(async () => {
   const [fullPackageHarness, round19Harness] = await Promise.all([
-    buildSampleAppFromPackage(FULL_PACKAGE_DIR, FULL_PACKAGE_MANIFEST),
+    buildSampleAppFromPackage(FULL_PACKAGE_DIR, FULL_PACKAGE_MANIFEST, "authoritative"),
     buildSampleAppFromPackage(ROUND19_REFRESH_PACKAGE_DIR, ROUND19_REFRESH_MANIFEST),
   ]);
   app = fullPackageHarness.app;
