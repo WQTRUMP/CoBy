@@ -83,6 +83,10 @@ describe("prepareNormalizedImport", () => {
       validTo: null,
       validToResolution: null,
       validityNote: null,
+      skuGranularityDetailValue: "family_only",
+      skuGranularitySource: "authoritative_manifest",
+      skuGranularityRaw: null,
+      skuGranularityIsBackfilled: true,
     });
     expect(prepared.relationEdges[0]).toEqual({
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
@@ -93,6 +97,10 @@ describe("prepareNormalizedImport", () => {
     expect(prepared.evidence[0]).not.toHaveProperty("relationId");
     expect(prepared.evidence[0]).toMatchObject({
       skuGranularity: "family_only",
+      skuGranularityDetailValue: "family_only",
+      skuGranularitySource: "relation_inherited_for_evidence",
+      skuGranularityRaw: null,
+      skuGranularityIsBackfilled: true,
     });
     expect(prepared.evidenceBindings[0]).toEqual({
       relationId: "rel:apple:tsmc:manufacturing:apple-silicon",
@@ -169,6 +177,83 @@ describe("prepareNormalizedImport", () => {
     expect(prepared.evidence).toHaveLength(1);
     expect(prepared.relations[0]?.skuGranularity).toBe("target_sku");
     expect(prepared.evidence[0]?.skuGranularity).toBe("target_sku");
+    expect(prepared.relations[0]).toMatchObject({
+      skuGranularityDetailValue: "target_sku",
+      skuGranularitySource: "authoritative_manifest",
+      skuGranularityNote: "Backfilled from full.15 authoritative manifest mapping.",
+      skuGranularityIsBackfilled: true,
+    });
+    expect(prepared.evidence[0]).toMatchObject({
+      skuGranularityDetailValue: "target_sku",
+      skuGranularitySource: "relation_inherited_for_evidence",
+      skuGranularityRaw: "target_sku_or_official_component",
+      skuGranularityIsBackfilled: true,
+    });
+  });
+
+  it("preserves legacy-only evidence notes as documented compatibility detail without promoting the scalar value", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:amazon:legacy:component_supply:unknown-board",
+          snapshot_id: "snapshot:2026-06-15.full.15",
+          company: "Amazon",
+          company_slug: "amazon",
+          supplier: "Legacy Board Vendor",
+          supplier_slug: "legacy-board-vendor",
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "component_supply",
+          relationship_subtype: "legacy_board",
+          product_scope: ["Unknown board"],
+          evidence_ids: ["evidence:amazon:legacy:1"],
+          primary_evidence_id: "evidence:amazon:legacy:1",
+          evidence_date: "2025-01-01",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Legacy analyst note mentions a target SKU alias.",
+          source_url: "https://example.com/amazon-legacy-board",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.75,
+          source_method: "manual_research",
+          source_count: 1,
+          status: "approved",
+          summary: "Legacy board vendor mention for Amazon hardware.",
+          lineage_key: "Amazon|Legacy Board Vendor|component_supply|Unknown board",
+          source_report_path: "output/amazon-legacy-board.md",
+          last_verified_at: "2026-06-15T00:41:55Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:amazon:legacy:1",
+          relation_id: "rel:amazon:legacy:component_supply:unknown-board",
+          source_type: "media",
+          title: "Legacy board vendor note",
+          publisher: "Example Media",
+          source_url: "https://example.com/amazon-legacy-board",
+          source_domain: "example.com",
+          published_at: "2025-01-01",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T00:41:55Z",
+          excerpt: "Legacy analyst note mentions a target SKU alias.",
+          citation_text: "Legacy analyst note mentions a target SKU alias.",
+          reliability_tier: 2,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/amazon-legacy-board.md",
+          notes: "sku_granularity=target_sku_or_official_component; analyst_note=legacy_only",
+        },
+      ],
+    });
+
+    expect(prepared.evidence[0]).toMatchObject({
+      skuGranularity: "platform_component_sku",
+      skuGranularityDetailValue: "documented_legacy_only",
+      skuGranularitySource: "legacy_note_backfill",
+      skuGranularityRaw: "target_sku_or_official_component",
+      skuGranularityNote:
+        "Legacy note preserved for compatibility only; not promoted to an authoritative SKU granularity fact.",
+      skuGranularityIsBackfilled: true,
+    });
   });
 
   it("maps v3 entity refs and legacy month-normalized inputs without defaulting evidenceDate onto validFrom", () => {

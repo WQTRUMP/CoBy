@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 
 import {
+  skuGranularityDetailSchema,
   skuGranularitySchema,
   standardizedImportEvidenceRecordSchema,
   standardizedImportPackageSchema,
@@ -11,6 +12,8 @@ import {
   type EntityAliasRecord,
   type EntityProfile,
   type SkuGranularity,
+  type SkuGranularityDetail,
+  type SkuGranularitySource,
   type StandardizedImportEvidenceRecord,
   type ImportEntityRef,
   type StandardizedImportRelationRecord,
@@ -56,6 +59,11 @@ export interface ImportRelationNode {
   id: string;
   relationshipType: StandardizedImportRelationRecord["relationship_type"];
   skuGranularity: SkuGranularity | null;
+  skuGranularityDetailValue: SkuGranularity | null;
+  skuGranularitySource: SkuGranularitySource | null;
+  skuGranularityRaw: string | null;
+  skuGranularityNote: string | null;
+  skuGranularityIsBackfilled: boolean;
   relationshipSubtype: string;
   tier: number;
   depthFromMag7: number;
@@ -98,6 +106,11 @@ export interface ImportEvidenceNode {
   id: string;
   sourceType: StandardizedImportEvidenceRecord["source_type"];
   skuGranularity: SkuGranularity | null;
+  skuGranularityDetailValue: SkuGranularity | null;
+  skuGranularitySource: SkuGranularitySource | null;
+  skuGranularityRaw: string | null;
+  skuGranularityNote: string | null;
+  skuGranularityIsBackfilled: boolean;
   title: string;
   publisher: string;
   url: string;
@@ -725,12 +738,106 @@ function normalizeLegacySkuGranularityValue(value: unknown): SkuGranularity | nu
 }
 
 function extractSkuGranularityFromNotes(notes: unknown): SkuGranularity | null {
+  const raw = extractSkuGranularityTokenFromNotes(notes);
+  return raw ? normalizeLegacySkuGranularityValue(raw) : null;
+}
+
+function extractSkuGranularityTokenFromNotes(notes: unknown): string | null {
   if (typeof notes !== "string") {
     return null;
   }
 
   const match = notes.match(/sku_granularity=([a-z_]+)/i);
-  return match ? normalizeLegacySkuGranularityValue(match[1].toLowerCase()) : null;
+  return match ? match[1].toLowerCase() : null;
+}
+
+function extractSkuGranularityNote(record: Record<string, unknown>): string | null {
+  return typeof record.sku_granularity_note === "string" ? record.sku_granularity_note : null;
+}
+
+function createSkuGranularityDetail(detail: SkuGranularityDetail): SkuGranularityDetail {
+  return skuGranularityDetailSchema.parse(detail);
+}
+
+function buildRelationSkuGranularityDetail(
+  record: Record<string, unknown>,
+  manifestMap: Record<string, SkuGranularity>,
+): SkuGranularityDetail | null {
+  const explicitValue = normalizeLegacySkuGranularityValue(record.sku_granularity);
+  const explicitRaw = typeof record.sku_granularity === "string" ? record.sku_granularity : null;
+  const explicitNote = extractSkuGranularityNote(record);
+
+  if (explicitValue) {
+    return createSkuGranularityDetail({
+      value: explicitValue,
+      source: "relation_field",
+      raw: explicitRaw,
+      note: explicitNote,
+      isBackfilled: false,
+    });
+  }
+
+  const relationId = typeof record.relation_id === "string" ? record.relation_id : null;
+  const authoritativeValue = relationId ? manifestMap[relationId] ?? null : null;
+  if (!authoritativeValue) {
+    return null;
+  }
+
+  return createSkuGranularityDetail({
+    value: authoritativeValue,
+    source: "authoritative_manifest",
+    raw: null,
+    note: explicitNote ?? "Backfilled from full.15 authoritative manifest mapping.",
+    isBackfilled: true,
+  });
+}
+
+function buildEvidenceSkuGranularityDetail(
+  record: Record<string, unknown>,
+  authoritativeRelationSkuGranularity: SkuGranularity | null,
+): SkuGranularityDetail | null {
+  const explicitValue = normalizeLegacySkuGranularityValue(record.sku_granularity);
+  const explicitRaw = typeof record.sku_granularity === "string" ? record.sku_granularity : null;
+  const explicitNote = extractSkuGranularityNote(record);
+
+  if (explicitValue) {
+    return createSkuGranularityDetail({
+      value: explicitValue,
+      source: "evidence_field",
+      raw: explicitRaw,
+      note: explicitNote,
+      isBackfilled: false,
+    });
+  }
+
+  const legacyRaw = extractSkuGranularityTokenFromNotes(record.notes);
+  if (authoritativeRelationSkuGranularity) {
+    return createSkuGranularityDetail({
+      value: authoritativeRelationSkuGranularity,
+      source: "relation_inherited_for_evidence",
+      raw: legacyRaw,
+      note:
+        explicitNote ??
+        (legacyRaw
+          ? "Resolved legacy evidence note against the authoritative relation SKU granularity."
+          : "Inherited authoritative relation SKU granularity for evidence."),
+      isBackfilled: true,
+    });
+  }
+
+  if (!legacyRaw) {
+    return null;
+  }
+
+  return createSkuGranularityDetail({
+    value: "documented_legacy_only",
+    source: "legacy_note_backfill",
+    raw: legacyRaw,
+    note:
+      explicitNote ??
+      "Legacy note preserved for compatibility only; not promoted to an authoritative SKU granularity fact.",
+    isBackfilled: true,
+  });
 }
 
 function applySkuGranularityHints(
@@ -928,26 +1035,29 @@ export async function loadNormalizedImportPackage(
 
 export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedNormalizedImport {
   const skuGranularityByRelationId = pkg.skuGranularityByRelationId ?? {};
-  const relations = pkg.relations.map((relation) =>
-    standardizedImportRelationRecordSchema.parse(
-      applySkuGranularityHints(
-        normalizeLegacyImportRecord(relation) as Record<string, unknown>,
-        null,
-      ),
-    ) as StandardizedImportRelationRecord,
-  );
-  const evidence = pkg.evidence.map((item) =>
-    standardizedImportEvidenceRecordSchema.parse(
-      applySkuGranularityHints(
-        normalizeLegacyImportRecord(item) as Record<string, unknown>,
-        typeof item?.relation_id === "string" ? skuGranularityByRelationId[item.relation_id] ?? null : null,
-      ),
-    ) as StandardizedImportEvidenceRecord,
-  );
+  const relations = pkg.relations.map((relation) => {
+    const normalized = normalizeLegacyImportRecord(relation) as Record<string, unknown>;
+    return {
+      normalized,
+      parsed: standardizedImportRelationRecordSchema.parse(
+        applySkuGranularityHints(normalized, null),
+      ) as StandardizedImportRelationRecord,
+    };
+  });
+  const evidence = pkg.evidence.map((item) => {
+    const normalized = normalizeLegacyImportRecord(item) as Record<string, unknown>;
+    const relationId = typeof item?.relation_id === "string" ? item.relation_id : null;
+    return {
+      normalized,
+      parsed: standardizedImportEvidenceRecordSchema.parse(
+        applySkuGranularityHints(normalized, relationId ? skuGranularityByRelationId[relationId] ?? null : null),
+      ) as StandardizedImportEvidenceRecord,
+    };
+  });
   const companyMap = new Map<string, ImportCompanyNode>();
   const snapshotMap = new Map<string, ImportSnapshotNode>();
 
-  for (const relation of relations) {
+  for (const { parsed: relation } of relations) {
     const companySeed = getCompanySeed(relation.company_slug, relation.company, true);
     const supplierSeed = getCompanySeed(relation.supplier_slug, relation.supplier, false);
 
@@ -984,91 +1094,110 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
   return {
     companies: [...companyMap.values()],
     snapshots: [...snapshotMap.values()],
-    relations: relations.map((relation) => ({
-      id: relation.relation_id,
-      relationshipType: relation.relationship_type,
-      skuGranularity:
-        relation.sku_granularity ??
-        skuGranularityByRelationId[relation.relation_id] ??
-        null,
-      relationshipSubtype: relation.relationship_subtype,
-      tier: relation.tier,
-      depthFromMag7: relation.depth_from_mag7,
-      confidence: relation.confidence_label,
-      confidenceScore: relation.confidence_score,
-      summary: relation.summary,
-      productScope: relation.product_scope,
-      notes: relation.notes ?? null,
-      evidenceIds: relation.evidence_ids,
-      evidenceCount: relation.evidence_ids.length,
-      snapshotId: relation.snapshot_id,
-      status: relation.status,
-      evidenceDate: relation.evidence_date,
-      evidenceDateResolution: normalizeLegacyResolutionValue(relation.evidence_date_resolution) as DateResolution,
-      evidenceDateNormalized: relation.evidence_date_normalized ?? null,
-      evidenceDateIsNormalized: relation.evidence_date_is_normalized ?? false,
-      validFrom: relation.valid_from ?? null,
-      validFromResolution:
-        relation.valid_from_resolution == null
-          ? null
-          : normalizeLegacyResolutionValue(relation.valid_from_resolution) as DateResolution,
-      validTo: relation.valid_to ?? null,
-      validToResolution:
-        relation.valid_to_resolution == null
-          ? null
-          : normalizeLegacyResolutionValue(relation.valid_to_resolution) as DateResolution,
-      validityNote: relation.validity_note ?? null,
-      sourceMethod: relation.source_method,
-      sourceCount: relation.source_count,
-      lineageKey: relation.lineage_key,
-      primaryEvidenceId: relation.primary_evidence_id,
-      evidenceExcerpt: relation.evidence_excerpt,
-      sourceUrl: relation.source_url,
-      sourceReportPath: relation.source_report_path,
-      lastVerifiedAt: relation.last_verified_at,
-    })),
-    relationEdges: relations.map((relation) => ({
+    relations: relations.map(({ normalized, parsed: relation }) => {
+      const detail = buildRelationSkuGranularityDetail(normalized, skuGranularityByRelationId);
+      return {
+        id: relation.relation_id,
+        relationshipType: relation.relationship_type,
+        skuGranularity:
+          relation.sku_granularity ??
+          skuGranularityByRelationId[relation.relation_id] ??
+          null,
+        skuGranularityDetailValue: detail?.value ?? null,
+        skuGranularitySource: detail?.source ?? null,
+        skuGranularityRaw: detail?.raw ?? null,
+        skuGranularityNote: detail?.note ?? null,
+        skuGranularityIsBackfilled: detail?.isBackfilled ?? false,
+        relationshipSubtype: relation.relationship_subtype,
+        tier: relation.tier,
+        depthFromMag7: relation.depth_from_mag7,
+        confidence: relation.confidence_label,
+        confidenceScore: relation.confidence_score,
+        summary: relation.summary,
+        productScope: relation.product_scope,
+        notes: relation.notes ?? null,
+        evidenceIds: relation.evidence_ids,
+        evidenceCount: relation.evidence_ids.length,
+        snapshotId: relation.snapshot_id,
+        status: relation.status,
+        evidenceDate: relation.evidence_date,
+        evidenceDateResolution: normalizeLegacyResolutionValue(relation.evidence_date_resolution) as DateResolution,
+        evidenceDateNormalized: relation.evidence_date_normalized ?? null,
+        evidenceDateIsNormalized: relation.evidence_date_is_normalized ?? false,
+        validFrom: relation.valid_from ?? null,
+        validFromResolution:
+          relation.valid_from_resolution == null
+            ? null
+            : normalizeLegacyResolutionValue(relation.valid_from_resolution) as DateResolution,
+        validTo: relation.valid_to ?? null,
+        validToResolution:
+          relation.valid_to_resolution == null
+            ? null
+            : normalizeLegacyResolutionValue(relation.valid_to_resolution) as DateResolution,
+        validityNote: relation.validity_note ?? null,
+        sourceMethod: relation.source_method,
+        sourceCount: relation.source_count,
+        lineageKey: relation.lineage_key,
+        primaryEvidenceId: relation.primary_evidence_id,
+        evidenceExcerpt: relation.evidence_excerpt,
+        sourceUrl: relation.source_url,
+        sourceReportPath: relation.source_report_path,
+        lastVerifiedAt: relation.last_verified_at,
+      };
+    }),
+    relationEdges: relations.map(({ parsed: relation }) => ({
       relationId: relation.relation_id,
       sourceCompanyId: getCompanySeed(relation.supplier_slug, relation.supplier, false).id,
       targetCompanyId: getCompanySeed(relation.company_slug, relation.company, true).id,
       snapshotId: relation.snapshot_id,
     })),
-    evidence: evidence.map((evidence) => ({
-      id: evidence.evidence_id,
-      sourceType: evidence.source_type,
-      skuGranularity:
-        evidence.sku_granularity ??
-        skuGranularityByRelationId[evidence.relation_id] ??
-        null,
-      title: evidence.title,
-      publisher: evidence.publisher,
-      url: evidence.source_url,
-      publishedAt: evidence.published_at,
-      publishedAtResolution: normalizeLegacyResolutionValue(evidence.published_at_resolution) as DateResolution,
-      coverageStart: evidence.coverage_start ?? null,
-      coverageEnd: evidence.coverage_end ?? null,
-      coverageStartResolution:
-        evidence.coverage_start_resolution == null
-          ? null
-          : normalizeLegacyResolutionValue(evidence.coverage_start_resolution) as DateResolution,
-      coverageEndResolution:
-        evidence.coverage_end_resolution == null
-          ? null
-          : normalizeLegacyResolutionValue(evidence.coverage_end_resolution) as DateResolution,
-      retrievedAt: evidence.retrieved_at,
-      excerpt: evidence.excerpt,
-      pageRef: evidence.page_ref ?? null,
-      language: evidence.language ?? "en",
-      hash: evidence.evidence_id,
-      sourceDomain: evidence.source_domain,
-      citationText: evidence.citation_text,
-      reliabilityTier: evidence.reliability_tier,
-      licenseNote: evidence.license_note ?? null,
-      parserVersion: evidence.parser_version,
-      sourceReportPath: evidence.source_report_path,
-      notes: evidence.notes ?? null,
-    })),
-    evidenceBindings: evidence.map((evidence) => ({
+    evidence: evidence.map(({ normalized, parsed: evidence }) => {
+      const detail = buildEvidenceSkuGranularityDetail(
+        normalized,
+        skuGranularityByRelationId[evidence.relation_id] ?? null,
+      );
+      return {
+        id: evidence.evidence_id,
+        sourceType: evidence.source_type,
+        skuGranularity:
+          evidence.sku_granularity ??
+          skuGranularityByRelationId[evidence.relation_id] ??
+          null,
+        skuGranularityDetailValue: detail?.value ?? null,
+        skuGranularitySource: detail?.source ?? null,
+        skuGranularityRaw: detail?.raw ?? null,
+        skuGranularityNote: detail?.note ?? null,
+        skuGranularityIsBackfilled: detail?.isBackfilled ?? false,
+        title: evidence.title,
+        publisher: evidence.publisher,
+        url: evidence.source_url,
+        publishedAt: evidence.published_at,
+        publishedAtResolution: normalizeLegacyResolutionValue(evidence.published_at_resolution) as DateResolution,
+        coverageStart: evidence.coverage_start ?? null,
+        coverageEnd: evidence.coverage_end ?? null,
+        coverageStartResolution:
+          evidence.coverage_start_resolution == null
+            ? null
+            : normalizeLegacyResolutionValue(evidence.coverage_start_resolution) as DateResolution,
+        coverageEndResolution:
+          evidence.coverage_end_resolution == null
+            ? null
+            : normalizeLegacyResolutionValue(evidence.coverage_end_resolution) as DateResolution,
+        retrievedAt: evidence.retrieved_at,
+        excerpt: evidence.excerpt,
+        pageRef: evidence.page_ref ?? null,
+        language: evidence.language ?? "en",
+        hash: evidence.evidence_id,
+        sourceDomain: evidence.source_domain,
+        citationText: evidence.citation_text,
+        reliabilityTier: evidence.reliability_tier,
+        licenseNote: evidence.license_note ?? null,
+        parserVersion: evidence.parser_version,
+        sourceReportPath: evidence.source_report_path,
+        notes: evidence.notes ?? null,
+      };
+    }),
+    evidenceBindings: evidence.map(({ parsed: evidence }) => ({
       relationId: evidence.relation_id,
       evidenceId: evidence.evidence_id,
     })),

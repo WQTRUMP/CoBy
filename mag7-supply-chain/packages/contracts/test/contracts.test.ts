@@ -5,6 +5,7 @@ import {
   companySearchResultItemSchema,
   companySuggestItemSchema,
   companySchema,
+  evidenceSchema,
   relationSchema,
   standardizedImportEvidenceRecordSchema,
   standardizedImportRelationRecordSchema,
@@ -65,6 +66,7 @@ describe("@mag7/contracts", () => {
       depth_from_mag7: 1,
       relationship_type: "component_supply",
       sku_granularity: "target_sku",
+      sku_granularity_note: "Explicitly anchored to the official target SKU.",
       relationship_subtype: "official_optical_transceiver_component_of_quantum_x800",
       product_scope: ["Quantum-X800 QM3x00 switches", "MMS4A20 800G DR4 single-port OSFP transceiver"],
       evidence_ids: ["evidence:nvidia:mms4a20:1"],
@@ -93,6 +95,7 @@ describe("@mag7/contracts", () => {
       source_url: "https://example.com/nvidia-mms4a20",
       source_domain: "example.com",
       sku_granularity: "target_sku_or_official_component",
+      sku_granularity_note: "Legacy alias preserved for compatibility.",
       published_at: "2025-07-23",
       published_at_resolution: "day",
       retrieved_at: "2026-06-15T00:41:55Z",
@@ -104,7 +107,70 @@ describe("@mag7/contracts", () => {
     });
 
     expect(relation.sku_granularity).toBe("target_sku");
+    expect(relation.sku_granularity_note).toBe("Explicitly anchored to the official target SKU.");
     expect(evidence.sku_granularity).toBe("platform_component_sku");
+    expect(evidence.sku_granularity_note).toBe("Legacy alias preserved for compatibility.");
+  });
+
+  it("accepts skuGranularityDetail on relation and evidence DTOs while keeping scalar compatibility", () => {
+    const relation = relationSchema.parse({
+      id: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+      sourceId: "company:nvidia-mms4a20-800g-dr4-single-port-osfp-transceiver",
+      targetId: "company:NVDA",
+      relationshipType: "component_supply",
+      skuGranularity: "target_sku",
+      skuGranularityDetail: {
+        value: "target_sku",
+        source: "authoritative_manifest",
+        raw: null,
+        note: "Backfilled from full.15 authoritative manifest mapping.",
+        isBackfilled: true,
+      },
+      relationshipSubtype: "official_optical_transceiver_component_of_quantum_x800",
+      tier: 1,
+      depthFromMag7: 1,
+      confidence: "confirmed",
+      confidenceScore: 0.95,
+      summary: "NVIDIA MMS4A20 is part of Quantum-X800 QM3x00.",
+      productScope: ["Quantum-X800 QM3x00 switches"],
+      evidenceIds: ["evidence:nvidia:mms4a20:1"],
+      primaryEvidenceId: "evidence:nvidia:mms4a20:1",
+      evidenceCount: 1,
+      snapshotId: "snapshot:2026-06-15.full.15",
+      status: "approved",
+    });
+    const evidence = evidenceSchema.parse({
+      id: "evidence:nvidia:mms4a20:1",
+      sourceType: "official_doc",
+      skuGranularity: "target_sku",
+      skuGranularityDetail: {
+        value: "target_sku",
+        source: "relation_inherited_for_evidence",
+        raw: "target_sku_or_official_component",
+        note: "Resolved legacy evidence note against the authoritative relation SKU granularity.",
+        isBackfilled: true,
+      },
+      title: "NVIDIA MMS4A20 800G DR4 Single-Port OSFP Transceiver",
+      publisher: "NVIDIA Docs",
+      url: "https://example.com/nvidia-mms4a20",
+      publishedAt: "2025-07-23",
+      retrievedAt: "2026-06-15T00:41:55Z",
+      excerpt: "The NVIDIA MMS4A20 ... is used to link the Quantum-X800 QM3x00 switches.",
+      language: "en",
+      hash: "evidence:nvidia:mms4a20:1",
+      sourceDomain: "example.com",
+      citationText: "The NVIDIA MMS4A20 ... is used to link the Quantum-X800 QM3x00 switches.",
+      reliabilityTier: 1,
+      parserVersion: "manual-normalization-v3",
+    });
+
+    expect(relation.skuGranularityDetail?.source).toBe("authoritative_manifest");
+    expect(evidence.skuGranularityDetail).toMatchObject({
+      value: "target_sku",
+      source: "relation_inherited_for_evidence",
+      raw: "target_sku_or_official_component",
+      isBackfilled: true,
+    });
   });
 
   it("maps legacy month-normalized v2 inputs into canonical v3 date fields", () => {

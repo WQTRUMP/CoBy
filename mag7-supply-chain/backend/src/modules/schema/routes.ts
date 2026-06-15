@@ -7,6 +7,7 @@ import {
   importRelationsFieldCatalog,
   knownRelationshipTypes,
   knownSourceTypes,
+  skuGranularitySourceSchema,
   skuGranularitySchema,
 } from "@mag7/contracts";
 
@@ -26,6 +27,7 @@ export async function registerSchemaRoutes(app: FastifyInstance) {
         date_resolution: dateResolutionSchema.options,
         alias_type: aliasTypeSchema.options,
         sku_granularity: skuGranularitySchema.options,
+        sku_granularity_detail_source: skuGranularitySourceSchema.options,
       },
       compatibility: {
         previousSchemaVersions: ["mag7-supply-chain.import-relations.v2"],

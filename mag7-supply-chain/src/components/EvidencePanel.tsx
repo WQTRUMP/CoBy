@@ -27,12 +27,20 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
             <strong>{relation.sourceMethodLabel ?? "Not specified"}</strong>
             <span>Evidence precision</span>
             <strong>{relation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+            <span>SKU 粒度</span>
+            <strong>{relation.skuGranularityLabel}</strong>
+            <span>粒度来源</span>
+            <strong>{relation.skuGranularitySourceLabel ?? "未标注"}</strong>
+            <span>是否回填</span>
+            <strong>{relation.skuGranularityIsBackfilled ? "是" : "否"}</strong>
             <span>Validity note</span>
             <strong>{relation.validityNote ?? "No additional note"}</strong>
             <span>Validity</span>
             <strong>{relation.validityLabel}</strong>
           </div>
         ) : null}
+        {relation?.skuGranularityBoundaryHint ? <p className="boundaryHint">{relation.skuGranularityBoundaryHint}</p> : null}
+        {relation?.skuGranularityNote ? <p className="supportingText">{relation.skuGranularityNote}</p> : null}
       </div>
 
       <div className="evidenceList">
@@ -44,6 +52,9 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
               </span>
               <span className={`confidenceBadge ${item.confidence}`}>
                 <ShieldCheck size={12} /> {formatConfidence(item.confidence)}
+              </span>
+              <span className={`miniBadge skuGranularityBadge ${getSkuGranularityClassName(item.skuGranularityValue)}`}>
+                {item.skuGranularityLabel}
               </span>
             </div>
             <strong>{item.title}</strong>
@@ -63,7 +74,17 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
               </strong>
               <span>Retrieved surrogate</span>
               <strong>{item.retrievedAt}</strong>
+              <span>SKU 粒度</span>
+              <strong>{item.skuGranularityLabel}</strong>
+              <span>粒度来源</span>
+              <strong>{item.skuGranularitySourceLabel ?? "未标注"}</strong>
+              <span>旧注释值</span>
+              <strong>{item.skuGranularityRaw ?? "无"}</strong>
+              <span>是否回填</span>
+              <strong>{item.skuGranularityIsBackfilled ? "是" : "否"}</strong>
             </div>
+            {item.skuGranularityBoundaryHint ? <p className="boundaryHint">{item.skuGranularityBoundaryHint}</p> : null}
+            {item.skuGranularityNote ? <p className="supportingText">{item.skuGranularityNote}</p> : null}
             {item.compatibilityNote ? <p>{item.compatibilityNote}</p> : null}
             <div className="evidenceFooter">
               <span>{item.publisher}</span>
@@ -98,6 +119,10 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
       </div>
     </div>
   );
+}
+
+function getSkuGranularityClassName(value: GraphRelationViewModel["skuGranularityValue"] | EvidenceViewModel["skuGranularityValue"]) {
+  return value ? `skuGranularity-${value}` : "skuGranularity-unknown";
 }
 
 function formatConfidence(value: EvidenceViewModel["confidence"]) {

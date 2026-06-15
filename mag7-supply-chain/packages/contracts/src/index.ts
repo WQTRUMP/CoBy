@@ -27,7 +27,22 @@ export const skuGranularitySchema = z.enum([
   "platform_component_sku",
   "family_only",
   "out_of_scope_sku",
+  "documented_legacy_only",
 ]);
+export const skuGranularitySourceSchema = z.enum([
+  "relation_field",
+  "evidence_field",
+  "authoritative_manifest",
+  "legacy_note_backfill",
+  "relation_inherited_for_evidence",
+]);
+export const skuGranularityDetailSchema = z.object({
+  value: skuGranularitySchema,
+  source: skuGranularitySourceSchema,
+  raw: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  isBackfilled: z.boolean().default(false),
+});
 
 export const knownSourceTypes = [
   "10k",
@@ -176,6 +191,7 @@ export const evidenceSchema = z.object({
   id: z.string(),
   sourceType: sourceTypeSchema,
   skuGranularity: skuGranularitySchema.nullable().optional(),
+  skuGranularityDetail: skuGranularityDetailSchema.nullable().optional(),
   title: z.string(),
   publisher: z.string(),
   url: z.string().url(),
@@ -248,6 +264,7 @@ export const relationSchema = z.object({
   targetId: z.string(),
   relationshipType: relationshipTypeSchema,
   skuGranularity: skuGranularitySchema.nullable().optional(),
+  skuGranularityDetail: skuGranularityDetailSchema.nullable().optional(),
   relationshipSubtype: z.string().nullable().optional(),
   tier: z.number().int().min(1),
   depthFromMag7: z.number().int().min(0),
@@ -393,6 +410,7 @@ const standardizedImportRelationRecordBaseSchema = z.object({
   depth_from_mag7: z.number().int().min(0),
   relationship_type: relationshipTypeSchema,
   sku_granularity: skuGranularityCompatSchema.nullable().optional(),
+  sku_granularity_note: z.string().nullable().optional(),
   relationship_subtype: z.string(),
   product_scope: z.array(z.string()).min(1),
   evidence_ids: z.array(z.string()).min(1),
@@ -482,6 +500,7 @@ export const standardizedImportEvidenceRecordSchema = z.object({
   source_url: z.string().url(),
   source_domain: z.string(),
   sku_granularity: skuGranularityCompatSchema.nullable().optional(),
+  sku_granularity_note: z.string().nullable().optional(),
   published_at: z.string(),
   published_at_resolution: dateResolutionCompatSchema,
   coverage_start: z.string().nullable().optional(),
@@ -577,6 +596,12 @@ export const importRelationsFieldCatalog = [
     type: "enum",
     required: false,
     description: "Optional target-SKU specificity marker used to distinguish target SKU, platform component SKU, family-only, and out-of-scope SKU boundaries.",
+  },
+  {
+    name: "sku_granularity_note",
+    type: "string",
+    required: false,
+    description: "Optional analyst note preserving how the SKU granularity was asserted or backfilled.",
   },
   {
     name: "relationship_subtype",
@@ -746,6 +771,8 @@ export type BackendSource = z.infer<typeof backendSourceSchema>;
 export type DateResolution = z.infer<typeof dateResolutionSchema>;
 export type AliasType = z.infer<typeof aliasTypeSchema>;
 export type SkuGranularity = z.infer<typeof skuGranularitySchema>;
+export type SkuGranularitySource = z.infer<typeof skuGranularitySourceSchema>;
+export type SkuGranularityDetail = z.infer<typeof skuGranularityDetailSchema>;
 export type CompanyDTO = z.infer<typeof companySchema>;
 export type CompanyListItemDTO = z.infer<typeof companyListItemSchema>;
 export type CompanySearchMatchDTO = z.infer<typeof companySearchMatchSchema>;

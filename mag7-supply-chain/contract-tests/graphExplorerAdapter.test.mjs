@@ -480,3 +480,66 @@ test("filters graph relations by relationship type and subtype while preserving 
     ["battery_cells", "lfp_cells"],
   );
 });
+
+test("prefers skuGranularityDetail and falls back to scalar skuGranularity for relation and evidence presentation", () => {
+  const subgraph = getSubgraphResponse("company:TSLA", 2, true);
+  subgraph.relations = subgraph.relations.map((relation, index) =>
+    index === 0
+      ? {
+          ...relation,
+          skuGranularity: "family_only",
+          skuGranularityDetail: {
+            value: "target_sku",
+            source: "authoritative_manifest",
+            raw: null,
+            note: "Backfilled from full.15 authoritative manifest mapping.",
+            isBackfilled: true,
+          },
+          evidence: [
+            {
+              ...relation.evidence[0],
+              skuGranularity: "family_only",
+              skuGranularityDetail: {
+                value: "documented_legacy_only",
+                source: "legacy_note_backfill",
+                raw: "target_sku_or_official_component",
+                note: "Legacy note retained for compatibility only.",
+                isBackfilled: true,
+              },
+            },
+          ],
+        }
+      : {
+          ...relation,
+          skuGranularity: "platform_component_sku",
+          skuGranularityDetail: null,
+          evidence: relation.evidence.map((item) => ({
+            ...item,
+            skuGranularity: "platform_component_sku",
+            skuGranularityDetail: null,
+          })),
+        },
+  );
+
+  const graph = adaptGraphViewModel({
+    company: getCompanyResponse("company:TSLA"),
+    overview: getCompanyOverviewResponse("company:TSLA"),
+    subgraph,
+    query: {
+      companyId: "company:TSLA",
+      depth: 2,
+      search: "",
+    },
+  });
+
+  assert.equal(graph.relations[0]?.skuGranularityValue, "target_sku");
+  assert.equal(graph.relations[0]?.skuGranularityLabel, "目标 SKU");
+  assert.equal(graph.relations[0]?.skuGranularitySourceLabel, "权威 manifest 回填");
+  assert.equal(graph.relations[0]?.skuGranularityIsBackfilled, true);
+  assert.equal(graph.relations[0]?.evidence[0]?.skuGranularityValue, "documented_legacy_only");
+  assert.equal(graph.relations[0]?.evidence[0]?.skuGranularityLabel, "仅旧文档留痕");
+  assert.equal(graph.relations[0]?.evidence[0]?.skuGranularityRaw, "target_sku_or_official_component");
+  assert.match(graph.relations[0]?.evidence[0]?.skuGranularityBoundaryHint ?? "", /仅旧文档留痕/);
+  assert.equal(graph.relations[1]?.skuGranularityValue, "platform_component_sku");
+  assert.equal(graph.relations[1]?.skuGranularitySourceLabel, "兼容标量字段");
+});

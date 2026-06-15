@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { CompanySidebar } from "../.tmp-contract-tests/src/components/CompanySidebar.js";
 import { EvidencePanel } from "../.tmp-contract-tests/src/components/EvidencePanel.js";
 import { GraphCanvas } from "../.tmp-contract-tests/src/components/GraphCanvas.js";
+import { RelationsPanel } from "../.tmp-contract-tests/src/components/RelationsPanel.js";
 import { TopBar } from "../.tmp-contract-tests/src/components/TopBar.js";
 import { adaptCompanyOptions, adaptGraphViewModel } from "../.tmp-contract-tests/src/adapters/graphExplorerAdapter.js";
 import {
@@ -438,4 +439,101 @@ test("renders evidence provenance semantics for published, reported-period, retr
   assert.match(markup, /reported_period_end/);
   assert.match(markup, /month-normalized compatibility/);
   assert.match(markup, /Legacy month-normalized inputs are rendered as month-level values/);
+});
+
+test("renders sku granularity labels, source info, and boundary hints in relation and evidence panels", () => {
+  const relation = {
+    id: "rel:sku-family",
+    sourceId: "company:SUP",
+    targetId: "company:NVDA",
+    relationshipType: "component_supply",
+    relationshipTypeLabel: "Component Supply",
+    relationshipSemanticLabel: "Component supply for a network platform",
+    relationshipSubtype: "optical_module",
+    relationshipSubtypeLabel: "Optical Module",
+    tier: 1,
+    depthFromMag7: 1,
+    confidence: "confirmed",
+    confidenceScore: 0.94,
+    summary: "Supplier supports the Quantum platform optical module family.",
+    productScope: ["Quantum-X800"],
+    notes: null,
+    sourceMethod: "direct_disclosure",
+    sourceMethodLabel: "Direct Disclosure",
+    evidenceDateResolution: "day",
+    evidenceDateResolutionLabel: "Day-level",
+    validFrom: "2025-01-01",
+    validFromResolution: "day",
+    validFromResolutionLabel: "Day-level",
+    validTo: null,
+    validToResolution: null,
+    validToResolutionLabel: null,
+    validityLabel: "2025-01-01 onward",
+    validityNote: "Family scope only.",
+    evidenceCount: 1,
+    evidence: [],
+    isDirectRelation: true,
+    skuGranularityValue: "family_only",
+    skuGranularityLabel: "仅家族层级",
+    skuGranularitySource: "authoritative_manifest",
+    skuGranularitySourceLabel: "权威 manifest 回填",
+    skuGranularityNote: "Backfilled from full.15 authoritative manifest mapping.",
+    skuGranularityBoundaryHint: "仅家族层级：不可视为具体目标 SKU vendor 锁定",
+    skuGranularityIsBackfilled: true,
+  };
+
+  const evidence = [
+    {
+      id: "evidence:legacy-sku",
+      title: "Legacy appendix",
+      publisher: "Example Publisher",
+      sourceType: "official_doc",
+      sourceTypeLabel: "Official Document",
+      publishedAt: "2026-06-01T00:00:00.000Z",
+      publishedAtResolution: "undated",
+      publishedAtResolutionLabel: "Undated / Retrieved surrogate",
+      publishedAtSemantic: "retrieved_at_surrogate",
+      reportedPeriodEnd: null,
+      reportedPeriodEndResolutionLabel: null,
+      retrievedAt: "2026-06-14T00:00:00.000Z",
+      retrievedAtSemantic: "retrieved_at_surrogate",
+      compatibilityNote: null,
+      url: "https://example.com/legacy",
+      citation: "Legacy appendix citation",
+      excerpt: "Legacy appendix excerpt",
+      pageRef: null,
+      confidence: "confirmed",
+      skuGranularityValue: "documented_legacy_only",
+      skuGranularityLabel: "仅旧文档留痕",
+      skuGranularitySource: "legacy_note_backfill",
+      skuGranularitySourceLabel: "旧注释回填",
+      skuGranularityRaw: "target_sku_or_official_component",
+      skuGranularityNote: "Legacy note retained for compatibility only.",
+      skuGranularityBoundaryHint: "仅旧文档留痕：只用于兼容旧记录，不构成新的正式归类",
+      skuGranularityIsBackfilled: true,
+    },
+  ];
+
+  const relationsMarkup = renderToStaticMarkup(
+    React.createElement(RelationsPanel, {
+      relations: [relation],
+      selectedRelationId: relation.id,
+      onSelect() {},
+    }),
+  );
+  const evidenceMarkup = renderToStaticMarkup(
+    React.createElement(EvidencePanel, {
+      relation,
+      evidence,
+    }),
+  );
+
+  assert.match(relationsMarkup, /仅家族层级/);
+  assert.match(relationsMarkup, /粒度来源：权威 manifest 回填 · 已回填/);
+  assert.match(relationsMarkup, /不可视为具体目标 SKU vendor 锁定/);
+  assert.match(evidenceMarkup, /SKU 粒度/);
+  assert.match(evidenceMarkup, /仅旧文档留痕/);
+  assert.match(evidenceMarkup, /旧注释值/);
+  assert.match(evidenceMarkup, /target_sku_or_official_component/);
+  assert.match(evidenceMarkup, /只用于兼容旧记录，不构成新的正式归类/);
 });

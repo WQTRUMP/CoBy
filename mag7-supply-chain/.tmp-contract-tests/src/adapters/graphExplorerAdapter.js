@@ -18,6 +18,20 @@ const ENTITY_KIND_BY_TYPE = {
     Technology: "technology",
     Material: "material",
 };
+const SKU_GRANULARITY_LABELS = {
+    target_sku: "目标 SKU",
+    platform_component_sku: "平台组件 SKU",
+    family_only: "仅家族层级",
+    out_of_scope_sku: "超出当前 SKU 范围",
+    documented_legacy_only: "仅旧文档留痕",
+};
+const SKU_GRANULARITY_SOURCE_LABELS = {
+    relation_field: "关系原字段",
+    evidence_field: "证据原字段",
+    authoritative_manifest: "权威 manifest 回填",
+    legacy_note_backfill: "旧注释回填",
+    relation_inherited_for_evidence: "继承关系粒度",
+};
 export function adaptCompanyOptions(response) {
     return response.items.map(adaptCompanyOption);
 }
@@ -101,6 +115,7 @@ function adaptCompanyOption(company) {
     };
 }
 function adaptRelation(relation, companyId) {
+    const skuGranularity = resolveSkuGranularityPresentation(relation.skuGranularityDetail, relation.skuGranularity);
     return {
         id: relation.id,
         sourceId: relation.sourceId,
@@ -132,9 +147,17 @@ function adaptRelation(relation, companyId) {
         evidenceCount: relation.evidenceCount,
         evidence: (relation.evidence ?? []).map((item) => adaptEvidence(item, relation.confidence)),
         isDirectRelation: relation.sourceId === companyId || relation.targetId === companyId,
+        skuGranularityValue: skuGranularity.value,
+        skuGranularityLabel: skuGranularity.label,
+        skuGranularitySource: skuGranularity.source,
+        skuGranularitySourceLabel: skuGranularity.sourceLabel,
+        skuGranularityNote: skuGranularity.note,
+        skuGranularityBoundaryHint: skuGranularity.boundaryHint,
+        skuGranularityIsBackfilled: skuGranularity.isBackfilled,
     };
 }
 function adaptEvidence(evidence, confidence) {
+    const skuGranularity = resolveSkuGranularityPresentation(evidence.skuGranularityDetail, evidence.skuGranularity);
     return {
         id: evidence.id,
         title: evidence.title,
@@ -155,6 +178,14 @@ function adaptEvidence(evidence, confidence) {
         excerpt: evidence.excerpt,
         pageRef: evidence.pageRef ?? null,
         confidence,
+        skuGranularityValue: skuGranularity.value,
+        skuGranularityLabel: skuGranularity.label,
+        skuGranularitySource: skuGranularity.source,
+        skuGranularitySourceLabel: skuGranularity.sourceLabel,
+        skuGranularityRaw: skuGranularity.raw,
+        skuGranularityNote: skuGranularity.note,
+        skuGranularityBoundaryHint: skuGranularity.boundaryHint,
+        skuGranularityIsBackfilled: skuGranularity.isBackfilled,
     };
 }
 function summarizeEvidence(relations) {
@@ -402,6 +433,31 @@ function getEvidenceCompatibilityNote(resolution, publishedAt) {
     }
     if (normalized === "filing_period") {
         return "This value represents the reported period end, not the document publication date.";
+    }
+    return null;
+}
+function resolveSkuGranularityPresentation(detail, scalar) {
+    const value = detail?.value ?? scalar ?? null;
+    return {
+        value,
+        label: value ? SKU_GRANULARITY_LABELS[value] : "未标注",
+        source: detail?.source ?? null,
+        sourceLabel: detail?.source ? SKU_GRANULARITY_SOURCE_LABELS[detail.source] : value ? "兼容标量字段" : null,
+        raw: detail?.raw ?? null,
+        note: detail?.note ?? null,
+        isBackfilled: detail?.isBackfilled ?? false,
+        boundaryHint: getSkuGranularityBoundaryHint(value),
+    };
+}
+function getSkuGranularityBoundaryHint(value) {
+    if (value === "family_only") {
+        return "仅家族层级：不可视为具体目标 SKU vendor 锁定";
+    }
+    if (value === "documented_legacy_only") {
+        return "仅旧文档留痕：只用于兼容旧记录，不构成新的正式归类";
+    }
+    if (value === "out_of_scope_sku") {
+        return "超出当前 SKU 范围：不计入当前正式目标 SKU 口径";
     }
     return null;
 }

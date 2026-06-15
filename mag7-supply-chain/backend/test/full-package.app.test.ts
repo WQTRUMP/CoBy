@@ -272,6 +272,16 @@ class RealSampleGraphRepository implements GraphRepository {
         sourceId: prepared.relationEdges.find((edge) => edge.relationId === relation.id)?.sourceCompanyId ?? "",
         targetId: prepared.relationEdges.find((edge) => edge.relationId === relation.id)?.targetCompanyId ?? "",
         status: relation.status as RelationDTO["status"],
+        skuGranularityDetail:
+          relation.skuGranularityDetailValue && relation.skuGranularitySource
+            ? {
+                value: relation.skuGranularityDetailValue,
+                source: relation.skuGranularitySource,
+                raw: relation.skuGranularityRaw,
+                note: relation.skuGranularityNote,
+                isBackfilled: relation.skuGranularityIsBackfilled,
+              }
+            : null,
       };
       this.relationById.set(relation.id, hydratedRelation);
     }
@@ -286,6 +296,16 @@ class RealSampleGraphRepository implements GraphRepository {
         id: evidenceNode.id,
         sourceType: evidenceNode.sourceType,
         skuGranularity: evidenceNode.skuGranularity,
+        skuGranularityDetail:
+          evidenceNode.skuGranularityDetailValue && evidenceNode.skuGranularitySource
+            ? {
+                value: evidenceNode.skuGranularityDetailValue,
+                source: evidenceNode.skuGranularitySource,
+                raw: evidenceNode.skuGranularityRaw,
+                note: evidenceNode.skuGranularityNote,
+                isBackfilled: evidenceNode.skuGranularityIsBackfilled,
+              }
+            : null,
         title: evidenceNode.title,
         publisher: evidenceNode.publisher,
         url: evidenceNode.url,
@@ -760,12 +780,33 @@ describe("full package app", () => {
     );
     expect(relationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")).toMatchObject({
       skuGranularity: "target_sku",
+      skuGranularityDetail: {
+        value: "target_sku",
+        source: "authoritative_manifest",
+        raw: null,
+        note: "Backfilled from full.15 authoritative manifest mapping.",
+        isBackfilled: true,
+      },
     });
     expect(relationById.get("rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver")).toMatchObject({
       skuGranularity: "platform_component_sku",
+      skuGranularityDetail: {
+        value: "platform_component_sku",
+        source: "authoritative_manifest",
+        raw: null,
+        note: "Backfilled from full.15 authoritative manifest mapping.",
+        isBackfilled: true,
+      },
     });
     expect(relationById.get("rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology")).toMatchObject({
       skuGranularity: "family_only",
+      skuGranularityDetail: {
+        value: "family_only",
+        source: "authoritative_manifest",
+        raw: null,
+        note: "Backfilled from full.15 authoritative manifest mapping.",
+        isBackfilled: true,
+      },
     });
 
     expect(path.json().relations).toEqual(
@@ -773,6 +814,10 @@ describe("full package app", () => {
         expect.objectContaining({
           id: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
           skuGranularity: "target_sku",
+          skuGranularityDetail: expect.objectContaining({
+            value: "target_sku",
+            source: "authoritative_manifest",
+          }),
         }),
       ]),
     );
@@ -784,6 +829,13 @@ describe("full package app", () => {
       items: [
         expect.objectContaining({
           skuGranularity: "target_sku",
+          skuGranularityDetail: {
+            value: "target_sku",
+            source: "relation_inherited_for_evidence",
+            raw: "target_sku_or_official_component",
+            note: "Resolved legacy evidence note against the authoritative relation SKU granularity.",
+            isBackfilled: true,
+          },
         }),
       ],
     });

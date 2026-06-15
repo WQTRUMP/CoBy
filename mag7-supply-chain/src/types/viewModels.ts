@@ -91,6 +91,14 @@ export interface EvidenceViewModel {
   excerpt: string;
   pageRef: string | null;
   confidence: RelationDTO["confidence"];
+  skuGranularityValue: string | null;
+  skuGranularityLabel: string;
+  skuGranularitySource: string | null;
+  skuGranularitySourceLabel: string | null;
+  skuGranularityRaw: string | null;
+  skuGranularityNote: string | null;
+  skuGranularityBoundaryHint: string | null;
+  skuGranularityIsBackfilled: boolean;
 }
 
 export interface GraphRelationViewModel {
@@ -124,6 +132,13 @@ export interface GraphRelationViewModel {
   evidenceCount: number;
   evidence: EvidenceViewModel[];
   isDirectRelation: boolean;
+  skuGranularityValue: string | null;
+  skuGranularityLabel: string;
+  skuGranularitySource: string | null;
+  skuGranularitySourceLabel: string | null;
+  skuGranularityNote: string | null;
+  skuGranularityBoundaryHint: string | null;
+  skuGranularityIsBackfilled: boolean;
 }
 
 export interface RelationFilterOptionViewModel {

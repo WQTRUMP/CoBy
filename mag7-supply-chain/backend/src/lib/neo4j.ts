@@ -158,6 +158,7 @@ function mapRelationRecord(
       typeof relation.skuGranularity === "string"
         ? relation.skuGranularity as RelationDTO["skuGranularity"]
         : null,
+    skuGranularityDetail: mapSkuGranularityDetailProperties(relation),
     tier: toNumber(relation.tier) ?? 1,
     depthFromMag7: toNumber(relation.depthFromMag7) ?? 1,
     confidence: String(relation.confidence) as RelationDTO["confidence"],
@@ -416,6 +417,40 @@ function pickLatestRelationSnapshotId(relations: Array<Pick<RelationDTO, "snapsh
   );
 }
 
+function mapSkuGranularityDetailProperties(
+  properties: Record<string, unknown>,
+): RelationDTO["skuGranularityDetail"] | EvidenceDTO["skuGranularityDetail"] {
+  const detailValue =
+    typeof properties.skuGranularityDetailValue === "string"
+      ? properties.skuGranularityDetailValue
+      : typeof properties.skuGranularity === "string"
+        ? properties.skuGranularity
+        : null;
+
+  if (!detailValue) {
+    return null;
+  }
+
+  const hasSource = typeof properties.skuGranularitySource === "string";
+  const hasRaw = typeof properties.skuGranularityRaw === "string";
+  const hasNote = typeof properties.skuGranularityNote === "string";
+  const isBackfilled = properties.skuGranularityIsBackfilled === true;
+
+  if (!hasSource && !hasRaw && !hasNote && !isBackfilled) {
+    return null;
+  }
+
+  return {
+    value: detailValue as RelationDTO["skuGranularity"],
+    source: hasSource
+      ? properties.skuGranularitySource as NonNullable<RelationDTO["skuGranularityDetail"]>["source"]
+      : "relation_field",
+    raw: hasRaw ? String(properties.skuGranularityRaw) : null,
+    note: hasNote ? String(properties.skuGranularityNote) : null,
+    isBackfilled,
+  };
+}
+
 function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO {
   return {
     id: String(properties.id),
@@ -424,6 +459,7 @@ function mapEvidenceProperties(properties: Record<string, unknown>): EvidenceDTO
       typeof properties.skuGranularity === "string"
         ? properties.skuGranularity as EvidenceDTO["skuGranularity"]
         : null,
+    skuGranularityDetail: mapSkuGranularityDetailProperties(properties),
     title: String(properties.title),
     publisher: String(properties.publisher),
     url: String(properties.url),

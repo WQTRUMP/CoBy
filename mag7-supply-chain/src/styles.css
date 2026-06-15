@@ -106,6 +106,11 @@ a {
   gap: 12px;
 }
 
+.relationMeta,
+.evidenceFooter {
+  flex-wrap: wrap;
+}
+
 .brandLockup {
   gap: 14px;
 }
@@ -990,6 +995,18 @@ a {
   color: var(--text-secondary);
 }
 
+.supportingText,
+.boundaryHint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.boundaryHint {
+  color: #ffe0a6;
+}
+
 .metaGrid {
   grid-template-columns: auto 1fr;
   gap: 8px 12px;
@@ -1088,6 +1105,40 @@ a {
 
 .miniBadge.semantic {
   margin-top: 8px;
+}
+
+.skuGranularityBadge {
+  white-space: normal;
+}
+
+.skuGranularity-target_sku {
+  color: #b8fff8;
+  background: rgba(64, 224, 208, 0.16);
+  border-color: rgba(64, 224, 208, 0.3);
+}
+
+.skuGranularity-platform_component_sku {
+  color: #dbf4ff;
+  background: rgba(118, 187, 255, 0.14);
+  border-color: rgba(118, 187, 255, 0.28);
+}
+
+.skuGranularity-family_only {
+  color: #f4ead2;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 224, 166, 0.4);
+}
+
+.skuGranularity-documented_legacy_only {
+  color: #ffd7c4;
+  background: rgba(255, 107, 87, 0.12);
+  border-color: rgba(255, 107, 87, 0.26);
+}
+
+.skuGranularity-out_of_scope_sku,
+.skuGranularity-unknown {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .confidenceBadge.confirmed {
