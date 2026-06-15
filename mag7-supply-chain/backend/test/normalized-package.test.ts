@@ -1,6 +1,9 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
+import { loadNormalizedImportPackage, prepareNormalizedImport } from "../src/lib/normalized-package.js";
 
 describe("prepareNormalizedImport", () => {
   it("preserves lossless normalized fields while splitting relation and evidence bindings into graph edges", () => {
@@ -667,5 +670,172 @@ describe("prepareNormalizedImport", () => {
       title: "Amazon EC2 Trn2 instances",
       sourceDomain: "aws.amazon.com",
     });
+  });
+
+  it("normalizes round19-compatible evidence source_type aliases during direct load", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:apple:ningbo-shanshan:materials_supply:compat-esg-report",
+          snapshot_id: "snapshot:2026-06-15.full.19-candidate",
+          company: "Apple",
+          company_slug: "apple",
+          supplier: "Ningbo Shanshan",
+          supplier_slug: "ningbo-shanshan",
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "materials_supply",
+          relationship_subtype: "compat_esg_report",
+          product_scope: ["Battery materials"],
+          evidence_ids: ["evidence:apple:ningbo-shanshan:compat-esg-report:1"],
+          primary_evidence_id: "evidence:apple:ningbo-shanshan:compat-esg-report:1",
+          evidence_date: "2025-04-27",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Compatibility row for official ESG report alias handling.",
+          source_url: "https://example.com/ningbo-shanshan-esg",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.86,
+          source_method: "manual_research",
+          source_count: 1,
+          status: "approved",
+          summary: "Importer compatibility for official ESG report aliases.",
+          lineage_key: "Apple|Ningbo Shanshan|materials_supply|compat_esg_report",
+          source_report_path: "output/evidence/apple-ningbo-shanshan.md",
+          last_verified_at: "2026-06-15T23:59:00Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:apple:ningbo-shanshan:compat-esg-report:1",
+          relation_id: "rel:apple:ningbo-shanshan:materials_supply:compat-esg-report",
+          source_type: "official_esg_report" as never,
+          title: "Ningbo Shanshan ESG report",
+          publisher: "Ningbo Shanshan",
+          source_url: "https://example.com/ningbo-shanshan-esg",
+          source_domain: "example.com",
+          published_at: "2025-04-27",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T23:59:00Z",
+          excerpt: "Compatibility row for official ESG report alias handling.",
+          citation_text: "Compatibility row for official ESG report alias handling.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/apple-ningbo-shanshan.md",
+        },
+      ],
+    });
+
+    expect(prepared.evidence[0]).toMatchObject({
+      sourceType: "official_report",
+      title: "Ningbo Shanshan ESG report",
+    });
+  });
+
+  it("coerces full.19 mixed-schema published rows into canonical tier and entity refs during direct load", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "full19-direct-load-"));
+
+    try {
+      const relationsPath = join(tempDir, "relations.jsonl");
+      const evidencePath = join(tempDir, "evidence.jsonl");
+
+      await writeFile(
+        relationsPath,
+        `${JSON.stringify({
+          schema_version: "mag7-supply-chain.import-relations.v3",
+          relation_id: "rel:microsoft:amd-instinct-mi300x-rocm:cloud_service:compat-direct-load",
+          snapshot_id: "snapshot:2026-06-15.full.19-candidate",
+          company: "Microsoft",
+          company_slug: "microsoft",
+          company_entity_id: "company:microsoft",
+          company_canonical_name: "Microsoft",
+          company_display_name: "Microsoft Azure",
+          company_legal_entity_name: "Microsoft Corporation",
+          supplier: "AMD Instinct MI300X / ROCm",
+          supplier_slug: "amd-instinct-mi300x-rocm",
+          supplier_entity_id: "entity:amd-instinct-mi300x-rocm",
+          supplier_display_name: "AMD Instinct MI300X / ROCm",
+          tier: "2",
+          depth_from_mag7: 2,
+          relationship_type: "cloud_service",
+          relationship_subtype: "compat_direct_load",
+          product_scope: ["Azure OpenAI Service"],
+          evidence_ids: ["evidence:microsoft:amd-instinct-mi300x-rocm:compat-direct-load:1"],
+          primary_evidence_id: "evidence:microsoft:amd-instinct-mi300x-rocm:compat-direct-load:1",
+          evidence_date: "2024-05-21",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Compatibility row mirrors the full.19 mixed-schema direct-load shape.",
+          source_url: "https://example.com/microsoft-azure-mi300x",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.88,
+          source_method: "cross_reported",
+          source_count: 1,
+          status: "approved",
+          summary: "Compatibility row for direct-load coercion.",
+          lineage_key: "Microsoft|AMD Instinct MI300X / ROCm|cloud_service|compat_direct_load",
+          source_report_path: "output/evidence/microsoft-azure-mi300x.md",
+          last_verified_at: "2026-06-15T18:00:00Z",
+        })}\n`,
+        "utf8",
+      );
+      await writeFile(
+        evidencePath,
+        `${JSON.stringify({
+          evidence_id: "evidence:microsoft:amd-instinct-mi300x-rocm:compat-direct-load:1",
+          relation_id: "rel:microsoft:amd-instinct-mi300x-rocm:cloud_service:compat-direct-load",
+          source_type: "official_doc",
+          title: "Azure OpenAI compatibility note",
+          publisher: "Microsoft",
+          source_url: "https://example.com/microsoft-azure-mi300x",
+          source_domain: "example.com",
+          published_at: "2024-05-21",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T18:00:00Z",
+          excerpt: "Compatibility row mirrors the full.19 mixed-schema direct-load shape.",
+          citation_text: "Compatibility row mirrors the full.19 mixed-schema direct-load shape.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/microsoft-azure-mi300x.md",
+        })}\n`,
+        "utf8",
+      );
+
+      const pkg = await loadNormalizedImportPackage(relationsPath, evidencePath);
+
+      expect(pkg.relations[0]).toMatchObject({
+        relation_id: "rel:microsoft:amd-instinct-mi300x-rocm:cloud_service:compat-direct-load",
+        tier: 2,
+        company_entity_ref: {
+          entity_id: "company:microsoft",
+          display_name: "Microsoft Azure",
+          legal_entity_name: "Microsoft Corporation",
+        },
+        supplier_entity_ref: {
+          entity_id: "entity:amd-instinct-mi300x-rocm",
+          display_name: "AMD Instinct MI300X / ROCm",
+          legal_entity_name: "AMD Instinct MI300X / ROCm",
+        },
+      });
+
+      const prepared = prepareNormalizedImport(pkg);
+      expect(prepared.relationEdges[0]).toMatchObject({
+        relationId: "rel:microsoft:amd-instinct-mi300x-rocm:cloud_service:compat-direct-load",
+        sourceCompanyId: "company:amd-instinct-mi300x-rocm",
+        targetCompanyId: "company:MSFT",
+        snapshotId: "snapshot:2026-06-15.full.19-candidate",
+      });
+      expect(prepared.companies.find((company) => company.id === "company:MSFT")).toMatchObject({
+        canonicalName: "Microsoft",
+        displayName: "Microsoft Azure",
+        entityProfile: {
+          canonicalName: "Microsoft",
+          displayName: "Microsoft Azure",
+          legalEntities: expect.arrayContaining([
+            expect.objectContaining({ name: "Microsoft Corporation", aliasType: "legal_entity" }),
+          ]),
+        },
+      });
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

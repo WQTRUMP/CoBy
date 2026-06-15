@@ -730,6 +730,21 @@ function normalizeLegacyResolutionValue(value: unknown) {
   return value;
 }
 
+function normalizeLegacySourceType(value: unknown) {
+  switch (value) {
+    case "official_esg_report":
+    case "official_half_year_report":
+      return "official_report";
+    case "official_exchange_filing":
+    case "third_party_filing":
+      return "official_filing";
+    case "official_ir_record":
+      return "official_doc";
+    default:
+      return value;
+  }
+}
+
 function normalizeLegacySkuGranularityValue(value: unknown): SkuGranularity | null {
   if (value == null) {
     return null;
@@ -878,6 +893,10 @@ function normalizeLegacyImportRecord(record: unknown) {
     }
   }
 
+  if ("source_type" in normalized) {
+    normalized.source_type = normalizeLegacySourceType(normalized.source_type);
+  }
+
   if (original.evidence_date_resolution === "month-normalized") {
     normalized.evidence_date_normalized =
       normalized.evidence_date_normalized ??
@@ -886,6 +905,84 @@ function normalizeLegacyImportRecord(record: unknown) {
   }
 
   return normalized;
+}
+
+function normalizeLegacyInteger(value: unknown) {
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    return Number(value);
+  }
+
+  return value;
+}
+
+function pickCompatString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function buildCompatEntityRef(
+  record: Record<string, unknown>,
+  side: "company" | "supplier",
+): Record<string, unknown> | undefined {
+  const refKey = `${side}_entity_ref`;
+  const fallbackRef =
+    record[refKey] && typeof record[refKey] === "object" && !Array.isArray(record[refKey])
+      ? { ...(record[refKey] as Record<string, unknown>) }
+      : {};
+
+  const entityId =
+    pickCompatString(fallbackRef, ["entity_id"]) ??
+    pickCompatString(record, [`${side}_entity_id`]) ??
+    (() => {
+      const slug = pickCompatString(record, [`${side}_slug`]);
+      return slug ? `company:${slug}` : null;
+    })();
+  const displayName =
+    pickCompatString(fallbackRef, ["display_name"]) ??
+    pickCompatString(record, [`${side}_display_name`, side]);
+  const legalEntityName =
+    pickCompatString(fallbackRef, ["legal_entity_name"]) ??
+    pickCompatString(record, [`${side}_legal_entity_name`, `${side}_canonical_name`, side]) ??
+    displayName;
+
+  if (!entityId || !displayName) {
+    return Object.keys(fallbackRef).length > 0 ? fallbackRef : undefined;
+  }
+
+  return {
+    ...fallbackRef,
+    entity_id: entityId,
+    display_name: displayName,
+    legal_entity_name: legalEntityName,
+  };
+}
+
+function normalizeLegacyRelationRecord(record: unknown) {
+  const normalized = normalizeLegacyImportRecord(record);
+  if (!normalized || typeof normalized !== "object") {
+    return normalized;
+  }
+
+  const relation = { ...(normalized as Record<string, unknown>) };
+  relation.tier = normalizeLegacyInteger(relation.tier);
+
+  const companyEntityRef = buildCompatEntityRef(relation, "company");
+  if (companyEntityRef) {
+    relation.company_entity_ref = companyEntityRef;
+  }
+
+  const supplierEntityRef = buildCompatEntityRef(relation, "supplier");
+  if (supplierEntityRef) {
+    relation.supplier_entity_ref = supplierEntityRef;
+  }
+
+  return relation;
 }
 
 async function discoverManifestSkuGranularityMap(
@@ -981,7 +1078,7 @@ export async function readNormalizedJsonlFile<T>(
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const parsed = normalizeLegacyImportRecord(JSON.parse(line) as unknown);
+      const parsed = normalizeLegacyRelationRecord(JSON.parse(line) as unknown);
       return schema.parse(parsed, {
         path: [filePath, index + 1],
       });
@@ -1005,7 +1102,7 @@ export async function loadNormalizedImportPackage(
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const normalized = normalizeLegacyImportRecord(JSON.parse(line) as unknown) as RawNormalizedRecord;
+      const normalized = normalizeLegacyRelationRecord(JSON.parse(line) as unknown) as RawNormalizedRecord;
       const relationId = typeof normalized.relation_id === "string" ? normalized.relation_id : null;
       if (relationId) {
         rawRelationsById[relationId] = normalized;
@@ -1055,7 +1152,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     const relationId = typeof relation?.relation_id === "string" ? relation.relation_id : null;
     const normalized =
       (relationId ? rawRelationsById[relationId] : null) ??
-      (normalizeLegacyImportRecord(relation) as Record<string, unknown>);
+      (normalizeLegacyRelationRecord(relation) as Record<string, unknown>);
     return {
       normalized,
       parsed: standardizedImportRelationRecordSchema.parse(

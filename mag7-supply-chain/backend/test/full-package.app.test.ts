@@ -30,6 +30,8 @@ import type {
 
 const FULL_PACKAGE_DIR = "/workspace/agents/evidence-collector/output/mag7-full-package";
 const FULL_PACKAGE_MANIFEST = `${FULL_PACKAGE_DIR}/mag7-full-package-manifest.json`;
+const ROUND19_REFRESH_PACKAGE_DIR = `${FULL_PACKAGE_DIR}/round19-aagt-refresh`;
+const ROUND19_REFRESH_MANIFEST = `${ROUND19_REFRESH_PACKAGE_DIR}/mag7-full-package-manifest.json`;
 const MAG7_COMPANY_IDS = [
   "company:AAPL",
   "company:MSFT",
@@ -572,32 +574,56 @@ class RealSampleGraphRepository implements GraphRepository {
 }
 
 let app: Awaited<ReturnType<typeof buildApp>>;
+let round19App: Awaited<ReturnType<typeof buildApp>>;
 let latestPublishedSnapshotId = "snapshot:published";
 let latestPublishedSnapshotVersion = "published";
 let preparedFullPackage: PreparedNormalizedImport;
+let round19PublishedSnapshotId = "snapshot:published";
+let round19PublishedSnapshotVersion = "published";
+let preparedRound19Package: PreparedNormalizedImport;
 
-beforeAll(async () => {
+async function buildSampleAppFromPackage(packageDir: string, manifestPath: string) {
   const [pkg, manifestRaw] = await Promise.all([
-    loadNormalizedImportPackage(`${FULL_PACKAGE_DIR}/relations.jsonl`, `${FULL_PACKAGE_DIR}/evidence.jsonl`),
-    readFile(FULL_PACKAGE_MANIFEST, "utf8"),
+    loadNormalizedImportPackage(`${packageDir}/relations.jsonl`, `${packageDir}/evidence.jsonl`),
+    readFile(manifestPath, "utf8"),
   ]);
   const manifest = JSON.parse(manifestRaw) as { package_snapshot_id?: string };
-  latestPublishedSnapshotId = manifest.package_snapshot_id ?? latestPublishedSnapshotId;
-  latestPublishedSnapshotVersion = latestPublishedSnapshotId.replace("snapshot:", "").replace(/-/g, ".");
-  preparedFullPackage = prepareNormalizedImport(pkg);
-  const graphRepository = new RealSampleGraphRepository(preparedFullPackage);
+  const snapshotId = manifest.package_snapshot_id ?? "snapshot:published";
+  const snapshotVersion = snapshotId.replace("snapshot:", "").replace(/-/g, ".");
+  const prepared = prepareNormalizedImport(pkg);
+  const graphRepository = new RealSampleGraphRepository(prepared);
   const neo4jHealth = async (): Promise<Neo4jHealth> => ({
     status: "up",
     detail: "full-package sample repository",
     required: true,
   });
 
-  app = await buildApp({
-    cacheClient,
-    graphRepository,
-    neo4jHealth,
-    runtimeMode: "live",
-  });
+  return {
+    app: await buildApp({
+      cacheClient,
+      graphRepository,
+      neo4jHealth,
+      runtimeMode: "live",
+    }),
+    prepared,
+    snapshotId,
+    snapshotVersion,
+  };
+}
+
+beforeAll(async () => {
+  const [fullPackageHarness, round19Harness] = await Promise.all([
+    buildSampleAppFromPackage(FULL_PACKAGE_DIR, FULL_PACKAGE_MANIFEST),
+    buildSampleAppFromPackage(ROUND19_REFRESH_PACKAGE_DIR, ROUND19_REFRESH_MANIFEST),
+  ]);
+  app = fullPackageHarness.app;
+  preparedFullPackage = fullPackageHarness.prepared;
+  latestPublishedSnapshotId = fullPackageHarness.snapshotId;
+  latestPublishedSnapshotVersion = fullPackageHarness.snapshotVersion;
+  round19App = round19Harness.app;
+  preparedRound19Package = round19Harness.prepared;
+  round19PublishedSnapshotId = round19Harness.snapshotId;
+  round19PublishedSnapshotVersion = round19Harness.snapshotVersion;
 });
 
 beforeEach(() => {
@@ -606,6 +632,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await app?.close();
+  await round19App?.close();
 });
 
 describe("full package app", () => {
@@ -965,5 +992,130 @@ describe("full package app", () => {
     expect(path.json().details).toEqual(
       expect.arrayContaining([expect.objectContaining({ path: "maxDepth" })]),
     );
+  });
+
+  it("direct-loads round19 candidate published raw without regressing Apple detail, overview, subgraph, path, stats, or evidence", async () => {
+    const relationId = "rel:apple:ups:logistics:global-launch-air-hub";
+    const [detail, overview, subgraph, path, stats, evidence] = await Promise.all([
+      round19App.inject({ method: "GET", url: "/api/v1/companies/company:AAPL" }),
+      round19App.inject({ method: "GET", url: "/api/v1/companies/company:AAPL/overview" }),
+      round19App.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:AAPL&depth=3&snapshot=published&includeEvidence=true",
+      }),
+      round19App.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:ups&targetCompanyId=company:AAPL&maxDepth=1&snapshot=published&includeEvidence=true",
+      }),
+      round19App.inject({
+        method: "GET",
+        url: "/api/v1/graph/stats?snapshot=published&companyId=company:AAPL",
+      }),
+      round19App.inject({
+        method: "GET",
+        url: `/api/v1/relations/${encodeURIComponent(relationId)}/evidence`,
+      }),
+    ]);
+
+    for (const response of [detail, overview, subgraph, path, stats, evidence]) {
+      expect(response.statusCode).toBe(200);
+    }
+
+    expect(detail.json().item.id).toBe("company:AAPL");
+    expect(overview.json().companyId).toBe("company:AAPL");
+    expect(subgraph.json().relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: relationId,
+          sourceId: "company:ups",
+          targetId: "company:AAPL",
+          snapshotId: round19PublishedSnapshotId,
+          tier: 1,
+        }),
+      ]),
+    );
+    expect(path.json().relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: relationId,
+          sourceId: "company:ups",
+          targetId: "company:AAPL",
+          snapshotId: round19PublishedSnapshotId,
+          tier: 1,
+        }),
+      ]),
+    );
+    expect(stats.json().relationCount).toBeGreaterThan(0);
+    expect(evidence.json()).toMatchObject({
+      relationId,
+      total: 1,
+      source: "neo4j",
+      items: [
+        expect.objectContaining({
+          sourceType: "official_press_release",
+          publishedAt: "2020-10-23",
+        }),
+      ],
+    });
+    expect(round19PublishedSnapshotVersion).toBe("2026.06.15.full.19.candidate");
+  });
+
+  it("keeps round19 candidate published counts and late-tail Tesla evidence reachable after compatibility coercion", async () => {
+    const relationId = "rel:tesla:redwood-materials:materials_supply:recycled-copper-foil-via-panasonic-nevada";
+    const [subgraph, path, evidence] = await Promise.all([
+      round19App.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:TSLA&depth=3&snapshot=published&includeEvidence=true",
+      }),
+      round19App.inject({
+        method: "GET",
+        url: "/api/v1/graph/path?sourceCompanyId=company:redwood-materials&targetCompanyId=company:TSLA&maxDepth=3&snapshot=published&includeEvidence=true",
+      }),
+      round19App.inject({
+        method: "GET",
+        url: `/api/v1/relations/${encodeURIComponent(relationId)}/evidence`,
+      }),
+    ]);
+
+    expect(preparedRound19Package.relations).toHaveLength(327);
+    expect(preparedRound19Package.evidence).toHaveLength(435);
+    expect(round19PublishedSnapshotId).toBe("snapshot:2026-06-15.full.19-candidate");
+
+    expect(subgraph.statusCode).toBe(200);
+    expect(path.statusCode).toBe(200);
+    expect(evidence.statusCode).toBe(200);
+    expect(subgraph.json().relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: relationId,
+          sourceId: "company:redwood-materials",
+          targetId: "company:TSLA",
+          snapshotId: round19PublishedSnapshotId,
+          tier: 3,
+        }),
+      ]),
+    );
+    expect(path.json().relations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: relationId,
+          sourceId: "company:redwood-materials",
+          targetId: "company:TSLA",
+          snapshotId: round19PublishedSnapshotId,
+          tier: 3,
+        }),
+      ]),
+    );
+    expect(evidence.json()).toMatchObject({
+      relationId,
+      total: 3,
+      source: "neo4j",
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          sourceType: "official_press_release",
+          publishedAt: "2022-11-15",
+        }),
+      ]),
+    });
   });
 });
