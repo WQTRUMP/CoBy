@@ -1,130 +1,68 @@
-# Mag7 live Neo4j/Redis 真实环境验收 Runbook
+# Mag7 full.17 live 真实验收自助运行包
 
-## 1. 目的
+## 1. 目标
 
-本文件定义 `real_data_launch` 的正式闭环验收方式。目标是基于 `snapshot:2026-06-15.full.16` authoritative 正式包，在真实 `Neo4j + Redis` 依赖上完成：
+本运行包用于把 `real_data_launch` 从当前 `blocked` 推进到可判定状态。权威输入固定为 `snapshot:2026-06-15.full.17`，脚本必须完成：
 
-1. 启动依赖或连接外部已就绪依赖。
-2. 执行 `npm run import:normalized`，并确认写入源为 `neo4j`。
-3. 验证 `health`、`companies`、`detail`、`overview`、`search`、`suggest`、`subgraph`、`path`、`stats`、`evidence` 全链路接口。
-4. 产出可回传、可审计的证据目录，而不是只口头报告“跑过了”。
+1. preflight：校验 full.17 数据包、Node/npm/curl/jq、运行时选择条件。
+2. bring-up：自动选择 external Neo4j/Redis 或 Docker/Compose。
+3. import：执行 `npm run import:normalized`，并要求 `source=neo4j`。
+4. HTTP smoke：验证 `health`、`detail`、`overview`、`search`、`suggest`、`subgraph`、`path`、`stats`、`relations/:id/evidence`。
+5. 结果沉淀：无论成功或失败，都输出结构化结果目录；严禁回退 mock。
 
-## 2. 当前结论
+## 2. 当前 authoritative 结论
 
-- `prototype`：可发布，但仅限显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路。
-- `real_data_launch`：截至 `2026-06-15` 仍 blocked。authoritative 结论不是“本机缺 Docker 即唯一阻塞”，而是当前仍缺基于 `snapshot:2026-06-15.full.16` 的 live Neo4j/Redis 真实写库与 HTTP 全链路验收证据；本机缺少 Docker/Compose 或等效依赖只是在当前工作机上无法直接补齐该证据的环境限制。
-- 默认运行态：`GRAPH_RUNTIME_MODE=live`。如果 live 依赖缺失，允许的失败语义只有：
-  - `GET /api/v1/health` 返回 `200` 且 `status=degraded`
-  - 业务接口返回 `503 dependency_unavailable`
-  - 不允许静默回退 `mock`
-- 监控/巡检前提：当 `/opt/wanman/products.json` 仍为空数组时，只能维持 `unknown:no_product_inventory`，不能把本 runbook 或候选清单表述成正式 uptime 覆盖。
+- `prototype`：可单独部署，但仅限显式 `GRAPH_RUNTIME_MODE=prototype`。
+- `real_data_launch`：截至 `2026-06-15` 仍 `blocked`。
+- 唯一 authoritative 阻塞不是“本机缺 Docker”本身，而是仍缺一套基于 `snapshot:2026-06-15.full.17` 的真实 Neo4j/Redis 写库成功证据，以及 `health/detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence` 全链路 live 成功返回证据。
+- `/opt/wanman/products.json` 若仍为空数组，系统状态只能维持 `unknown:no_product_inventory`。
 
-## 3. 本轮正式输入
+## 3. 自助运行入口
 
-### 3.1 正式包
+- 主脚本：`infra/deployment/live-acceptance-commands.sh`
+- 环境样例：`infra/deployment/live-acceptance.env.example`
+- 验收模板：`infra/deployment/live-acceptance-evidence-template.md`
 
-- 路径：`/workspace/agents/evidence-collector/output/mag7-full-package`
-- manifest：`mag7-full-package-manifest.json`
-- package version：`1.15.0`
-- package snapshot：`snapshot:2026-06-15.full.16`
-- `relations.jsonl`：`273` 行
-- `evidence.jsonl`：`361` 行
+## 4. 自动模式选择
 
-### 3.2 验收脚本与模板
+脚本默认 `--mode auto`，选择逻辑固定如下：
 
-- 一键执行器：`infra/deployment/live-acceptance-commands.sh`
-- 环境变量样例：`infra/deployment/live-acceptance.env.example`
-- 证据模板：`infra/deployment/live-acceptance-evidence-template.md`
+1. 如果 `NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL` 五项都已提供，则优先走 `external`。
+2. 否则，如果当前机器可用 `docker compose`，则退回 `docker`。
+3. 两者都不可用时，不做任何 mock 降级，而是输出 `result.json` 失败结论，并指向最小外部前置。
 
-## 4. 最小外部前置条件
+可选显式参数：
 
-满足以下两种模式之一即可：
+```bash
+--mode auto|docker|external
+--output-dir <dir>
+--keep-services
+```
 
-### 4.1 Docker 模式
+## 5. 最小外部前置
 
-- 已验证 Node.js：`v22.22.3`
-- npm
-- `curl`
-- `jq`
-- Docker Engine
-- Docker Compose
-
-脚本会自动：
-
-1. 启动 `docker-compose.dev.yml` 中的 `neo4j`、`neo4j-init`、`redis`、`minio`
-2. 等待 Neo4j / Redis 健康
-3. 执行导入与 HTTP 验收
-4. 收集日志与返回体
-
-### 4.2 External 模式
-
-- 已验证 Node.js：`v22.22.3`
-- npm
-- `curl`
-- `jq`
-- 一套外部已就绪的 Neo4j 5.26 兼容实例
-- 一套外部已就绪的 Redis 7.4 兼容实例
-- 可用的 `NEO4J_URI` / `NEO4J_USERNAME` / `NEO4J_PASSWORD` / `NEO4J_DATABASE` / `REDIS_URL`
-
-External 模式最小必填输入只有以下 6 项；其余变量不填则使用脚本默认值：
+只需要补齐以下最小集合，不要求额外改代码：
 
 ```dotenv
 GRAPH_RUNTIME_MODE=live
-NEO4J_URI=bolt://<external-host>:7687
+NEO4J_URI=bolt://<reachable-neo4j-host>:7687
 NEO4J_USERNAME=<username>
 NEO4J_PASSWORD=<password>
 NEO4J_DATABASE=neo4j
-REDIS_URL=redis://<external-host>:6379
+REDIS_URL=redis://<reachable-redis-host>:6379
 ```
 
-可选项：
+同时需要：
 
-- `API_BASE`：若 backend 不监听 `http://127.0.0.1:4000`
-- `HOST` / `PORT`：若需改本地 backend 监听地址
-- `CORS_ORIGIN`：仅当前端 preview 基线需跨源时才需要
-- `EXPECTED_PACKAGE_SNAPSHOT`：默认会校验 `snapshot:2026-06-15.full.16`
+- Node.js `v22.22.3`
+- npm
+- curl
+- jq
+- 若不用 external，则需要 Docker Engine + Docker Compose
 
-脚本不会拉本地容器，而是直接：
+## 6. 推荐执行方式
 
-1. 用提供的环境变量启动 backend
-2. 导入 full.16
-3. 跑 HTTP 验收
-4. 把证据落到输出目录
-
-## 5. 环境变量
-
-推荐先加载：
-
-```bash
-set -a
-source infra/deployment/live-acceptance.env.example
-set +a
-```
-
-最小必要变量如下：
-
-```dotenv
-GRAPH_RUNTIME_MODE=live
-NEO4J_URI=bolt://127.0.0.1:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=mag7-dev-password
-NEO4J_DATABASE=neo4j
-REDIS_URL=redis://127.0.0.1:6379
-EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.16
-```
-
-如需改变本地监听或 HTTP 验收地址，再额外覆盖：
-
-```dotenv
-API_BASE=http://127.0.0.1:4000
-PORT=4000
-HOST=127.0.0.1
-CORS_ORIGIN=http://127.0.0.1:5174
-```
-
-## 6. 一键执行
-
-### 6.1 Docker 模式
+### 6.1 自动模式
 
 ```bash
 cd /workspace/project/mag7-supply-chain
@@ -132,63 +70,56 @@ set -a
 source infra/deployment/live-acceptance.env.example
 set +a
 bash infra/deployment/live-acceptance-commands.sh \
-  --services-mode docker \
-  --output-dir /tmp/mag7-live-acceptance-full16
+  --mode auto \
+  --output-dir /tmp/mag7-live-acceptance-full17
 ```
 
-### 6.2 External 模式
+### 6.2 显式 external
 
 ```bash
 cd /workspace/project/mag7-supply-chain
 set -a
 source infra/deployment/live-acceptance.env.example
-export NEO4J_URI='bolt://<external-host>:7687'
-export REDIS_URL='redis://<external-host>:6379'
+export NEO4J_URI='bolt://<reachable-neo4j-host>:7687'
+export NEO4J_USERNAME='<username>'
+export NEO4J_PASSWORD='<password>'
+export NEO4J_DATABASE='neo4j'
+export REDIS_URL='redis://<reachable-redis-host>:6379'
 set +a
 bash infra/deployment/live-acceptance-commands.sh \
-  --services-mode external \
-  --output-dir /tmp/mag7-live-acceptance-full16
+  --mode external \
+  --output-dir /tmp/mag7-live-acceptance-full17
 ```
 
-### 6.3 可选参数
+### 6.3 显式 docker
 
-- `--keep-services`
-  - Docker 模式下保留容器，不在退出时 `down`
-- `--skip-preview-baseline`
-  - 跳过 preview/default 的 JSON 与 live 失败语义基线检查；适用于只做 external backend live 写库闭环、且不需要本机前端 preview 代理证据的最小验收
+```bash
+cd /workspace/project/mag7-supply-chain
+set -a
+source infra/deployment/live-acceptance.env.example
+set +a
+bash infra/deployment/live-acceptance-commands.sh \
+  --mode docker \
+  --output-dir /tmp/mag7-live-acceptance-full17
+```
 
-## 7. 脚本实际覆盖内容
+## 7. 通过门槛
 
-`live-acceptance-commands.sh` 默认会顺序执行：
-
-1. 前置依赖检查
-2. `npm install`（根目录与 backend）
-3. preview/default JSON + live 失败语义基线
-4. `docker compose up -d` 或复用 external 依赖
-5. `npm run build`
-6. `npm run import:normalized -- --relations ... --evidence ...`
-7. `npm start`
-8. 逐接口断言并把结果写到 `--output-dir`
-9. 生成 `acceptance-summary.json`
-
-## 8. 通过门槛
-
-只有同时满足以下条件，才能把结论改为 `real_data_launch 通过`：
+只有同时满足以下条件，才能把结论改成 `real_data_launch 通过`：
 
 1. `import-summary.json`
    - `source = "neo4j"`
    - `relationCount > 0`
    - `evidenceCount > 0`
    - `snapshotCount > 0`
-2. `health.json`
+2. `http/health.json`
    - `status = "ok"`
    - `runtimeMode = "live"`
    - `repositoryMode = "neo4j"`
    - `contracts.mockGraphBoundary = false`
    - `dependencies.neo4j.status = "up"`
    - `dependencies.redis.status = "up"`
-3. 业务接口全部返回成功
-   - `companies?isMag7=true&page=1&pageSize=5`
+3. 以下 8 个接口全部成功：
    - `companies/company:AAPL`
    - `companies/company:AAPL/overview`
    - `companies/search?q=amazon&limit=5`
@@ -197,107 +128,75 @@ bash infra/deployment/live-acceptance-commands.sh \
    - `graph/path?...`
    - `graph/stats?...`
    - `relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence`
-4. 需要带 `source` 的业务响应必须为 `neo4j`
+4. 所有带 `source` 的响应必须为 `neo4j`，不得出现 `mock`。
 
-## 9. 输出物与回传要求
+## 8. 输出目录结构
 
-`--output-dir` 至少会包含：
+脚本会至少产出：
 
-- `prerequisites.txt`
-- `import-summary.json`
-- `health.json`
-- `companies-list.json`
-- `company-detail.json`
-- `company-overview.json`
-- `company-search.json`
-- `company-suggest.json`
-- `subgraph.json`
-- `path.json`
-- `stats.json`
-- `evidence.json`
-- `acceptance-summary.json`
-- `backend-live.log`
-- `package-manifest.json`
+- `preflight.json`
+- `mode-selection.json`
+- `bringup.json`
+- `import-summary.json` 或 `import-failure.json`
+- `http/health.json`
+- `http/detail.json`
+- `http/overview.json`
+- `http/search.json`
+- `http/suggest.json`
+- `http/subgraph.json`
+- `http/path.json`
+- `http/stats.json`
+- `http/evidence.json`
+- `http-smoke-summary.json`
+- `minimal-external-prerequisites.json`
+- `result.json`
+- `logs/backend-live.log`
 
-Docker 模式额外包含：
+若走 docker，还会额外包含：
 
-- `docker-compose-ps.txt`
-- `docker-logs/compose.log`
-- `docker-logs/neo4j.log`
-- `docker-logs/redis.log`
-- `docker-logs/minio.log`
+- `docker/docker-compose-ps.txt`
+- `docker/compose.log`
+- `docker/neo4j.log`
+- `docker/redis.log`
 
-回传给审核方时，必须同时提交：
+## 9. 失败分流
 
-1. 证据目录压缩包
-2. 按 `infra/deployment/live-acceptance-evidence-template.md` 填写的验收说明
-3. 如失败，附阻塞原因、缺失证据与失败命令
+### 9.1 `runtime_unavailable`
 
-## 10. 常见失败分流
+含义：既没有完整 external 环境变量，也没有 Docker/Compose。
 
-### 10.1 `docker: command not found`
+动作：补齐最小 external 输入，或换到带 Docker 的运行器。
 
-含义：
+### 9.2 `neo4j_unreachable` / `redis_unreachable`
 
-- 当前机器没有容器运行能力。
+含义：脚本已识别到 external 模式，但 TCP probe 无法连通依赖。
 
-处理：
+动作：先修复网络或实例状态，再重跑脚本。
 
-- 切换到具备 Docker 的运行器重新执行；
-- 或改用 external 模式，并提供外部 Neo4j/Redis。
+### 9.3 `import_command_failed`
 
-### 10.2 导入输出 `source != "neo4j"`
+含义：脚本进入 live 导入，但真实写库失败。
 
-含义：
+动作：查看 `import-failure.json` 和 `logs/import.stderr.log`，确认是否是依赖拒绝连接、认证错误或图数据库约束问题。
 
-- 没有连上真实图数据库，或误进了 `prototype/mock`。
+### 9.4 `health_not_ok`
 
-结论：
+含义：backend 虽已启动，但 live 依赖仍未全部 ready。
 
-- 不能判定 `real_data_launch` 通过。
+动作：检查 `http/health.json` 的 `dependencies` 字段；不要把 `degraded` 写成通过。
 
-### 10.3 `health.status = degraded`
+### 9.5 `*_validation_failed`
 
-含义：
+含义：接口返回了 JSON，但不满足 authoritative full.17 验收锚点。
 
-- live 依赖至少有一个未就绪。
+动作：检查对应 `http/*.json`，逐项比对 runbook 第 7 节。
 
-结论：
+## 10. 从 blocked 到通过的最小闭环
 
-- 这证明系统没有静默回退 mock；
-- 但 `real_data_launch` 仍不通过。
+当前阻塞要解除，只差这一条闭环：
 
-### 10.4 业务接口返回 `503 dependency_unavailable`
+1. 提供一套可达 Neo4j/Redis。
+2. 用本脚本重跑 full.17。
+3. 拿到 `result.json.passed = true`，以及 `import-summary.json + http/*.json` 成套证据。
 
-含义：
-
-- backend 已处于 live 路径，但 Neo4j 或 Redis 仍不可用。
-
-结论：
-
-- 继续排查依赖，不要把该结果写成“原型可用即上线可用”。
-
-## 11. 当前工作机限制与 authoritative blocked 结论
-
-本机已确认：
-
-- Node.js 可用
-- 代码与 full.16 数据包可读
-
-本机仍缺：
-
-- `docker`
-- `docker compose`
-
-因此当前工作机不能直接产出真实 Neo4j/Redis 写库闭环证据。但这只是当前执行环境限制，不应被简化成 `real_data_launch` 的唯一阻塞定义。当前 authoritative blocked 结论必须保持为：
-
-1. 尚未拿到基于 `snapshot:2026-06-15.full.16` 的 `import-summary.json (source=neo4j)`、`health.json (status=ok)` 与业务接口成功返回的成套证据；
-2. 因缺上述真实写库/HTTP 验收证据，`real_data_launch` 仍 blocked；
-3. `/opt/wanman/products.json` 当前若仍为空数组，系统状态只能维持 `unknown:no_product_inventory`，不能宣称已建立正式 live 巡检覆盖。
-
-最小外部前置清单已经收敛为：
-
-1. 一台具备 Docker 的机器，或
-2. 一套可访问的外部 Neo4j/Redis 端点
-
-除此之外不再要求额外隐藏步骤。
+除此之外，不再要求额外 backlog、mock 演示或新的文档补丁。
