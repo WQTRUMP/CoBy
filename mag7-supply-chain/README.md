@@ -196,6 +196,34 @@ curl http://127.0.0.1:4173/api/v1/health
 - 不得把全量包 in-memory real-shape 测试、prototype/mock 返回或 degraded 运行结果表述成真实 Neo4j + Redis 验收。
 - Cloudflare、正式域名、付费数据库 / 缓存资源的实际部署必须走 Wanman 审批流，不能直接使用提供商凭据。
 
+### real_data_launch 一键验收
+
+正式 live 验收统一走 `infra/deployment` 下的交接包：
+
+```bash
+cd /workspace/project/mag7-supply-chain
+set -a
+source infra/deployment/live-acceptance.env.example
+set +a
+bash infra/deployment/live-acceptance-commands.sh \
+  --services-mode docker \
+  --output-dir /tmp/mag7-live-acceptance-full13
+```
+
+如果当前环境没有 Docker，但已有外部 Neo4j / Redis，可改用：
+
+```bash
+bash infra/deployment/live-acceptance-commands.sh \
+  --services-mode external \
+  --output-dir /tmp/mag7-live-acceptance-full13
+```
+
+相关文件：
+
+- `infra/deployment/live-acceptance-runbook.md`
+- `infra/deployment/live-acceptance.env.example`
+- `infra/deployment/live-acceptance-evidence-template.md`
+
 推荐部署拆分：
 
 - Web: GitHub Pages / Cloudflare Pages / Vercel
