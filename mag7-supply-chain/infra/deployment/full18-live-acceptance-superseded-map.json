@@ -2,6 +2,13 @@
   "schema": "wanman.superseded-document-map",
   "version": 1,
   "current_package": "full18-live-acceptance-final",
+  "current_package_status": "historical_audit_only",
+  "current_release_entry": [
+    "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
+    "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
+    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+    "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
+  ],
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
   "replaces": [
     {
@@ -45,6 +52,24 @@
       "old_scope": "Cloudflare 决策摘要",
       "new_path": "infra/deployment/live-acceptance-runbook.md",
       "reason": "其 Cloudflare/域名接入顺序已吸收进最终执行手册"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance-runbook.md",
+      "old_scope": "full.18 live 外部验收最终执行手册作为当前发布入口",
+      "new_path": "infra/deployment/deployment-manifest.json",
+      "reason": "full.19 正式入口已固定为 327/435 published 与 350/476 all-candidates；full.18 312/410、328/439 只保留审计用途"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance.env.example",
+      "old_scope": "full.18 env 模板作为当前发布计数来源",
+      "new_path": "infra/deployment/products-candidate.json",
+      "reason": "模板内 EXPECTED_* 只对应 full.18 历史验收，不得再被 human/final-release-index 误读为当前正式计数"
+    },
+    {
+      "old_path": "infra/deployment/full18-live-acceptance-final-checklist.json",
+      "old_scope": "full.18 机器可读清单作为当前发布入口",
+      "new_path": "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md",
+      "reason": "当前最终 gate 结论仍受可访问性复审 v2 缺失约束，full.18 检查清单只能保留审计用途"
     }
   ],
   "historical_only": [

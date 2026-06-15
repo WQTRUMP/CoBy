@@ -1,3 +1,11 @@
+> `superseded`：本手册仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径。
+> 当前正式入口请改用：
+> 1. `/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json`
+> 2. `/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json`
+> 3. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md`
+> 4. `/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md`
+> 本文件中的 `312/410` 与 `328/439` 仅对应 full.18 阶段验收包历史计数，不得再写成当前正式发布计数；当前正式边界是 `published=327/435`、`all-candidates=350/476`。
+
 # Mag7 full.18 live 外部验收最终执行手册
 
 ## 1. 结论边界

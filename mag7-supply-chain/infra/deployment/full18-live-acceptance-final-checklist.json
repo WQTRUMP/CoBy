@@ -1,6 +1,25 @@
 {
   "schema": "wanman.live-acceptance-checklist",
   "version": 1,
+  "status": "superseded_for_release_entry",
+  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径；其中 312/410 与 328/439 只对应 full.18 历史验收包。",
+  "superseded_by": [
+    "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
+    "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
+    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+    "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
+  ],
+  "current_release_counts_reference": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "published": {
+      "relations": 327,
+      "evidence": 435
+    },
+    "all_candidates": {
+      "relations": 350,
+      "evidence": 476
+    }
+  },
   "package_name": "Mag7 full.18 live 外部验收最终执行包",
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
   "formal_chain": "7b0963ea -> fd7161a9 -> fb8bc7b2",
