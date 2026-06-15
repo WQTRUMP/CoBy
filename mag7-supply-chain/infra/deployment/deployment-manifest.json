@@ -1,7 +1,7 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-15T00:04:45Z",
+  "generated_at": "2026-06-15T00:32:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
@@ -114,7 +114,7 @@
           "serves_requests": false,
           "serves_health_checks": true,
           "observed_in_verification": true,
-          "observed_business_response": "结构化 503 dependency_unavailable；`/api/v1/health` 返回 200 degraded 并暴露 `cache disabled`。"
+          "observed_business_response": "结构化 503 dependency_unavailable；`/api/v1/health` 仅暴露 live 依赖失败语义，不代表业务接口仍可成功服务。"
         },
         {
           "name": "full_graph_mode",
@@ -299,7 +299,7 @@
             "error": "dependency_unavailable",
             "dependency": "redis"
           },
-          "observation": "旧的本地 mock 200 样本已移除；当前 Redis live 失败语义以 backend 测试合同为准，要求 health 暴露 degraded，业务与导入接口返回 503。"
+          "observation": "旧的本地 mock 200 样本已移除；当前 Redis live 失败语义以 backend 测试合同为准，要求 health 暴露 degraded，业务与导入接口返回 503 dependency_unavailable。"
         }
       }
     }
@@ -371,7 +371,7 @@
       "import_normalized": "failed: 503 dependency_unavailable (dependency=neo4j, detail contains GRAPH_RUNTIME_MODE=live)",
       "invalid_parameter_contract": "400 bad_request",
       "neo4j_unreachable_business_contract": "503 dependency_unavailable",
-      "redis_live_business_contract": "backend/test/app.test.ts 已验证：health=200 degraded 且 companies/import 返回 503 dependency_unavailable (dependency=redis)"
+      "redis_live_business_contract": "backend/test/app.test.ts 已验证：health=200 degraded 仅暴露 live 依赖失败，companies/import 返回 503 dependency_unavailable (dependency=redis)"
     }
   },
   "sources": [
