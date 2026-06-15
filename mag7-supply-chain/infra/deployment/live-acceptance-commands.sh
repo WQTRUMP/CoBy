@@ -7,14 +7,15 @@ usage() {
   bash infra/deployment/live-acceptance-commands.sh [--services-mode docker|external] [--output-dir <dir>] [--keep-services] [--skip-preview-baseline]
 
 说明：
-  - docker 模式：用仓库自带 compose 拉起 Neo4j/Redis/MinIO，完成 full.13 导入与 HTTP 验收。
+  - docker 模式：用仓库自带 compose 拉起 Neo4j/Redis/MinIO，完成 full.16 authoritative 包导入与 HTTP 验收。
   - external 模式：复用外部已启动的 Neo4j/Redis，仅执行导入与 HTTP 验收。
   - 所有证据会写入 --output-dir；默认写到 mktemp 目录。
 
 环境变量：
   REPO_ROOT           仓库根目录，默认 /workspace/project/mag7-supply-chain
   BACKEND_DIR         backend 目录，默认 $REPO_ROOT/backend
-  PACKAGE_DIR         full.13 数据包目录，默认 /workspace/agents/evidence-collector/output/mag7-full-package
+  PACKAGE_DIR         full.16 数据包目录，默认 /workspace/agents/evidence-collector/output/mag7-full-package
+  EXPECTED_PACKAGE_SNAPSHOT authoritative snapshot，默认 snapshot:2026-06-15.full.16
   API_BASE            API 基址，默认 http://127.0.0.1:4000
   PORT                后端端口，默认 4000
   HOST                后端监听地址，默认 127.0.0.1
@@ -114,6 +115,8 @@ fi
 REPO_ROOT="${REPO_ROOT:-/workspace/project/mag7-supply-chain}"
 BACKEND_DIR="${BACKEND_DIR:-$REPO_ROOT/backend}"
 PACKAGE_DIR="${PACKAGE_DIR:-/workspace/agents/evidence-collector/output/mag7-full-package}"
+PACKAGE_MANIFEST="${PACKAGE_DIR}/mag7-full-package-manifest.json"
+EXPECTED_PACKAGE_SNAPSHOT="${EXPECTED_PACKAGE_SNAPSHOT:-snapshot:2026-06-15.full.16}"
 API_BASE="${API_BASE:-http://127.0.0.1:4000}"
 
 export PORT="${PORT:-4000}"
@@ -134,6 +137,7 @@ PREREQ_REPORT="$OUTPUT_DIR/prerequisites.txt"
 SUMMARY_JSON="$OUTPUT_DIR/acceptance-summary.json"
 IMPORT_JSON="$OUTPUT_DIR/import-summary.json"
 SERVER_LOG="$OUTPUT_DIR/backend-live.log"
+PACKAGE_MANIFEST_COPY="$OUTPUT_DIR/package-manifest.json"
 PREVIEW_LOG="$OUTPUT_DIR/frontend-preview.log"
 PREVIEW_BACKEND_LOG="$OUTPUT_DIR/backend-preview.log"
 DOCKER_PS="$OUTPUT_DIR/docker-compose-ps.txt"
@@ -180,6 +184,8 @@ trap cleanup EXIT
   echo "repo_root=$REPO_ROOT"
   echo "backend_dir=$BACKEND_DIR"
   echo "package_dir=$PACKAGE_DIR"
+  echo "package_manifest=$PACKAGE_MANIFEST"
+  echo "expected_package_snapshot=$EXPECTED_PACKAGE_SNAPSHOT"
   echo "api_base=$API_BASE"
   echo "output_dir=$OUTPUT_DIR"
   echo "graph_runtime_mode=$GRAPH_RUNTIME_MODE"
@@ -193,8 +199,15 @@ echo "node=$(node -v)" >>"$PREREQ_REPORT"
 echo "npm=$(npm -v)" >>"$PREREQ_REPORT"
 echo "jq=$(jq --version)" >>"$PREREQ_REPORT"
 test "$GRAPH_RUNTIME_MODE" = "live"
+test -f "$PACKAGE_MANIFEST"
 test -f "$PACKAGE_DIR/relations.jsonl"
 test -f "$PACKAGE_DIR/evidence.jsonl"
+PACKAGE_SNAPSHOT_ID="$(jq -r '.package_snapshot_id' "$PACKAGE_MANIFEST")"
+PACKAGE_VERSION="$(jq -r '.package_version' "$PACKAGE_MANIFEST")"
+test "$PACKAGE_SNAPSHOT_ID" = "$EXPECTED_PACKAGE_SNAPSHOT"
+cp "$PACKAGE_MANIFEST" "$PACKAGE_MANIFEST_COPY"
+echo "package_version=$PACKAGE_VERSION" >>"$PREREQ_REPORT"
+echo "package_snapshot_id=$PACKAGE_SNAPSHOT_ID" >>"$PREREQ_REPORT"
 wc -l "$PACKAGE_DIR/relations.jsonl" "$PACKAGE_DIR/evidence.jsonl" >>"$PREREQ_REPORT"
 
 if [[ "$SERVICES_MODE" = "docker" ]]; then
@@ -292,7 +305,7 @@ if [[ "$SERVICES_MODE" = "docker" ]]; then
   docker exec mag7-redis redis-cli ping >"$OUTPUT_DIR/redis-ping.txt"
 fi
 
-echo "== 5. 导入 full.13，必须返回 source=neo4j =="
+echo "== 5. 导入 ${PACKAGE_SNAPSHOT_ID}，必须返回 source=neo4j =="
 npm run import:normalized -- \
   --relations "$PACKAGE_DIR/relations.jsonl" \
   --evidence "$PACKAGE_DIR/evidence.jsonl" | tee "$IMPORT_JSON"
@@ -415,7 +428,8 @@ jq -e '
 echo "== 10. 汇总 =="
 jq -n \
   --arg servicesMode "$SERVICES_MODE" \
-  --arg packageSnapshotId "snapshot:2026-06-15.full.13" \
+  --arg packageSnapshotId "$PACKAGE_SNAPSHOT_ID" \
+  --arg packageVersion "$PACKAGE_VERSION" \
   --arg outputDir "$OUTPUT_DIR" \
   --slurpfile health "$OUTPUT_DIR/health.json" \
   --slurpfile imported "$IMPORT_JSON" \
@@ -431,6 +445,7 @@ jq -n \
     passed: true,
     servicesMode: $servicesMode,
     packageSnapshotId: $packageSnapshotId,
+    packageVersion: $packageVersion,
     outputDir: $outputDir,
     import: $imported[0],
     health: $health[0],

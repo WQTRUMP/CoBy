@@ -7,7 +7,7 @@
 - 执行环境：
 - 服务模式：`docker` / `external`
 - 结果结论：`通过` / `失败`
-- 使用数据包：`snapshot:2026-06-15.full.13`
+- 使用数据包：`snapshot:2026-06-15.full.16`
 - 证据目录：
 
 ## 2. 前置条件
@@ -16,6 +16,7 @@
 - npm 版本：
 - jq 版本：
 - Docker/Compose 版本：
+- package version：
 - `relations.jsonl` 行数：
 - `evidence.jsonl` 行数：
 
@@ -26,11 +27,23 @@ source infra/deployment/live-acceptance.env.example
 bash infra/deployment/live-acceptance-commands.sh --services-mode <docker|external> --output-dir <your-output-dir>
 ```
 
-如使用 external 模式，请补充实际 `NEO4J_URI` / `REDIS_URL`（可脱敏主机名或口令）：
+如使用 external 模式，请补充最小输入（可脱敏主机名或口令）：
 
 ```dotenv
+GRAPH_RUNTIME_MODE=live
 NEO4J_URI=
+NEO4J_USERNAME=
+NEO4J_PASSWORD=
+NEO4J_DATABASE=
 REDIS_URL=
+```
+
+如实际不是默认监听地址，再补充：
+
+```dotenv
+API_BASE=
+HOST=
+PORT=
 ```
 
 ## 4. 导入结果
@@ -125,6 +138,7 @@ REDIS_URL=
 ## 7. 失败时必交证据
 
 - `backend-live.log`
+- `package-manifest.json`
 - `frontend-preview.log` / `backend-preview.log`（若执行 preview 基线）
 - `docker-compose-ps.txt`（docker 模式）
 - `docker-logs/neo4j.log`（docker 模式）
