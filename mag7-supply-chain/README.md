@@ -37,7 +37,7 @@
 - 前端 API 基址变量：`VITE_GRAPH_API_BASE_URL`
 - 后端默认运行态：`GRAPH_RUNTIME_MODE=live`
 - 后端 live 依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
-- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`，`real_data_launch` 仍未通过
+- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`；`full.19` live 技术阻塞已解除，当前仅待 human 部署决策，审批范围仅覆盖 published `332/444`
 
 ## 快速开始
 
@@ -190,11 +190,12 @@ curl http://127.0.0.1:4173/api/v1/health
 
 当前部署口径与 `infra/deployment/deployment-manifest.json` 对齐：
 
-- 唯一正式链：`ac99e36b + ec276475 -> 1b401c37`；`authoritative snapshot=snapshot:2026-06-15.full.17`
-- `round17=no-op merge`；不得再把任何 `full.18`、`20217319`、`5637c196`、`3a28e46f`、`6bf44b53` 或 `6277d4df` 旧链表述成正式依据；这些旧链仅保留审计用途
+- 唯一正式结论链：`full20-wave5 formal review v2 + full20-wave5 formal refresh + full19 live e2e formal review v3`；`authoritative snapshot=snapshot:2026-06-15.full.18`
+- `full20-wave5` 是 keep-only closure，不构成新的 authoritative promotion；`full.19-candidate`、`full20-wave5-candidate` 外层壳层与旧 `round17` 审计链都不得表述成正式依据
 - 正式增量口径：`formal net new=Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
+- 正式发布边界：`published=332/444`、`all-candidates=341/459`、`candidate-only=9/15`
 - `prototype`：可发布。允许前端静态站点接独立 API；仅当后端显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许使用 `repositoryMode=mock` / `source=mock` 的原型演示链路。
-- `real_data_launch`：不通过。当前仍缺 live Neo4j / Redis 依赖下的导入闭环、健康检查与业务接口验收。
+- `real_data_launch`：技术阻塞已解除，当前状态是 `ready_for_human_decision`，但 human 审批范围只能覆盖 published `332/444`，不得把 all-candidates `341/459` 视作已发布 live 数据。
 - 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。
 - 若 `/opt/wanman/products.json` 仍为空数组，则 `system_status=unknown:no_product_inventory`，不得宣称正式 uptime 覆盖。
 - 不得把全量包 in-memory real-shape 测试、prototype/mock 返回或 degraded 运行结果表述成真实 Neo4j + Redis 验收。
@@ -211,7 +212,7 @@ source infra/deployment/live-acceptance.env.example
 set +a
 bash infra/deployment/live-acceptance-commands.sh \
   --mode docker \
-  --output-dir /tmp/mag7-live-acceptance-full17
+  --output-dir /tmp/mag7-live-acceptance-full18
 ```
 
 如果当前环境没有 Docker，但已有外部 Neo4j / Redis，可改用：
@@ -219,7 +220,7 @@ bash infra/deployment/live-acceptance-commands.sh \
 ```bash
 bash infra/deployment/live-acceptance-commands.sh \
   --mode external \
-  --output-dir /tmp/mag7-live-acceptance-full17
+  --output-dir /tmp/mag7-live-acceptance-full18
 ```
 
 相关文件：

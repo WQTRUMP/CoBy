@@ -8,10 +8,11 @@
 - 请求模式：`auto` / `docker` / `external`
 - 实际模式：`docker` / `external` / `unavailable`
 - 结果结论：`通过` / `失败`
-- 唯一正式链：`7b0963ea -> fd7161a9 -> fb8bc7b2`
+- 唯一正式链：`full20-wave5 formal review v2 + full20-wave5 formal refresh + full19 live e2e formal review v3`
 - `authoritative snapshot`：`snapshot:2026-06-15.full.18`
-- published：`312 relations / 410 evidence`
-- all-candidates：`328 relations / 439 evidence`
+- published：`332 relations / 444 evidence`
+- all-candidates：`341 relations / 459 evidence`
+- candidate-only：`9 relations / 15 evidence`
 - 证据目录：
 
 ## 2. 前置条件
@@ -45,8 +46,8 @@ NEO4J_PASSWORD=
 NEO4J_DATABASE=
 REDIS_URL=
 EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
-EXPECTED_RELATION_COUNT=312
-EXPECTED_EVIDENCE_COUNT=410
+EXPECTED_RELATION_COUNT=332
+EXPECTED_EVIDENCE_COUNT=444
 ```
 
 ## 4. preflight / mode-selection
@@ -60,8 +61,8 @@ EXPECTED_EVIDENCE_COUNT=410
 必须说明：
 
 - 是否命中 `snapshot:2026-06-15.full.18`
-- `relations=312`
-- `evidence=410`
+- `relations=332`
+- `evidence=444`
 - 自动选择结果是 `docker` 还是 `external`
 - 若失败，失败码是什么
 
@@ -170,7 +171,7 @@ EXPECTED_EVIDENCE_COUNT=410
 ## 10. 最终判定
 
 - `result.json.passed`：
-- 是否满足 `real_data_launch` 通过门槛：
+- 是否满足 `real_data_launch ready_for_human_decision` 的正式部署证据门槛：
 - 若未通过，唯一阻塞原因：
 - 是否已接入 Cloudflare 最终路由：
 - `/opt/wanman/products.json` 状态（为空数组时只能写 `unknown:no_product_inventory`）：

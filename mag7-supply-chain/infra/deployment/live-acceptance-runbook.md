@@ -4,26 +4,31 @@
 > 2. `/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json`
 > 3. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md`
 > 4. `/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md`
-> 本文件中的 `312/410` 与 `328/439` 仅对应 full.18 阶段验收包历史计数，不得再写成当前正式发布计数；当前正式边界是 `published=327/435`、`all-candidates=350/476`。
+> 本文件中的 full.18 历史过程只保留审计用途；当前正式入口已切换为 full20-wave5 收口链与 full19 live 终审链。
+> 当前正式边界是 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=341/459`、`candidate-only=9/15`。
+> `real_data_launch` 技术阻塞已解除，当前状态是 `ready_for_human_decision`；任何 human/Cloudflare 审批都只能覆盖 published `332/444`。
 
 # Mag7 full.18 live 外部验收最终执行手册
 
 ## 1. 结论边界
 
-- 唯一正式链：`7b0963ea -> fd7161a9 -> fb8bc7b2`
+- 唯一正式链：`full20-wave5 formal review v2 + full20-wave5 formal refresh + full19 live e2e formal review v3`
 - authoritative snapshot：`snapshot:2026-06-15.full.18`
-- published：`312 relations / 410 evidence`
-- all-candidates：`328 relations / 439 evidence`
-- 当前 readiness：`prototype=conditional_go`，`real_data_launch=no_go`
+- published：`332 relations / 444 evidence`
+- all-candidates：`341 relations / 459 evidence`
+- candidate-only：`9 relations / 15 evidence`
+- 当前 readiness：`prototype=conditional_go`，`real_data_launch=ready_for_human_decision`
 
-本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。只有拿到 `source=neo4j` 的真实导入证据与完整 HTTP smoke 通过证据后，`real_data_launch` 才允许从 `blocked` 改判为通过。
+本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。当前正式复审已确认 `source=neo4j` 的真实导入与 HTTP 回读闭环成立；此后任何重新验收都必须维持 `332/444` published 边界，且只能作为 human 部署决策与最终环境复核证据，不能再把阻塞状态写回 `blocked`。
 
 ## 2. 权威输入与排除项
 
 最终执行包只允许以下 authoritative inputs：
 
-1. `/workspace/agents/api-tester-2/output/full18-root-promotion-refresh/`
-2. `/workspace/agents/code-reviewer-6/output/full18-root-promotion-formal-review-v3/`
+1. `/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/`
+2. `/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/`
+3. `/workspace/agents/dev/output/full20-wave5-live-import-closure-report.md`
+4. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/`
 
 以下任务或草稿不得再作为本手册的正式输入：
 
@@ -90,8 +95,8 @@ REDIS_URL=<provider-neutral-redis-url>
 
 ```dotenv
 EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
-EXPECTED_RELATION_COUNT=312
-EXPECTED_EVIDENCE_COUNT=410
+EXPECTED_RELATION_COUNT=332
+EXPECTED_EVIDENCE_COUNT=444
 PORT=4000
 HOST=127.0.0.1
 API_BASE=http://127.0.0.1:4000
@@ -121,7 +126,7 @@ bash infra/deployment/live-acceptance-commands.sh \
 
 脚本会自动完成：
 
-1. `snapshot/full.18 published=312/410` preflight
+1. `snapshot/full.18 published=332/444` preflight
 2. external 或 docker 运行时选择
 3. `npm run build` 与 `npm run import:normalized`
 4. `GET /api/v1/health`
@@ -142,7 +147,7 @@ curl -sS "$API_BASE/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/
 
 ## 8. 唯一成功判据
 
-只有同时满足以下条件，才允许把结论改成 `real_data_launch 通过`：
+只有同时满足以下条件，才允许把结论写成“可提交或维持 `ready_for_human_decision` 的正式部署证据”：
 
 1. `result.json.passed = true`
 2. `import-summary.json`
@@ -160,7 +165,7 @@ curl -sS "$API_BASE/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/
 4. `http/detail.json`、`overview.json`、`search.json`、`suggest.json`、`subgraph.json`、`path.json`、`stats.json`、`evidence.json` 全部通过
 5. 所有带 `source` 的业务响应都必须是 `neo4j`，不得出现 `mock`
 
-`degraded`、`503 dependency_unavailable`、prototype 模式、或全量包内存测试都不能当成通过。
+`degraded`、`503 dependency_unavailable`、prototype 模式、或全量包内存测试都不能当成通过；`all-candidates 341/459` 也不能当成已批准发布范围。
 
 ## 9. 失败分流
 
