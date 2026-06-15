@@ -5,6 +5,7 @@ import { buildApp } from "../src/app.js";
 import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,
+  type ImportRelationNode,
   type PreparedNormalizedImport,
 } from "../src/lib/normalized-package.js";
 import type { CacheClient } from "../src/lib/redis.js";
@@ -772,7 +773,7 @@ describe("full package app", () => {
     const expectedNvdaRelations = preparedFullPackage.relationEdges
       .filter((edge) => edge.sourceCompanyId === "company:NVDA" || edge.targetCompanyId === "company:NVDA")
       .map((edge) => relationById.get(edge.relationId))
-      .filter((relation): relation is RelationDTO => relation != null);
+      .filter((relation): relation is ImportRelationNode => relation != null);
     const relationDetailFor = (relationId: string) => {
       const relation = relationById.get(relationId);
       return relation?.skuGranularityDetailValue && relation.skuGranularitySource
