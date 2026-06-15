@@ -32,7 +32,7 @@
       "display_name": "Mag7 供应链交互式探索平台",
       "kind": "interactive_supply_chain_platform",
       "readiness": "real_data_launch_ready_for_human_decision",
-      "summary": "wave5 正式收口后，当前发布边界已刷新为 published 332/444、all-candidates 341/459、candidate-only 9/15；9 条 keep-only 尾项在 published evidence 端点继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18；真实 source=neo4j live 能力仍锚定既有 full19 终审链，wave5 不构成新的 authoritative promotion。本候选清单对应的 post-audit v3 结论继续维持 ready_for_human_decision，但 human 审批范围只允许覆盖 published 332/444。",
+      "summary": "wave5 正式收口后，当前发布边界已刷新为 published 332/444、all-candidates 341/459、candidate-only 9/15；9 条 keep-only 尾项在 published evidence 端点继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18；真实 source=neo4j live 能力仍锚定既有 full19 终审链，但该表述不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过，wave5 也不构成新的 authoritative promotion。本候选清单对应的 post-audit v3 结论继续维持 ready_for_human_decision，但 human 审批范围只允许覆盖 published 332/444。",
       "urls": {
         "web_health": {
           "path": "/",

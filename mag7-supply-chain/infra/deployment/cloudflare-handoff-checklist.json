@@ -10,7 +10,7 @@
     "published": "332 relations / 444 evidence",
     "all_candidates": "341 relations / 459 evidence",
     "candidate_only_delta": "9 relations / 15 evidence",
-    "real_data_launch": "真实 live 能力已在既有 full19 终审链成立；wave5 仅刷新当前 payload 与候选边界，现已进入待 human 批准部署阶段"
+    "real_data_launch": "真实 live 能力已在既有 full19 终审链成立；该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。wave5 仅刷新当前 payload 与候选边界，现已进入待 human 批准部署阶段"
   },
   "audit_only_exclusions": [
     "0cd6875d",
@@ -106,6 +106,6 @@
     "published 332/444 与 all-candidates 341/459 边界已按 full20-wave5 正式收口锁定。",
     "candidate-only relation 在 published 视图中必须继续不可取证，evidence 读取应返回 404 relation_evidence_not_found。",
     "当前数据边界的唯一正式结论源只能是 full20-wave5-formal-review-v2 与 full20-wave5-formal-refresh；0cd6875d 与 6e45bce1 仅保留审计用途。",
-    "真实 live 能力已在既有 full19 终审链成立，但正式外部部署仍需 human 批准。"
+    "真实 live 能力已在既有 full19 终审链成立，但该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过；正式外部部署仍需 human 批准。"
   ]
 }

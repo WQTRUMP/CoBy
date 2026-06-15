@@ -7,6 +7,7 @@
 > 本文件中的 full.18 历史过程只保留审计用途；当前正式入口已切换为 full20-wave5 收口链与 full19 live 终审链。
 > 当前正式边界是 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=341/459`、`candidate-only=9/15`。
 > `real_data_launch` 技术阻塞已解除，当前状态是 `ready_for_human_decision`；任何 human/Cloudflare 审批都只能覆盖 published `332/444`。
+> 这里引用的既有 full19 live 成立结论只锚定历史正式证据链，不等于 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。
 > 历史 `post-audit-v2`、`312/410`、`327/435`、`350/476` 只保留审计用途，不再代表当前 authoritative 入口。
 
 # Mag7 full.18 live 外部验收最终执行手册
@@ -21,7 +22,7 @@
 - 当前正式入口：`post-audit-v3`
 - 当前 readiness：`prototype=conditional_go`，`real_data_launch=ready_for_human_decision`
 
-本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。当前正式复审已确认 `source=neo4j` 的真实导入与 HTTP 回读闭环成立；此后任何重新验收都必须维持 `332/444` published 边界，且只能作为 human 部署决策与最终环境复核证据，不能再把阻塞状态写回 `blocked`。
+本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。当前正式复审已确认 `source=neo4j` 的真实导入与 HTTP 回读闭环在既有 full19 终审链成立；该结论只锚定历史正式证据链，不等于 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。此后任何重新验收都必须维持 `332/444` published 边界，且只能作为 human 部署决策与最终环境复核证据，不能再把阻塞状态写回 `blocked`。
 
 ## 2. 权威输入与排除项
 

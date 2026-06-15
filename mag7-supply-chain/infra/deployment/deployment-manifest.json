@@ -294,7 +294,7 @@
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
     "real_data_launch_allowed_after_approval": true,
-    "summary": "source=neo4j 的真实 live 运行时能力已在既有 full19 终审链成立；full20-wave5 进一步把当前 root payload 与候选边界锁定为 published 332/444、all-candidates 341/459、candidate-only 9/15。可访问性 v2 与安全复审均已通过，当前继续维持 ready_for_human_decision，但审批范围只覆盖 published 332/444。Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
+    "summary": "source=neo4j 的真实 live 运行时能力已在既有 full19 终审链成立；该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。full20-wave5 进一步把当前 root payload 与候选边界锁定为 published 332/444、all-candidates 341/459、candidate-only 9/15。可访问性 v2 与安全复审均已通过，当前继续维持 ready_for_human_decision，但审批范围只覆盖 published 332/444。Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
   },
   "deployment_tiers": {
     "prototype": {

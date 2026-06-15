@@ -37,7 +37,7 @@
 - 前端 API 基址变量：`VITE_GRAPH_API_BASE_URL`
 - 后端默认运行态：`GRAPH_RUNTIME_MODE=live`
 - 后端 live 依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
-- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`；`full.19` live 技术阻塞已解除，当前仅待 human 部署决策，审批范围仅覆盖 published `332/444`
+- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`；`full.19` live 技术阻塞已解除，当前仅待 human 部署决策，审批范围仅覆盖 published `332/444`。这里引用的 live 成立结论仅指既有 `full19-live-e2e-formal-review-v3` 证据链，不等于 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。
 
 ## 快速开始
 
