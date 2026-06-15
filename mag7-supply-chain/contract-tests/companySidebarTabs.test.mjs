@@ -57,7 +57,19 @@ test("renders a single active tab in the company sidebar roving tabindex set", (
     }),
   );
 
-  assert.match(markup, /id="company-tab-overview"[^>]*tabindex="-1"[^>]*aria-selected="false"/);
-  assert.match(markup, /id="company-tab-evidence"[^>]*tabindex="0"[^>]*aria-selected="true"/);
-  assert.match(markup, /id="company-tab-financials"[^>]*tabindex="-1"[^>]*aria-selected="false"/);
+  assert.ok(
+    markup.includes(
+      '<button aria-controls="company-panel-overview" aria-selected="false" class="tabButton" id="company-tab-overview" role="tab" tabindex="-1" type="button">Overview</button>',
+    ),
+  );
+  assert.ok(
+    markup.includes(
+      '<button aria-controls="company-panel-evidence" aria-selected="true" class="tabButton active" id="company-tab-evidence" role="tab" tabindex="0" type="button">Evidence</button>',
+    ),
+  );
+  assert.ok(
+    markup.includes(
+      '<button aria-controls="company-panel-financials" aria-selected="false" class="tabButton" id="company-tab-financials" role="tab" tabindex="-1" type="button">Financials</button>',
+    ),
+  );
 });
