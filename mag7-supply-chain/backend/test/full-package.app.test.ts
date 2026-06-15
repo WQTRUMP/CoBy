@@ -767,13 +767,15 @@ describe("full package app", () => {
     expect(path.statusCode).toBe(200);
     expect(evidence.statusCode).toBe(200);
 
-    const relationById = new Map(
+    const relationById = new Map<string, ImportRelationNode>(
       preparedFullPackage.relations.map((relation) => [relation.id, relation]),
     );
     const expectedNvdaRelations = preparedFullPackage.relationEdges
       .filter((edge) => edge.sourceCompanyId === "company:NVDA" || edge.targetCompanyId === "company:NVDA")
-      .map((edge) => relationById.get(edge.relationId))
-      .filter((relation): relation is ImportRelationNode => relation != null);
+      .flatMap((edge) => {
+        const relation = relationById.get(edge.relationId);
+        return relation ? [relation] : [];
+      });
     const relationDetailFor = (relationId: string) => {
       const relation = relationById.get(relationId);
       return relation?.skuGranularityDetailValue && relation.skuGranularitySource
