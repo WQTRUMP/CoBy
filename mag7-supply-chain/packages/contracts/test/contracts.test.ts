@@ -295,6 +295,42 @@ describe("@mag7/contracts", () => {
     }
   });
 
+  it("accepts the expanded official and industry source types from the latest full package", () => {
+    for (const sourceType of [
+      "official_press_release",
+      "official_filing",
+      "official_blog",
+      "official_joint_press_release",
+      "official_joint_press_release_pdf",
+      "official_report",
+      "official_supplier_list",
+      "official_engineering_blog",
+      "official_company_release",
+      "official_annual_report",
+      "industry_platform",
+    ] as const) {
+      const parsed = standardizedImportEvidenceRecordSchema.parse({
+        evidence_id: `evidence:test:${sourceType}`,
+        relation_id: "rel:test",
+        source_type: sourceType,
+        title: "Test evidence",
+        publisher: "Example",
+        source_url: `https://example.com/${sourceType}`,
+        source_domain: "example.com",
+        published_at: "2026-06-15",
+        published_at_resolution: "day",
+        retrieved_at: "2026-06-15T03:30:00.000Z",
+        excerpt: `Example excerpt for ${sourceType}.`,
+        citation_text: `Example excerpt for ${sourceType}.`,
+        reliability_tier: 1,
+        parser_version: "manual-normalization-v3",
+        source_report_path: "output/evidence/test.json",
+      });
+
+      expect(parsed.source_type).toBe(sourceType);
+    }
+  });
+
   it("accepts v3 company alias profiles and evidence coverage fields", () => {
     const company = companySchema.parse({
       id: "company:GOOGL",

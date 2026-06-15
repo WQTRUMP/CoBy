@@ -547,4 +547,64 @@ describe("prepareNormalizedImport", () => {
     });
     expect(prepared.evidence[0].publishedAtResolution).not.toBe("published_at");
   });
+
+  it("accepts expanded official source_type variants when preparing normalized imports", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:apple:corning:component_supply:cover-glass",
+          snapshot_id: "snapshot:2026-06-15.full.16",
+          company: "Apple",
+          company_slug: "apple",
+          supplier: "Corning",
+          supplier_slug: "corning",
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "component_supply",
+          relationship_subtype: "cover_glass",
+          product_scope: ["iPhone cover glass"],
+          evidence_ids: ["evidence:apple:corning:official-pr"],
+          primary_evidence_id: "evidence:apple:corning:official-pr",
+          evidence_date: "2026-06-15",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Corning announced a long-term supply collaboration with Apple.",
+          source_url: "https://example.com/apple-corning-official-pr",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.89,
+          source_method: "direct_disclosure",
+          source_count: 1,
+          status: "approved",
+          summary: "Corning supplies cover glass to Apple.",
+          lineage_key: "Apple|Corning|component_supply|cover_glass",
+          source_report_path: "output/evidence/apple-corning.json",
+          last_verified_at: "2026-06-15T03:30:00.000Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:apple:corning:official-pr",
+          relation_id: "rel:apple:corning:component_supply:cover-glass",
+          source_type: "official_press_release",
+          title: "Apple and Corning expand US manufacturing commitment",
+          publisher: "Apple",
+          source_url: "https://example.com/apple-corning-official-pr",
+          source_domain: "example.com",
+          published_at: "2026-06-15",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T03:30:00.000Z",
+          excerpt: "Apple announced a multi-year commitment supporting Corning's advanced glass production.",
+          citation_text: "Apple announced a multi-year commitment supporting Corning's advanced glass production.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/apple-corning.json",
+        },
+      ],
+    });
+
+    expect(prepared.evidence[0]).toMatchObject({
+      id: "evidence:apple:corning:official-pr",
+      sourceType: "official_press_release",
+      title: "Apple and Corning expand US manufacturing commitment",
+    });
+  });
 });

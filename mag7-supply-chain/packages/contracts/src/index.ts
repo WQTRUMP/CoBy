@@ -53,9 +53,20 @@ export const knownSourceTypes = [
   "media",
   "authoritative_media",
   "industry_report",
+  "industry_platform",
   "press_release",
   "official_doc",
- ] as const;
+  "official_press_release",
+  "official_filing",
+  "official_blog",
+  "official_joint_press_release",
+  "official_joint_press_release_pdf",
+  "official_report",
+  "official_supplier_list",
+  "official_engineering_blog",
+  "official_company_release",
+  "official_annual_report",
+] as const;
 
 export const sourceTypeSchema = z.enum(knownSourceTypes);
 
