@@ -20,6 +20,16 @@ export function toDependencyDetail(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+export function toPublicDependencyDetail(dependency: "neo4j" | "redis") {
+  return dependency === "neo4j"
+    ? "Neo4j dependency is currently unavailable."
+    : "Redis dependency is currently unavailable.";
+}
+
+export function toPublicHealthDependencyDetail(status: "up" | "down" | "not_configured") {
+  return status === "up" ? "available" : "unavailable";
+}
+
 export function isNeo4jUnavailableError(error: unknown) {
   if (!(error instanceof Error)) {
     return false;

@@ -96,9 +96,10 @@ export function TopBar(props: TopBarProps) {
               />
             </label>
 
-            <div className="depthSwitcher" aria-label="Graph depth">
+            <div className="depthSwitcher" aria-label="Graph depth" role="group">
               {[1, 2, 3].map((value) => (
                 <button
+                  aria-pressed={value === depth}
                   key={value}
                   className={value === depth ? "depthButton active" : "depthButton"}
                   onClick={() => onDepthChange(value)}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Neo4jGraphRepository } from "../src/lib/neo4j.js";
+import { createNeo4jBundle, Neo4jGraphRepository } from "../src/lib/neo4j.js";
 import type { PreparedNormalizedImport } from "../src/lib/normalized-package.js";
 
 class FakeRecord {
@@ -12,6 +12,49 @@ class FakeRecord {
 }
 
 describe("Neo4jGraphRepository", () => {
+  it("rejects live Neo4j bundles when credentials are not explicitly configured", async () => {
+    const bundle = createNeo4jBundle({
+      mode: "live",
+      uri: "neo4j://127.0.0.1:7687",
+      username: "",
+      password: "",
+    });
+
+    const health = await bundle.health();
+
+    expect(health).toMatchObject({
+      status: "not_configured",
+      required: true,
+      detail: expect.stringContaining("must be explicitly configured"),
+    });
+
+    await expect(bundle.repository.listCompanies({
+      isMag7: true,
+      page: 1,
+      pageSize: 5,
+    })).rejects.toMatchObject({
+      error: "dependency_unavailable",
+      dependency: "neo4j",
+    });
+  });
+
+  it("rejects live Neo4j bundles when weak default credentials are provided", async () => {
+    const bundle = createNeo4jBundle({
+      mode: "live",
+      uri: "neo4j://127.0.0.1:7687",
+      username: "neo4j",
+      password: "neo4j",
+    });
+
+    const health = await bundle.health();
+
+    expect(health).toMatchObject({
+      status: "not_configured",
+      required: true,
+      detail: expect.stringContaining("weak default neo4j/neo4j"),
+    });
+  });
+
   it("maps subgraph rows via SOURCE_OF/TARGET_OF joins and groups evidence by traversed relation", async () => {
     let capturedQuery = "";
 

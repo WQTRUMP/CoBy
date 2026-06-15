@@ -10,7 +10,11 @@ import { registerImportRoutes } from "./modules/imports/routes.js";
 import { registerSchemaRoutes } from "./modules/schema/routes.js";
 import type { GraphRepository, Neo4jHealth, RuntimeMode } from "./lib/neo4j.js";
 import type { CacheClient } from "./lib/redis.js";
-import { DependencyUnavailableError, isDependencyUnavailableError } from "./lib/dependency-failures.js";
+import {
+  DependencyUnavailableError,
+  isDependencyUnavailableError,
+  toPublicDependencyDetail,
+} from "./lib/dependency-failures.js";
 import { toRequestValidationError } from "./lib/request-validation.js";
 
 export interface AppOptions {
@@ -35,7 +39,6 @@ const liveDependencyProtectedPrefixes = [
   "/api/v1/companies",
   "/api/v1/graph",
   "/api/v1/relations",
-  "/api/v1/imports/normalized-package",
 ];
 
 function formatValidationDetails(error: ZodError) {
@@ -134,7 +137,7 @@ export async function buildApp(options: AppOptions) {
         error: error.error,
         message: error.message,
         dependency: error.dependency,
-        detail: error.detail,
+        detail: toPublicDependencyDetail(error.dependency),
       });
     }
 

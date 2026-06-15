@@ -39,6 +39,11 @@ export interface Neo4jHealth {
   required: boolean;
 }
 
+const LIVE_NEO4J_CREDENTIALS_REQUIRED_DETAIL =
+  "NEO4J_USERNAME and NEO4J_PASSWORD must be explicitly configured for GRAPH_RUNTIME_MODE=live";
+const LIVE_NEO4J_WEAK_DEFAULTS_DETAIL =
+  "NEO4J_USERNAME/NEO4J_PASSWORD weak default neo4j/neo4j is not allowed for GRAPH_RUNTIME_MODE=live";
+
 export interface GraphRepository {
   source: "neo4j" | "mock";
   listCompanies(query: CompanyListQuery): Promise<CompanyListItemDTO[]>;
@@ -1279,8 +1284,10 @@ class UnavailableGraphRepository implements GraphRepository {
 export function createNeo4jBundle(options: CreateNeo4jBundleOptions = {}): Neo4jClientBundle {
   const mode = options.mode ?? env.GRAPH_RUNTIME_MODE;
   const uri = options.uri ?? env.NEO4J_URI;
-  const username = options.username ?? env.NEO4J_USERNAME;
-  const password = options.password ?? env.NEO4J_PASSWORD;
+  const configuredUsername = options.username ?? env.NEO4J_USERNAME;
+  const configuredPassword = options.password ?? env.NEO4J_PASSWORD;
+  const username = configuredUsername ?? "neo4j";
+  const password = configuredPassword ?? "neo4j";
   const database = options.database ?? env.NEO4J_DATABASE;
 
   if (!uri) {
@@ -1303,6 +1310,30 @@ export function createNeo4jBundle(options: CreateNeo4jBundleOptions = {}): Neo4j
       health: async () => ({
         status: "not_configured",
         detail,
+        required: true,
+      }),
+      close: async () => undefined,
+    };
+  }
+
+  if (mode === "live" && (!configuredUsername || !configuredPassword)) {
+    return {
+      repository: new UnavailableGraphRepository(LIVE_NEO4J_CREDENTIALS_REQUIRED_DETAIL),
+      health: async () => ({
+        status: "not_configured",
+        detail: LIVE_NEO4J_CREDENTIALS_REQUIRED_DETAIL,
+        required: true,
+      }),
+      close: async () => undefined,
+    };
+  }
+
+  if (mode === "live" && configuredUsername === "neo4j" && configuredPassword === "neo4j") {
+    return {
+      repository: new UnavailableGraphRepository(LIVE_NEO4J_WEAK_DEFAULTS_DETAIL),
+      health: async () => ({
+        status: "not_configured",
+        detail: LIVE_NEO4J_WEAK_DEFAULTS_DETAIL,
         required: true,
       }),
       close: async () => undefined,

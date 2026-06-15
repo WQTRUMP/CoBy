@@ -30,6 +30,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     error: null,
     loading: true,
   });
+  const [reloadToken, setReloadToken] = useState(0);
   const [rawGraph, setRawGraph] = useState<RawGraphState | null>(null);
   const [relationEvidenceById, setRelationEvidenceById] = useState<Record<string, EvidenceViewModel[]>>({});
   const queryKey = getGraphQueryKey(query);
@@ -121,7 +122,7 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     return () => {
       alive = false;
     };
-  }, [api, query.depth, requestCompanyId, searchQuery]);
+  }, [api, query.depth, reloadToken, requestCompanyId, searchQuery]);
 
   const graph = useMemo<GraphViewModel | null>(() => {
     if (!rawGraph) {
@@ -172,5 +173,6 @@ export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
     graph,
     relationEvidenceById,
     loadRelationEvidence,
+    reload: () => setReloadToken((current) => current + 1),
   };
 }

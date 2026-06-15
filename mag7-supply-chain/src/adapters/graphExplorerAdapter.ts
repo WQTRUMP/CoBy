@@ -56,8 +56,20 @@ const SOURCE_TYPE_LABELS = {
   media: "Media",
   authoritative_media: "Authoritative Media",
   industry_report: "Industry Report",
+  industry_platform: "Industry Platform",
   press_release: "Press Release",
   official_doc: "Official Document",
+  official_press_release: "Official Press Release",
+  official_filing: "Official Filing",
+  official_blog: "Official Blog",
+  official_joint_press_release: "Official Joint Press Release",
+  official_joint_press_release_pdf: "Official Joint Press Release PDF",
+  official_report: "Official Report",
+  official_supplier_list: "Official Supplier List",
+  official_engineering_blog: "Official Engineering Blog",
+  official_product_page: "Official Product Page",
+  official_company_release: "Official Company Release",
+  official_annual_report: "Official Annual Report",
 } satisfies Record<EvidenceDTO["sourceType"], string>;
 
 const ENTITY_KIND_BY_TYPE: Record<SubgraphDTO["nodes"][number]["entityType"], GraphNodeKind> = {

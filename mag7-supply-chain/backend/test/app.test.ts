@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
+import { env } from "../src/config/env.js";
 import { DependencyUnavailableError } from "../src/lib/dependency-failures.js";
 import { mockSubgraph } from "../src/lib/mock-data.js";
 import { prepareNormalizedImport } from "../src/lib/normalized-package.js";
@@ -432,7 +433,7 @@ describe("backend app", () => {
         dependencies: {
           neo4j: {
             status: "down",
-            detail: "connect ECONNREFUSED 127.0.0.1:7687",
+            detail: "unavailable",
             required: true,
           },
         },
@@ -443,7 +444,7 @@ describe("backend app", () => {
         error: "dependency_unavailable",
         dependency: "neo4j",
         message: "Live graph mode requires a reachable Neo4j dependency.",
-        detail: "connect ECONNREFUSED 127.0.0.1:7687",
+        detail: "Neo4j dependency is currently unavailable.",
       });
     } finally {
       await unavailableApp.close();
@@ -507,25 +508,30 @@ describe("backend app", () => {
         dependencies: {
           neo4j: {
             status: "up",
+            detail: "available",
             required: true,
           },
           redis: {
             status: "down",
             required: true,
             enabled: false,
+            detail: "unavailable",
           },
         },
       });
 
-      for (const response of [companiesResponse, importResponse]) {
-        expect(response.statusCode).toBe(503);
-        expect(response.json()).toMatchObject({
-          error: "dependency_unavailable",
-          dependency: "redis",
-          message: "Live graph mode requires a reachable Redis dependency.",
-          detail: expect.stringContaining("cache disabled"),
-        });
-      }
+      expect(companiesResponse.statusCode).toBe(503);
+      expect(companiesResponse.json()).toMatchObject({
+        error: "dependency_unavailable",
+        dependency: "redis",
+        message: "Live graph mode requires a reachable Redis dependency.",
+        detail: "Redis dependency is currently unavailable.",
+      });
+
+      expect(importResponse.statusCode).toBe(404);
+      expect(importResponse.json()).toMatchObject({
+        error: "not_found",
+      });
     } finally {
       await redisUnavailableApp.close();
     }
@@ -718,6 +724,114 @@ describe("backend app", () => {
       evidenceCount: 9,
       source: "mock",
     });
+  });
+
+  it("hides normalized package import over HTTP in live mode by default", async () => {
+    const liveApp = await buildApp({
+      cacheClient,
+      graphRepository: {
+        ...graphRepository,
+        source: "neo4j",
+      },
+      neo4jHealth: async () => ({
+        status: "up",
+        detail: "Neo4j connection healthy",
+        required: true,
+      }),
+      runtimeMode: "live",
+    });
+
+    try {
+      const response = await liveApp.inject({
+        method: "POST",
+        url: "/api/v1/imports/normalized-package",
+        payload: {
+          requestId: "hidden-live-import",
+          relationFile:
+            "/workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl",
+          evidenceFile:
+            "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl",
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toMatchObject({
+        error: "not_found",
+        message: "Route not found.",
+      });
+    } finally {
+      await liveApp.close();
+    }
+  });
+
+  it("requires bearer authentication before allowing live HTTP normalized imports", async () => {
+    const previousImportHttpEnabled = env.IMPORT_HTTP_ENABLED;
+    const previousImportApiToken = env.IMPORT_API_TOKEN;
+    env.IMPORT_HTTP_ENABLED = true;
+    env.IMPORT_API_TOKEN = "super-secret-import-token";
+
+    const liveImportApp = await buildApp({
+      cacheClient,
+      graphRepository: {
+        ...graphRepository,
+        source: "neo4j",
+      },
+      neo4jHealth: async () => ({
+        status: "up",
+        detail: "Neo4j connection healthy",
+        required: true,
+      }),
+      runtimeMode: "live",
+    });
+
+    try {
+      const [forbiddenResponse, acceptedResponse] = await Promise.all([
+        liveImportApp.inject({
+          method: "POST",
+          url: "/api/v1/imports/normalized-package",
+          payload: {
+            requestId: "forbidden-live-import",
+            relationFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl",
+            evidenceFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl",
+          },
+        }),
+        liveImportApp.inject({
+          method: "POST",
+          url: "/api/v1/imports/normalized-package",
+          headers: {
+            authorization: "Bearer super-secret-import-token",
+          },
+          payload: {
+            requestId: "authorized-live-import",
+            relationFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-relations-sample.jsonl",
+            evidenceFile:
+              "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl",
+          },
+        }),
+      ]);
+
+      expect(forbiddenResponse.statusCode).toBe(403);
+      expect(forbiddenResponse.json()).toMatchObject({
+        error: "forbidden",
+        message: "Administrative import access is required.",
+      });
+
+      expect(acceptedResponse.statusCode).toBe(202);
+      expect(acceptedResponse.json()).toMatchObject({
+        accepted: true,
+        requestId: "authorized-live-import",
+        source: "neo4j",
+        relationCount: 8,
+        evidenceCount: 9,
+      });
+    } finally {
+      env.IMPORT_HTTP_ENABLED = previousImportHttpEnabled;
+      env.IMPORT_API_TOKEN = previousImportApiToken;
+      await liveImportApp.close();
+    }
   });
 
   it("prepares normalized import companies with mag7 ids", () => {

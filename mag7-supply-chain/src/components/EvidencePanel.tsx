@@ -3,10 +3,13 @@ import type { EvidenceViewModel, GraphRelationViewModel } from "../types/viewMod
 
 interface EvidencePanelProps {
   evidence: EvidenceViewModel[];
+  error: string | null;
+  loading: boolean;
+  onRetry: () => void;
   relation: GraphRelationViewModel | null;
 }
 
-export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
+export function EvidencePanel({ evidence, error, loading, onRetry, relation }: EvidencePanelProps) {
   return (
     <div className="evidenceTabPanel">
       <div className="detailCard">
@@ -42,6 +45,27 @@ export function EvidencePanel({ evidence, relation }: EvidencePanelProps) {
         {relation?.skuGranularityBoundaryHint ? <p className="boundaryHint">{relation.skuGranularityBoundaryHint}</p> : null}
         {relation?.skuGranularityNote ? <p className="supportingText">{relation.skuGranularityNote}</p> : null}
       </div>
+
+      {loading ? (
+        <div className="inlineStatusCard" role="status" aria-live="polite">
+          Loading evidence details…
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="inlineStatusCard error" role="alert">
+          <p>{error}</p>
+          <button className="inlineActionButton" onClick={onRetry} type="button">
+            Retry evidence load
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && !error && evidence.length === 0 ? (
+        <div className="inlineStatusCard" role="status" aria-live="polite">
+          Select a relation to inspect source cards.
+        </div>
+      ) : null}
 
       <div className="evidenceList">
         {evidence.map((item) => (

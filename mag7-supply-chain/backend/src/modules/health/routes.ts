@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
+import { toPublicHealthDependencyDetail } from "../../lib/dependency-failures.js";
+
 export async function registerHealthRoutes(app: FastifyInstance) {
   app.get("/api/v1/health", async () => {
     const [neo4j, redis] = await Promise.all([app.neo4jHealth(), app.cacheClient.health()]);
@@ -18,8 +20,17 @@ export async function registerHealthRoutes(app: FastifyInstance) {
         mockGraphBoundary: app.runtimeMode === "prototype" && app.graphRepository.source === "mock",
       },
       dependencies: {
-        neo4j,
-        redis,
+        neo4j: {
+          status: neo4j.status,
+          required: neo4j.required,
+          detail: toPublicHealthDependencyDetail(neo4j.status),
+        },
+        redis: {
+          status: redis.status,
+          enabled: redis.enabled,
+          required: redis.required,
+          detail: toPublicHealthDependencyDetail(redis.status),
+        },
       },
     };
   });

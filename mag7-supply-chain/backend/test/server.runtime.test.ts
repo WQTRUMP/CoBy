@@ -125,13 +125,13 @@ describe("runtime startup", () => {
           neo4j: {
             status: "not_configured",
             required: true,
-            detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+            detail: "unavailable",
           },
           redis: {
             status: "down",
             required: true,
             enabled: false,
-            detail: expect.stringContaining("cache disabled"),
+            detail: "unavailable",
           },
         },
       });
@@ -142,7 +142,7 @@ describe("runtime startup", () => {
         error: "dependency_unavailable",
         dependency: "neo4j",
         message: "Live graph mode requires a reachable Neo4j dependency.",
-        detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+        detail: "Neo4j dependency is currently unavailable.",
       });
     },
     15_000,
@@ -319,13 +319,13 @@ describe("runtime startup", () => {
           neo4j: {
             status: "not_configured",
             required: true,
-            detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+            detail: "unavailable",
           },
           redis: {
             status: "not_configured",
             required: true,
             enabled: false,
-            detail: expect.stringContaining("requires Redis for acceptance"),
+            detail: "unavailable",
           },
         },
       });
@@ -336,7 +336,96 @@ describe("runtime startup", () => {
         error: "dependency_unavailable",
         dependency: "neo4j",
         message: "Live graph mode requires a reachable Neo4j dependency.",
-        detail: expect.stringContaining("GRAPH_RUNTIME_MODE=live"),
+        detail: "Neo4j dependency is currently unavailable.",
+      });
+    },
+    15_000,
+  );
+
+  it(
+    "refuses live startup semantics when Neo4j credentials are omitted even if NEO4J_URI is set",
+    async () => {
+      const port = 4314;
+      const child = spawn(process.execPath, ["dist/backend/src/server.js"], {
+        cwd: backendDir,
+        env: {
+          ...process.env,
+          HOST: "127.0.0.1",
+          PORT: String(port),
+          NEO4J_URI: "neo4j://127.0.0.1:7687",
+          NEO4J_USERNAME: "",
+          NEO4J_PASSWORD: "",
+          REDIS_URL: "",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      childProcesses.add(child);
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      const deadline = Date.now() + 8_000;
+      let healthResponse: Response | null = null;
+
+      while (Date.now() < deadline) {
+        if (child.exitCode !== null) {
+          throw new Error(
+            `server exited before credential guard health check completed (code ${child.exitCode})\nstdout:\n${stdout}\nstderr:\n${stderr}`,
+          );
+        }
+
+        try {
+          healthResponse = await fetch(`http://127.0.0.1:${port}/api/v1/health`);
+          break;
+        } catch {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 200);
+          });
+        }
+      }
+
+      expect(healthResponse, `credential-guard server did not start listening in time\nstdout:\n${stdout}\nstderr:\n${stderr}`).not.toBeNull();
+      expect(healthResponse!.status).toBe(200);
+
+      const healthPayload = (await healthResponse!.json()) as {
+        status: string;
+        runtimeMode: string;
+        repositoryMode: string;
+        dependencies: {
+          neo4j: {
+            status: string;
+            required: boolean;
+            detail: string;
+          };
+        };
+      };
+
+      expect(healthPayload).toMatchObject({
+        status: "degraded",
+        runtimeMode: "live",
+        repositoryMode: "neo4j",
+        dependencies: {
+          neo4j: {
+            status: "not_configured",
+            required: true,
+            detail: "unavailable",
+          },
+        },
+      });
+
+      const companiesResponse = await fetch(`http://127.0.0.1:${port}/api/v1/companies?isMag7=true&page=1&pageSize=2`);
+      expect(companiesResponse.status).toBe(503);
+      await expect(companiesResponse.json()).resolves.toMatchObject({
+        error: "dependency_unavailable",
+        dependency: "neo4j",
+        message: "Live graph mode requires a reachable Neo4j dependency.",
+        detail: "Neo4j dependency is currently unavailable.",
       });
     },
     15_000,

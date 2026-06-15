@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from "react";
 import { CornersOut, Minus, Plus } from "@phosphor-icons/react";
 import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
 import { getRelationshipTypeLabel } from "../utils/relationSemantics.js";
@@ -15,6 +16,36 @@ interface GraphCanvasProps {
 
 export function GraphCanvas(props: GraphCanvasProps) {
   const { activeNodeId, activeRelationId, focusNode, graph, onNodeSelect, onRelationSelect, onZoomChange, zoom } = props;
+  const viewportId = useId();
+  const instructionsId = useId();
+  const nodesHeadingId = useId();
+  const relationsHeadingId = useId();
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === viewportRef.current);
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  async function handleFullscreenToggle() {
+    if (!viewportRef.current) {
+      return;
+    }
+
+    if (document.fullscreenElement === viewportRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await viewportRef.current.requestFullscreen();
+  }
 
   return (
     <section className="graphWorkspace">
@@ -45,10 +76,82 @@ export function GraphCanvas(props: GraphCanvasProps) {
         </div>
       </div>
 
-      <div className="graphViewport">
+      <div className="graphViewport" ref={viewportRef} id={viewportId}>
         <div className="graphViewportOverlay" />
         <div className="graphDust" />
-        <svg viewBox="0 0 100 100" role="img" aria-label={`${graph.focusCompany.name} supply chain graph`}>
+        <div className="graphAssistivePanel" aria-describedby={instructionsId}>
+          <div className="graphAssistiveHeader">
+            <strong>Keyboard exploration</strong>
+            <p id={instructionsId}>
+              Use the node and relation buttons to inspect the currently visible graph. Selecting a node opens overview details;
+              selecting a relation opens the evidence path.
+            </p>
+          </div>
+
+          <div className="graphAssistiveSection" aria-labelledby={nodesHeadingId}>
+            <div className="graphAssistiveSectionHeader">
+              <strong id={nodesHeadingId}>Visible nodes</strong>
+              <span>{graph.nodes.length} items</span>
+            </div>
+            <div className="graphAssistiveList">
+              {graph.nodes.map((node) => {
+                const isActive = node.id === activeNodeId;
+                return (
+                  <button
+                    key={node.id}
+                    aria-pressed={isActive}
+                    className={isActive ? "graphListButton active" : "graphListButton"}
+                    onClick={() => onNodeSelect(node)}
+                    type="button"
+                  >
+                    <span className="graphListMeta">{node.kindLabel}</span>
+                    <strong>{node.displayName}</strong>
+                    <small>{node.secondaryLabel ?? node.region}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="graphAssistiveSection" aria-labelledby={relationsHeadingId}>
+            <div className="graphAssistiveSectionHeader">
+              <strong id={relationsHeadingId}>Visible relations</strong>
+              <span>{graph.relations.length} items</span>
+            </div>
+            <div className="graphAssistiveList">
+              {graph.relations.map((relation) => {
+                const source = graph.nodes.find((node) => node.id === relation.sourceId);
+                const target = graph.nodes.find((node) => node.id === relation.targetId);
+                const isActive = relation.id === activeRelationId;
+                const sourceName = source?.displayName ?? relation.sourceId;
+                const targetName = target?.displayName ?? relation.targetId;
+                return (
+                  <button
+                    key={relation.id}
+                    aria-pressed={isActive}
+                    className={isActive ? "graphListButton active" : "graphListButton"}
+                    onClick={() => onRelationSelect(relation)}
+                    type="button"
+                  >
+                    <span className="graphListMeta">
+                      {relation.relationshipTypeLabel} · Tier {relation.tier}
+                    </span>
+                    <strong>{relation.summary}</strong>
+                    <small>
+                      {sourceName} to {targetName}
+                    </small>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <svg
+          viewBox="0 0 100 100"
+          aria-hidden="true"
+          focusable="false"
+        >
           <g transform={`scale(${zoom}) translate(${(1 - zoom) * 50} ${(1 - zoom) * 50})`}>
             {graph.relations.map((relation) => {
               const source = graph.nodes.find((node) => node.id === relation.sourceId);
@@ -92,13 +195,31 @@ export function GraphCanvas(props: GraphCanvasProps) {
         </div>
 
         <div className="zoomCluster">
-          <button className="iconButton" type="button" onClick={() => onZoomChange(Math.max(0.8, zoom - 0.1))}>
+          <button
+            aria-label="Zoom out graph"
+            className="iconButton"
+            type="button"
+            onClick={() => onZoomChange(Math.max(0.8, zoom - 0.1))}
+          >
             <Minus size={16} />
           </button>
-          <button className="iconButton" type="button" onClick={() => onZoomChange(Math.min(1.5, zoom + 0.1))}>
+          <button
+            aria-label="Zoom in graph"
+            className="iconButton"
+            type="button"
+            onClick={() => onZoomChange(Math.min(1.5, zoom + 0.1))}
+          >
             <Plus size={16} />
           </button>
-          <button className="iconButton" type="button">
+          <button
+            aria-label={isFullscreen ? "Exit fullscreen exploration" : "Enter fullscreen exploration"}
+            aria-pressed={isFullscreen}
+            className="iconButton"
+            type="button"
+            onClick={() => {
+              void handleFullscreenToggle();
+            }}
+          >
             <CornersOut size={16} />
           </button>
         </div>

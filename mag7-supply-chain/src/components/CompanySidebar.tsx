@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { Buildings, ChartBar, Database, LinkBreak, Path, Stack } from "@phosphor-icons/react";
 import { EvidencePanel } from "./EvidencePanel.js";
 import type {
@@ -16,17 +16,56 @@ interface CompanySidebarProps {
   activeTab: "overview" | "evidence" | "financials";
   company: CompanyProfileViewModel;
   evidence: EvidenceViewModel[];
+  evidenceError: string | null;
+  evidenceLoading: boolean;
   evidenceSummary: EvidenceSummaryViewModel;
+  isOpen: boolean;
+  onClose: () => void;
   onRelationSelect: (relation: GraphRelationViewModel) => void;
+  onRetryEvidence: () => void;
   onTabChange: (tab: "overview" | "evidence" | "financials") => void;
   relations: GraphRelationViewModel[];
 }
 
 export function CompanySidebar(props: CompanySidebarProps) {
-  const { activeNode, activeRelation, activeTab, company, evidence, evidenceSummary, onRelationSelect, onTabChange, relations } = props;
+  const {
+    activeNode,
+    activeRelation,
+    activeTab,
+    company,
+    evidence,
+    evidenceError,
+    evidenceLoading,
+    evidenceSummary,
+    isOpen,
+    onClose,
+    onRelationSelect,
+    onRetryEvidence,
+    onTabChange,
+    relations,
+  } = props;
+  const overviewTabId = "company-tab-overview";
+  const evidenceTabId = "company-tab-evidence";
+  const financialsTabId = "company-tab-financials";
+  const overviewPanelId = "company-panel-overview";
+  const evidencePanelId = "company-panel-evidence";
+  const financialsPanelId = "company-panel-financials";
+  const tabOrder = ["overview", "evidence", "financials"] as const;
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, tab: (typeof tabOrder)[number]) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    event.preventDefault();
+    const currentIndex = tabOrder.indexOf(tab);
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const nextIndex = (currentIndex + direction + tabOrder.length) % tabOrder.length;
+    onTabChange(tabOrder[nextIndex]);
+  }
 
   return (
-    <aside className="detailSidebar">
+    <aside className="detailSidebar" aria-hidden={!isOpen}>
       <div className="detailSidebarHeader">
         <div className="detailCompany">
           <div className="detailLogo">{company.ticker.slice(0, 2)}</div>
@@ -38,19 +77,49 @@ export function CompanySidebar(props: CompanySidebarProps) {
             <span className="tierBadge">Tier 1 suppliers</span>
           </div>
         </div>
-        <button className="closeSidebar" type="button" aria-label="Close details">
+        <button className="closeSidebar" type="button" aria-label="Close details panel" onClick={onClose}>
           ×
         </button>
       </div>
 
       <div className="detailTabs" role="tablist" aria-label="Company detail tabs">
-        <button className={activeTab === "overview" ? "tabButton active" : "tabButton"} onClick={() => onTabChange("overview")} type="button">
+        <button
+          aria-controls={overviewPanelId}
+          aria-selected={activeTab === "overview"}
+          className={activeTab === "overview" ? "tabButton active" : "tabButton"}
+          id={overviewTabId}
+          onClick={() => onTabChange("overview")}
+          onKeyDown={(event) => handleTabKeyDown(event, "overview")}
+          role="tab"
+          tabIndex={activeTab === "overview" ? 0 : -1}
+          type="button"
+        >
           Overview
         </button>
-        <button className={activeTab === "evidence" ? "tabButton active" : "tabButton"} onClick={() => onTabChange("evidence")} type="button">
+        <button
+          aria-controls={evidencePanelId}
+          aria-selected={activeTab === "evidence"}
+          className={activeTab === "evidence" ? "tabButton active" : "tabButton"}
+          id={evidenceTabId}
+          onClick={() => onTabChange("evidence")}
+          onKeyDown={(event) => handleTabKeyDown(event, "evidence")}
+          role="tab"
+          tabIndex={activeTab === "evidence" ? 0 : -1}
+          type="button"
+        >
           Evidence
         </button>
-        <button className={activeTab === "financials" ? "tabButton active" : "tabButton"} onClick={() => onTabChange("financials")} type="button">
+        <button
+          aria-controls={financialsPanelId}
+          aria-selected={activeTab === "financials"}
+          className={activeTab === "financials" ? "tabButton active" : "tabButton"}
+          id={financialsTabId}
+          onClick={() => onTabChange("financials")}
+          onKeyDown={(event) => handleTabKeyDown(event, "financials")}
+          role="tab"
+          tabIndex={activeTab === "financials" ? 0 : -1}
+          type="button"
+        >
           Financials
         </button>
       </div>
@@ -63,7 +132,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
 
       <div className="detailPanelBody">
         {activeTab === "overview" ? (
-          <>
+          <div aria-labelledby={overviewTabId} id={overviewPanelId} role="tabpanel">
             <div className="detailCard">
               <p className="sectionEyebrow compact">Current focus</p>
               <strong>{activeNode?.displayName ?? company.displayName}</strong>
@@ -166,13 +235,23 @@ export function CompanySidebar(props: CompanySidebarProps) {
                 </li>
               </ul>
             </div>
-          </>
+          </div>
         ) : null}
 
-        {activeTab === "evidence" ? <EvidencePanel evidence={evidence} relation={activeRelation} /> : null}
+        {activeTab === "evidence" ? (
+          <div aria-labelledby={evidenceTabId} id={evidencePanelId} role="tabpanel">
+            <EvidencePanel
+              evidence={evidence}
+              error={evidenceError}
+              loading={evidenceLoading}
+              onRetry={onRetryEvidence}
+              relation={activeRelation}
+            />
+          </div>
+        ) : null}
 
         {activeTab === "financials" ? (
-          <>
+          <div aria-labelledby={financialsTabId} id={financialsPanelId} role="tabpanel">
             <div className="detailCard">
               <p className="sectionEyebrow compact">Financials</p>
               <strong>{formatCurrency(company.marketCapUsd)}</strong>
@@ -187,7 +266,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
                 <li>Evidence: {company.apiBindings.evidenceEndpoint}</li>
               </ul>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
     </aside>
