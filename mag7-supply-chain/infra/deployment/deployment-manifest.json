@@ -1,7 +1,7 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-15T23:45:00Z",
+  "generated_at": "2026-06-16T00:20:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
@@ -9,7 +9,21 @@
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
     "readiness": "prototype_passed_real_data_launch_ready_for_human_decision",
-    "summary": "唯一正式结论源只能是 full.19 真实 live 终审 v3。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；published 视图固定为 327 relations / 435 evidence，all-candidates 固定为 350 relations / 476 evidence，candidate-only 差额 23 / 41 继续成立且其 live evidence 读取继续返回 404 relation_evidence_not_found。source=neo4j 的真实导入与同一套 live 运行时下的 HTTP 回读已经成立，因此 real_data_launch 不再因 full.19 live 运行时闭环缺失而 blocked；后续仅待 human/控制面完成 Cloudflare 与付费资源部署决策。"
+    "summary": "唯一正式结论源只能是 full.19 真实 live 终审 v3。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；published 视图固定为 327 relations / 435 evidence，all-candidates 固定为 350 relations / 476 evidence，candidate-only 差额 23 / 41 继续成立且其 live evidence 读取继续返回 404 relation_evidence_not_found。source=neo4j 的真实导入与同一套 live 运行时下的 HTTP 回读已经成立，因此 real_data_launch 不再因 full.19 live 运行时闭环缺失而 blocked；可访问性 v2 与安全复审现已通过，ready_for_human_decision 已恢复，但仅限 published 327/435 的 human 审批范围。"
+  },
+  "release_gate_status": {
+    "post_audit_status": "ready_for_human_decision_restored",
+    "authoritative_post_audit_report": "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
+    "supersedes": [
+      "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
+    ],
+    "decision_scope": "published_only",
+    "decision_scope_summary": "仅允许对 published 327 relations / 435 evidence 发起 Cloudflare 连接与正式部署审批。",
+    "non_blocking_residual_risks": [
+      "backend/test/server.runtime.test.ts 在全量 npm test 下仍有 timeout 抖动",
+      "evidence-collector 顶层仍保留 312/410 与 328/439 的历史审计文件",
+      "可访问性 v2 尚无 NVDA/VoiceOver/TalkBack 实机签字"
+    ]
   },
   "authoritative_supply_chain_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
@@ -273,7 +287,7 @@
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
     "real_data_launch_allowed_after_approval": true,
-    "summary": "source=neo4j 的真实 live 导入与 HTTP 回读已经成立，因此 real_data_launch 的技术阻塞已解除；但 Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
+    "summary": "source=neo4j 的真实 live 导入与 HTTP 回读已经成立，因此 real_data_launch 的技术阻塞已解除；可访问性 v2 与安全复审均已通过，当前恢复 ready_for_human_decision，但审批范围只覆盖 published 327/435。Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
   },
   "deployment_tiers": {
     "prototype": {
