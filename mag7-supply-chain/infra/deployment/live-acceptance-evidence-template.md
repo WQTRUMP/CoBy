@@ -148,5 +148,6 @@ PORT=
 ## 8. 最终判定
 
 - 是否满足 `real_data_launch` 通过门槛：
-- 若未通过，唯一阻塞项：
+- 若未通过，阻塞原因 / 缺失证据：
+- `/opt/wanman/products.json` 状态（为空数组时只能写 `unknown:no_product_inventory`）：
 - 下一步动作：

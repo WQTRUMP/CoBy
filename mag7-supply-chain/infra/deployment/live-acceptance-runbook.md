@@ -12,11 +12,12 @@
 ## 2. 当前结论
 
 - `prototype`：可发布，但仅限显式 `GRAPH_RUNTIME_MODE=prototype` 的原型链路。
-- `real_data_launch`：截至 `2026-06-15` 仍未在当前工作机直接跑通，唯一阻塞是当前机器缺少 Docker 或等效 Neo4j/Redis 运行时。
+- `real_data_launch`：截至 `2026-06-15` 仍 blocked。authoritative 结论不是“本机缺 Docker 即唯一阻塞”，而是当前仍缺基于 `snapshot:2026-06-15.full.16` 的 live Neo4j/Redis 真实写库与 HTTP 全链路验收证据；本机缺少 Docker/Compose 或等效依赖只是在当前工作机上无法直接补齐该证据的环境限制。
 - 默认运行态：`GRAPH_RUNTIME_MODE=live`。如果 live 依赖缺失，允许的失败语义只有：
   - `GET /api/v1/health` 返回 `200` 且 `status=degraded`
   - 业务接口返回 `503 dependency_unavailable`
   - 不允许静默回退 `mock`
+- 监控/巡检前提：当 `/opt/wanman/products.json` 仍为空数组时，只能维持 `unknown:no_product_inventory`，不能把本 runbook 或候选清单表述成正式 uptime 覆盖。
 
 ## 3. 本轮正式输入
 
@@ -230,7 +231,7 @@ Docker 模式额外包含：
 
 1. 证据目录压缩包
 2. 按 `infra/deployment/live-acceptance-evidence-template.md` 填写的验收说明
-3. 如失败，附唯一阻塞项与失败命令
+3. 如失败，附阻塞原因、缺失证据与失败命令
 
 ## 10. 常见失败分流
 
@@ -276,7 +277,7 @@ Docker 模式额外包含：
 
 - 继续排查依赖，不要把该结果写成“原型可用即上线可用”。
 
-## 11. 当前工作机的唯一阻塞
+## 11. 当前工作机限制与 authoritative blocked 结论
 
 本机已确认：
 
@@ -288,7 +289,13 @@ Docker 模式额外包含：
 - `docker`
 - `docker compose`
 
-因此当前工作机不能直接产出真实 Neo4j/Redis 写库闭环证据。最小外部前置清单已经收敛为：
+因此当前工作机不能直接产出真实 Neo4j/Redis 写库闭环证据。但这只是当前执行环境限制，不应被简化成 `real_data_launch` 的唯一阻塞定义。当前 authoritative blocked 结论必须保持为：
+
+1. 尚未拿到基于 `snapshot:2026-06-15.full.16` 的 `import-summary.json (source=neo4j)`、`health.json (status=ok)` 与业务接口成功返回的成套证据；
+2. 因缺上述真实写库/HTTP 验收证据，`real_data_launch` 仍 blocked；
+3. `/opt/wanman/products.json` 当前若仍为空数组，系统状态只能维持 `unknown:no_product_inventory`，不能宣称已建立正式 live 巡检覆盖。
+
+最小外部前置清单已经收敛为：
 
 1. 一台具备 Docker 的机器，或
 2. 一套可访问的外部 Neo4j/Redis 端点
