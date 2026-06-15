@@ -22,8 +22,11 @@ export type NormalizedRelationRecord = StandardizedImportRelationRecord;
 export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
 export type NormalizedRelationInput = z.input<typeof standardizedImportRelationRecordSchema>;
 export type NormalizedEvidenceInput = z.input<typeof standardizedImportEvidenceRecordSchema>;
+type RawNormalizedRecord = Record<string, unknown>;
 export type NormalizedImportPackage = z.input<typeof standardizedImportPackageSchema> & {
   skuGranularityByRelationId?: Record<string, SkuGranularity>;
+  rawRelationsById?: Record<string, RawNormalizedRecord>;
+  rawEvidenceById?: Record<string, RawNormalizedRecord>;
 };
 
 interface CompanySeed {
@@ -996,20 +999,25 @@ export async function loadNormalizedImportPackage(
     discoverManifestSkuGranularityMap(relationFile, manifestFile),
   ]);
 
+  const rawRelationsById: Record<string, RawNormalizedRecord> = {};
   const relations = relationsRaw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line, index) =>
-      standardizedImportRelationRecordSchema.parse(
-        applySkuGranularityHints(
-          normalizeLegacyImportRecord(JSON.parse(line) as unknown) as Record<string, unknown>,
-          null,
-        ),
-        { path: [relationFile, index + 1] },
-      ),
-    );
+    .map((line, index) => {
+      const normalized = normalizeLegacyImportRecord(JSON.parse(line) as unknown) as RawNormalizedRecord;
+      const relationId = typeof normalized.relation_id === "string" ? normalized.relation_id : null;
+      if (relationId) {
+        rawRelationsById[relationId] = normalized;
+      }
 
+      return standardizedImportRelationRecordSchema.parse(
+        applySkuGranularityHints(normalized, null),
+        { path: [relationFile, index + 1] },
+      );
+    });
+
+  const rawEvidenceById: Record<string, RawNormalizedRecord> = {};
   const evidence = evidenceRaw
     .split("\n")
     .map((line) => line.trim())
@@ -1017,6 +1025,10 @@ export async function loadNormalizedImportPackage(
     .map((line, index) => {
       const normalized = normalizeLegacyImportRecord(JSON.parse(line) as unknown) as Record<string, unknown>;
       const relationId = typeof normalized.relation_id === "string" ? normalized.relation_id : null;
+      const evidenceId = typeof normalized.evidence_id === "string" ? normalized.evidence_id : null;
+      if (evidenceId) {
+        rawEvidenceById[evidenceId] = normalized;
+      }
       return standardizedImportEvidenceRecordSchema.parse(
         applySkuGranularityHints(
           normalized,
@@ -1030,13 +1042,20 @@ export async function loadNormalizedImportPackage(
     relations,
     evidence,
     skuGranularityByRelationId,
+    rawRelationsById,
+    rawEvidenceById,
   };
 }
 
 export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedNormalizedImport {
   const skuGranularityByRelationId = pkg.skuGranularityByRelationId ?? {};
+  const rawRelationsById = pkg.rawRelationsById ?? {};
+  const rawEvidenceById = pkg.rawEvidenceById ?? {};
   const relations = pkg.relations.map((relation) => {
-    const normalized = normalizeLegacyImportRecord(relation) as Record<string, unknown>;
+    const relationId = typeof relation?.relation_id === "string" ? relation.relation_id : null;
+    const normalized =
+      (relationId ? rawRelationsById[relationId] : null) ??
+      (normalizeLegacyImportRecord(relation) as Record<string, unknown>);
     return {
       normalized,
       parsed: standardizedImportRelationRecordSchema.parse(
@@ -1045,7 +1064,10 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     };
   });
   const evidence = pkg.evidence.map((item) => {
-    const normalized = normalizeLegacyImportRecord(item) as Record<string, unknown>;
+    const evidenceId = typeof item?.evidence_id === "string" ? item.evidence_id : null;
+    const normalized =
+      (evidenceId ? rawEvidenceById[evidenceId] : null) ??
+      (normalizeLegacyImportRecord(item) as Record<string, unknown>);
     const relationId = typeof item?.relation_id === "string" ? item.relation_id : null;
     return {
       normalized,
