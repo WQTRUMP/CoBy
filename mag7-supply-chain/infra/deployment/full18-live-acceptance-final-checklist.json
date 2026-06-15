@@ -2,24 +2,54 @@
   "schema": "wanman.live-acceptance-checklist",
   "version": 1,
   "status": "superseded_for_release_entry",
-  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径；其中 312/410 与 328/439 只对应 full.18 历史验收包。",
+  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径；当前 authoritative 口径统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=341/459、candidate-only=9/15、real_data_launch=ready_for_human_decision、post-audit=v3。旧的 312/410、327/435、350/476 与 post-audit-v2 仅保留 historical/superseded/audit-only 语义。",
   "superseded_by": [
     "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
     "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
     "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
-    "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
+    "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md"
   ],
-  "current_release_counts_reference": {
+  "current_authoritative_release_reference": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "formal_post_audit_entry": "v3",
     "published": {
-      "relations": 327,
-      "evidence": 435
+      "relations": 332,
+      "evidence": 444
     },
     "all_candidates": {
-      "relations": 350,
-      "evidence": 476
+      "relations": 341,
+      "evidence": 459
+    },
+    "candidate_only": {
+      "relations": 9,
+      "evidence": 15
     }
   },
+  "historical_audit_only_release_references": [
+    {
+      "label": "superseded_full18_live_acceptance_package",
+      "published": {
+        "relations": 312,
+        "evidence": 410
+      },
+      "all_candidates": {
+        "relations": 328,
+        "evidence": 439
+      }
+    },
+    {
+      "label": "predecessor_post_audit_v3_release_entry",
+      "published": {
+        "relations": 327,
+        "evidence": 435
+      },
+      "all_candidates": {
+        "relations": 350,
+        "evidence": 476
+      },
+      "usage": "historical_audit_only"
+    }
+  ],
   "package_name": "Mag7 full.18 live 外部验收最终执行包",
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
   "formal_chain": "7b0963ea -> fd7161a9 -> fb8bc7b2",
@@ -36,15 +66,41 @@
   ],
   "readiness": {
     "prototype": "conditional_go",
-    "real_data_launch": "no_go_until_live_acceptance_passes"
+    "real_data_launch": "ready_for_human_decision"
   },
   "published_counts": {
-    "relations": 312,
-    "evidence": 410
+    "relations": 332,
+    "evidence": 444
   },
   "all_candidates_counts": {
-    "relations": 328,
-    "evidence": 439
+    "relations": 341,
+    "evidence": 459
+  },
+  "candidate_only_counts": {
+    "relations": 9,
+    "evidence": 15
+  },
+  "historical_audit_only_counts": {
+    "superseded_full18_live_acceptance_package": {
+      "published": {
+        "relations": 312,
+        "evidence": 410
+      },
+      "all_candidates": {
+        "relations": 328,
+        "evidence": 439
+      }
+    },
+    "predecessor_post_audit_v3_release_entry": {
+      "published": {
+        "relations": 327,
+        "evidence": 435
+      },
+      "all_candidates": {
+        "relations": 350,
+        "evidence": 476
+      }
+    }
   },
   "minimum_prerequisites": [
     "Node.js v22.22.3",
@@ -71,8 +127,8 @@
     "CORS_ORIGIN",
     "VITE_GRAPH_API_BASE_URL",
     "EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18",
-    "EXPECTED_RELATION_COUNT=312",
-    "EXPECTED_EVIDENCE_COUNT=410"
+    "EXPECTED_RELATION_COUNT=332",
+    "EXPECTED_EVIDENCE_COUNT=444"
   ],
   "cloudflare_domain_sequence": [
     {
@@ -102,8 +158,8 @@
       "command": "bash infra/deployment/live-acceptance-commands.sh --mode external --output-dir ${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full18}",
       "success": [
         "preflight.json.packageSnapshotId = snapshot:2026-06-15.full.18",
-        "preflight.json.packageCounts.relations = 312",
-        "preflight.json.packageCounts.evidence = 410"
+        "preflight.json.packageCounts.relations = 332",
+        "preflight.json.packageCounts.evidence = 444"
       ]
     },
     {
@@ -161,6 +217,7 @@
     "6-12 小时：仅在 result.json.passed=true 后接入 Cloudflare DNS、证书、/api 代理或 api 子域，并在最终路由重跑 smoke",
     "12-24 小时：复查 /api/v1/health、detail、search、path、evidence 样本；若 products.json 仍未正式接入，则继续维持 unknown:no_product_inventory"
   ],
+  "formal_post_audit_entry": "v3",
   "handoff_files": [
     "infra/deployment/live-acceptance-runbook.md",
     "infra/deployment/live-acceptance-commands.sh",

@@ -3,10 +3,11 @@
 > 1. `/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json`
 > 2. `/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json`
 > 3. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md`
-> 4. `/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md`
+> 4. `/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md`
 > 本文件中的 full.18 历史过程只保留审计用途；当前正式入口已切换为 full20-wave5 收口链与 full19 live 终审链。
 > 当前正式边界是 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=341/459`、`candidate-only=9/15`。
 > `real_data_launch` 技术阻塞已解除，当前状态是 `ready_for_human_decision`；任何 human/Cloudflare 审批都只能覆盖 published `332/444`。
+> 历史 `post-audit-v2`、`312/410`、`327/435`、`350/476` 只保留审计用途，不再代表当前 authoritative 入口。
 
 # Mag7 full.18 live 外部验收最终执行手册
 
@@ -17,6 +18,7 @@
 - published：`332 relations / 444 evidence`
 - all-candidates：`341 relations / 459 evidence`
 - candidate-only：`9 relations / 15 evidence`
+- 当前正式入口：`post-audit-v3`
 - 当前 readiness：`prototype=conditional_go`，`real_data_launch=ready_for_human_decision`
 
 本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。当前正式复审已确认 `source=neo4j` 的真实导入与 HTTP 回读闭环成立；此后任何重新验收都必须维持 `332/444` published 边界，且只能作为 human 部署决策与最终环境复核证据，不能再把阻塞状态写回 `blocked`。
@@ -38,7 +40,7 @@
 4. `69ab6247-3cc2-4c8a-b2b7-45294225be1b`
 5. `e14b3746-88f1-4c2c-921c-0e88e63db23c`
 
-`full17-live-unblock-*` 文件只保留审计用途，已被本手册与 `full18-live-acceptance-final-checklist.json` supersede。
+`full17-live-unblock-*` 文件只保留审计用途，已被本手册与 `full18-live-acceptance-final-checklist.json` supersede。`final-release-index-post-audit-v2` 也已被 `post-audit-v3` supersede，只能保留审计用途。
 
 ## 3. 最小外部前置
 
