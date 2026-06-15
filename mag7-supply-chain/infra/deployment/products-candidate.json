@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-16T00:20:00Z",
+  "generated_at": "2026-06-15T23:59:30Z",
   "generated_by": "devops",
   "inventory_status": "pending_human_approval",
   "post_audit_status": "ready_for_human_decision_restored",
@@ -8,20 +8,22 @@
     "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
   ],
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-  "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+  "formal_decision_source": "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
+  "live_runtime_verification_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
   "published_counts": {
-    "relations": 327,
-    "evidence": 435
+    "relations": 332,
+    "evidence": 444
   },
   "all_candidates_counts": {
-    "relations": 350,
-    "evidence": 476
+    "relations": 341,
+    "evidence": 459
   },
   "candidate_only_delta": {
-    "relations": 23,
-    "evidence": 41
+    "relations": 9,
+    "evidence": 15
   },
   "audit_only_exclusions": [
+    "0cd6875d",
     "6e45bce1"
   ],
   "products": [
@@ -30,7 +32,7 @@
       "display_name": "Mag7 供应链交互式探索平台",
       "kind": "interactive_supply_chain_platform",
       "readiness": "real_data_launch_ready_for_human_decision",
-      "summary": "published 327/435 已在 source=neo4j 的真实 live 运行时下完成导入与 HTTP 回读；350/476 仍保留为 all-candidates / candidate-only 边界，candidate-only live evidence 继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18，6e45bce1 仅保留审计用途不得作为最终输入。本候选清单对应的 post-audit v3 结论已恢复 ready_for_human_decision，但 human 审批范围只允许覆盖 published 327/435。",
+      "summary": "wave5 正式收口后，当前发布边界已刷新为 published 332/444、all-candidates 341/459、candidate-only 9/15；9 条 keep-only 尾项在 published evidence 端点继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18；真实 source=neo4j live 能力仍锚定既有 full19 终审链，wave5 不构成新的 authoritative promotion。本候选清单对应的 post-audit v3 结论继续维持 ready_for_human_decision，但 human 审批范围只允许覆盖 published 332/444。",
       "urls": {
         "web_health": {
           "path": "/",
@@ -68,8 +70,8 @@
         "默认 GRAPH_RUNTIME_MODE=live；只有显式 GRAPH_RUNTIME_MODE=prototype 时才允许 mock。",
         "真实数据链路必须同时连通 NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL。",
         "candidate-only relation 不得被写成已发布 live 数据；其 evidence 读取应继续返回 404 relation_evidence_not_found。",
-        "唯一正式结论源只能是 /workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md；6e45bce1 仅保留审计用途。",
-        "post-audit v3 已显式 supersede /workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md；当前只允许对 published 327/435 发起 human 审批。"
+        "当前 published/all-candidates/candidate-only 唯一正式结论源只能是 /workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md 与 /workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md；0cd6875d 与 6e45bce1 仅保留审计用途。",
+        "post-audit v3 已显式 supersede /workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md；当前只允许对 published 332/444 发起 human 审批。"
       ],
       "monitoring_scope_after_approval": {
         "eligible": [
@@ -78,7 +80,7 @@
           "detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 的 live 抽样巡检"
         ],
         "still_excluded": [
-          "350/476 all-candidates 的 candidate-only 数据",
+          "341/459 all-candidates 的 candidate-only 数据",
           "未经批准直接写入 /opt/wanman/products.json 前的正式 uptime 承诺"
         ]
       },

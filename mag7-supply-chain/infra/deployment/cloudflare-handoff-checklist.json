@@ -1,17 +1,19 @@
 {
   "schema": "wanman.cloudflare-handoff-checklist",
   "version": 1,
-  "generated_at": "2026-06-15T23:45:00Z",
+  "generated_at": "2026-06-15T23:59:45Z",
   "generated_by": "devops",
-  "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+  "formal_decision_source": "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
+  "live_runtime_verification_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
   "decision_summary": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "published": "327 relations / 435 evidence",
-    "all_candidates": "350 relations / 476 evidence",
-    "candidate_only_delta": "23 relations / 41 evidence",
-    "real_data_launch": "不再因 full.19 live 运行时闭环而 blocked，现已进入待 human 批准部署阶段"
+    "published": "332 relations / 444 evidence",
+    "all_candidates": "341 relations / 459 evidence",
+    "candidate_only_delta": "9 relations / 15 evidence",
+    "real_data_launch": "真实 live 能力已在既有 full19 终审链成立；wave5 仅刷新当前 payload 与候选边界，现已进入待 human 批准部署阶段"
   },
   "audit_only_exclusions": [
+    "0cd6875d",
     "6e45bce1"
   ],
   "cloudflare_connection_gate": {
@@ -20,8 +22,8 @@
     "forbidden": [
       "代理人直接使用 Cloudflare 凭据",
       "在未获 Wanman 控制面批准前切换正式流量",
-      "把 candidate-only 350/476 描述成已发布 live 数据",
-      "把 6e45bce1 当成任何最终部署输入"
+      "把 candidate-only 341/459 描述成已发布 live 数据",
+      "把 0cd6875d 或 6e45bce1 当成任何最终部署输入"
     ]
   },
   "required_human_fields": [
@@ -65,12 +67,12 @@
     {
       "order": 2,
       "step": "human 在 Wanman 中批准 deployment manifest 对应的 paid/domain-impacting 部署。",
-      "gate": "批准内容只能覆盖 published 327/435 的真实 live 发布，不得放大到 350/476。"
+      "gate": "批准内容只能覆盖 published 332/444 的正式部署，不得放大到 341/459。"
     },
     {
       "order": 3,
       "step": "受信部署流程按批准结果创建前端站点、后端托管、Cloudflare DNS/证书与 /api 路由。",
-      "gate": "保持 authoritative snapshot=full.18；不得借此宣称 full.19 authoritative promoted。"
+      "gate": "保持 authoritative snapshot=full.18；不得借此宣称 full20-wave5 authoritative promoted。"
     },
     {
       "order": 4,
@@ -101,9 +103,9 @@
   },
   "boundary_assertions": [
     "authoritative snapshot 仍为 snapshot:2026-06-15.full.18。",
-    "published 327/435 与 all-candidates 350/476 边界不变。",
-    "candidate-only relation 在 published live 图中必须继续不可取证，live evidence 读取应返回 404 relation_evidence_not_found。",
-    "唯一正式结论源只能是 code-reviewer-6 的 full19-live-e2e-formal-review-v3 报告；6e45bce1 仅保留审计用途。",
-    "real_data_launch 的技术阻塞已解除，但正式外部部署仍需 human 批准。"
+    "published 332/444 与 all-candidates 341/459 边界已按 full20-wave5 正式收口锁定。",
+    "candidate-only relation 在 published 视图中必须继续不可取证，evidence 读取应返回 404 relation_evidence_not_found。",
+    "当前数据边界的唯一正式结论源只能是 full20-wave5-formal-review-v2 与 full20-wave5-formal-refresh；0cd6875d 与 6e45bce1 仅保留审计用途。",
+    "真实 live 能力已在既有 full19 终审链成立，但正式外部部署仍需 human 批准。"
   ]
 }
