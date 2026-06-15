@@ -9,7 +9,7 @@
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
     "readiness": "prototype_passed_real_data_launch_ready_for_human_decision",
-    "summary": "唯一正式数据收口链已切换为 full20-wave5 正式终审 v2 与 full20-wave5 formal refresh。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 root/canonical published 视图固定为 332 relations / 444 evidence，all-candidates 固定为 341 relations / 459 evidence，candidate-only 差额 9 / 15 继续成立且其 published evidence 读取继续返回 404 relation_evidence_not_found。既有 full19 live 终审 v3 已证明 source=neo4j 的真实 live 导入与 HTTP 回读能力成立；wave5 只刷新当前 payload 与候选壳边界，不构成新的 authoritative promotion。可访问性 v2 与安全复审现已通过，ready_for_human_decision 继续成立，但 human 审批范围仅限 published 332/444。"
+    "summary": "唯一正式数据收口链已切换为 full20-wave5 正式终审 v2 与 full20-wave5 formal refresh。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 root/canonical published 视图固定为 332 relations / 444 evidence，all-candidates 固定为 341 relations / 459 evidence，candidate-only 差额 9 / 15 继续成立且其 published evidence 读取继续返回 404 relation_evidence_not_found。既有 full19 live 终审 v3 已证明 source=neo4j 的真实 live 导入与 HTTP 回读能力成立，但该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过；wave5 只刷新当前 payload 与候选壳边界，不构成新的 authoritative promotion。可访问性 v2 与安全复审现已通过，ready_for_human_decision 继续成立，但 human 审批范围仅限 published 332/444。"
   },
   "release_gate_status": {
     "post_audit_status": "ready_for_human_decision_restored",
