@@ -146,9 +146,25 @@ npm run import:normalized -- \
 全量 Mag7 发布包导入：
 
 ```bash
-npm run import:normalized -- \
-  --relations /workspace/agents/evidence-collector/output/mag7-full-package/relations.jsonl \
-  --evidence /workspace/agents/evidence-collector/output/mag7-full-package/evidence.jsonl
+npm run import:full-package:live -- \
+  --manifest /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json \
+  --mode published
+```
+
+当前顶层正式包已经重建到 `full20-wave5` candidate shell，live 导入必须按 manifest 口径执行，而不是手写旧 JSONL 路径或沿用旧计数：
+
+- `package snapshot shell`：`snapshot:2026-06-15.full.20-wave5-candidate`
+- `authoritative snapshot`：`snapshot:2026-06-15.full.18`
+- `published view`：`332 relations / 444 evidence`
+- `all-candidates view`：`341 relations / 459 evidence`
+- `candidate-only delta`：`9 relations / 15 evidence`
+
+如果需要导入候选全集用于审计或离线对比，可显式切换：
+
+```bash
+npm run import:full-package:live -- \
+  --manifest /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json \
+  --mode all-candidates
 ```
 
 或通过 HTTP 触发：
@@ -162,6 +178,8 @@ curl -X POST http://127.0.0.1:4000/api/v1/imports/normalized-package \
     "evidenceFile": "/workspace/agents/evidence-collector/output/mag7-normalized-evidence-sample.jsonl"
   }'
 ```
+
+CLI 在 `--manifest` 模式下会先校验 JSONL 实际行数是否与 manifest 一致；如果不是 `332/444`、`341/459`、`9/15` 这组正式口径，导入会直接失败，避免误把旧 `327/435` 或 `350/476` 数据当成当前 live 基线。
 
 ## 数据库初始化
 

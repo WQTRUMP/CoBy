@@ -637,6 +637,7 @@ let app: Awaited<ReturnType<typeof buildApp>>;
 let round19App: Awaited<ReturnType<typeof buildApp>>;
 let latestPublishedSnapshotId = "snapshot:published";
 let latestPublishedSnapshotVersion = "published";
+let rootPackageSnapshotId = "snapshot:published";
 let preparedFullPackage: PreparedNormalizedImport;
 let round19PublishedSnapshotId = "snapshot:published";
 let round19PublishedSnapshotVersion = "published";
@@ -655,6 +656,7 @@ async function buildSampleAppFromPackage(
     package_snapshot_id?: string;
     authoritative_snapshot?: string;
   };
+  const packageSnapshotId = manifest.package_snapshot_id ?? "snapshot:published";
   const snapshotId =
     (snapshotSelector === "authoritative" ? manifest.authoritative_snapshot : manifest.package_snapshot_id) ??
     manifest.authoritative_snapshot ??
@@ -679,6 +681,7 @@ async function buildSampleAppFromPackage(
     prepared,
     snapshotId,
     snapshotVersion,
+    packageSnapshotId,
   };
 }
 
@@ -691,6 +694,7 @@ beforeAll(async () => {
   preparedFullPackage = fullPackageHarness.prepared;
   latestPublishedSnapshotId = fullPackageHarness.snapshotId;
   latestPublishedSnapshotVersion = fullPackageHarness.snapshotVersion;
+  rootPackageSnapshotId = fullPackageHarness.packageSnapshotId;
   round19App = round19Harness.app;
   preparedRound19Package = round19Harness.prepared;
   round19PublishedSnapshotId = round19Harness.snapshotId;
@@ -761,6 +765,12 @@ describe("full package app", () => {
       id: latestPublishedSnapshotId,
       version: latestPublishedSnapshotVersion,
     });
+  });
+
+  it("distinguishes the full20-wave5 candidate shell from the authoritative full.18 published snapshot", () => {
+    expect(rootPackageSnapshotId).toBe("snapshot:2026-06-15.full.20-wave5-candidate");
+    expect(latestPublishedSnapshotId).toBe("snapshot:2026-06-15.full.18");
+    expect(rootPackageSnapshotId).not.toBe(latestPublishedSnapshotId);
   });
 
   it("serves real search, suggest, path, stats, and evidence payloads from the full package", async () => {
