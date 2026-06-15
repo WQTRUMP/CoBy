@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Neo4jGraphRepository } from "../src/lib/neo4j.js";
+import type { PreparedNormalizedImport } from "../src/lib/normalized-package.js";
 
 class FakeRecord {
   constructor(private readonly values: Record<string, unknown>) {}
@@ -1014,5 +1015,82 @@ describe("Neo4jGraphRepository", () => {
         displayName: "Google",
       },
     });
+  });
+
+  it("serializes company entity profiles to JSON before sending import payloads to Neo4j", async () => {
+    const runCalls: Array<{ query: string; params: Record<string, unknown> }> = [];
+    type FakeTransaction = {
+      run(query: string, params: Record<string, unknown>): Promise<{ records: never[] }>;
+    };
+    const tx = {
+      async run(query: string, params: Record<string, unknown>) {
+        runCalls.push({ query, params });
+        return { records: [] };
+      },
+    } satisfies FakeTransaction;
+    const session = {
+      async executeWrite<T>(callback: (tx: FakeTransaction) => Promise<T>) {
+        return callback(tx);
+      },
+      async close() {},
+    };
+
+    const driver = {
+      session() {
+        return session;
+      },
+    };
+
+    const repository = new Neo4jGraphRepository(driver as never, "neo4j");
+    const payload: PreparedNormalizedImport = {
+      snapshots: [],
+      companies: [
+        {
+          id: "company:GOOGL",
+          ticker: "GOOGL",
+          name: "Alphabet",
+          canonicalName: "Alphabet",
+          displayName: "Google",
+          entityType: "Company",
+          companyType: "public_company",
+          country: "US",
+          isMag7: true,
+          marketCapUsd: 2200000000000,
+          description: "Alphabet",
+          aliases: ["Alphabet Inc.", "Google"],
+          entityProfile: {
+            canonicalName: "Alphabet",
+            displayName: "Google",
+            legalEntities: [],
+            brands: [],
+            aliases: [],
+          },
+          entityProfileJson:
+            '{"canonicalName":"Alphabet","displayName":"Google","legalEntities":[],"brands":[],"aliases":[]}',
+          importanceScore: 1,
+          active: true,
+          searchAliases: ["Alphabet", "Google"],
+        },
+      ],
+      relations: [],
+      relationEdges: [],
+      evidence: [],
+      evidenceBindings: [],
+    };
+
+    await repository.importNormalizedPackage(payload);
+
+    const companyCall = runCalls.find(({ query }) => query.includes("UNWIND $companies AS company"));
+    expect(companyCall).toBeDefined();
+    expect(companyCall?.params.companies).toEqual([
+      expect.objectContaining({
+        id: "company:GOOGL",
+        canonicalName: "Alphabet",
+        displayName: "Google",
+        entityProfileJson:
+          '{"canonicalName":"Alphabet","displayName":"Google","legalEntities":[],"brands":[],"aliases":[]}',
+      }),
+    ]);
+    expect((companyCall?.params.companies as Array<Record<string, unknown>>)[0]).not.toHaveProperty("entityProfile");
   });
 });

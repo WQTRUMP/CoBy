@@ -650,7 +650,24 @@ if ! npm --prefix "$BACKEND_DIR" run import:normalized -- --relations "$PACKAGE_
   fail_stage "import" "import_command_failed" "live 导入失败" "请查看 import-failure.json 与 logs/import.stderr.log。"
 fi
 
-if ! jq . "$IMPORT_STDOUT" >"$IMPORT_JSON"; then
+if ! python3 - "$IMPORT_STDOUT" "$IMPORT_JSON" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+stdout_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+text = stdout_path.read_text()
+anchors = [text.rfind('{"source"'), text.rfind('{\n  "source"')]
+anchor = max(anchors)
+if anchor < 0:
+    raise SystemExit(1)
+
+segment = text[anchor:].lstrip()
+payload, _ = json.JSONDecoder().raw_decode(segment)
+output_path.write_text(json.dumps(payload, indent=2) + "\n")
+PY
+then
   jq -n \
     --arg mode "$SELECTED_MODE" \
     --arg stdoutFile "logs/import.stdout.log" \

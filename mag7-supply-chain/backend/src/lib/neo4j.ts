@@ -853,7 +853,7 @@ export class Neo4jGraphRepository implements GraphRepository {
         WHERE rel.depthFromMag7 <= $depth
           AND length(path) <= (($depth * 2) - 1)
           AND ($relationshipTypes IS NULL OR rel.relationshipType IN $relationshipTypes)
-        WITH root, DISTINCT rel
+        WITH DISTINCT root, rel
         WHERE rel IS NOT NULL
         MATCH (source:Company)-[:SOURCE_OF]->(rel)-[:TARGET_OF]->(target:Company)
         MATCH (snapshot:Snapshot)-[:CONTAINS]->(rel)
@@ -1104,6 +1104,8 @@ export class Neo4jGraphRepository implements GraphRepository {
     const session = this.driver.session({ database: this.database });
 
     try {
+      const companies = payload.companies.map(({ entityProfile: _entityProfile, ...company }) => company);
+
       await session.executeWrite(async (tx) => {
         await tx.run(
           `
@@ -1120,7 +1122,7 @@ export class Neo4jGraphRepository implements GraphRepository {
           MERGE (c:Company {id: company.id})
           SET c += company
           `,
-          { companies: payload.companies },
+          { companies },
         );
 
         await tx.run(
