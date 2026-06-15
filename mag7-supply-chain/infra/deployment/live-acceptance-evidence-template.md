@@ -1,4 +1,4 @@
-# Mag7 full.18 live 验收证据模板
+# Mag7 full.21 source=neo4j live 验收证据模板
 
 ## 1. 执行摘要
 
@@ -7,12 +7,15 @@
 - 执行环境：
 - 请求模式：`auto` / `docker` / `external`
 - 实际模式：`docker` / `external` / `unavailable`
+- 导入模式：`published` / `all-candidates`
 - 结果结论：`通过` / `失败`
-- 唯一正式链：`full20-wave5 formal review v2 + full20-wave5 formal refresh + full19 live e2e formal review v3`
+- 唯一正式链：
+  - `/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md`
+  - `/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md`
 - `authoritative snapshot`：`snapshot:2026-06-15.full.18`
 - published：`332 relations / 444 evidence`
-- all-candidates：`341 relations / 459 evidence`
-- candidate-only：`9 relations / 15 evidence`
+- all-candidates：`335 relations / 448 evidence`
+- candidate-only：`3 relations / 4 evidence`
 - 证据目录：
 
 ## 2. 前置条件
@@ -22,8 +25,7 @@
 - curl 版本：
 - jq 版本：
 - Docker/Compose 版本：
-- `relations.jsonl` 行数：
-- `evidence.jsonl` 行数：
+- package shell snapshot：
 - Cloudflare/域名阶段：
   - `未接入`
   - `仅预备记录`
@@ -45,9 +47,15 @@ NEO4J_USERNAME=
 NEO4J_PASSWORD=
 NEO4J_DATABASE=
 REDIS_URL=
+LIVE_IMPORT_MODE=all-candidates
 EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
 EXPECTED_RELATION_COUNT=332
 EXPECTED_EVIDENCE_COUNT=444
+EXPECTED_ALL_CANDIDATE_RELATION_COUNT=335
+EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT=448
+EXPECTED_CANDIDATE_ONLY_RELATION_COUNT=3
+EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT=4
+PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 ```
 
 ## 4. preflight / mode-selection
@@ -61,8 +69,9 @@ EXPECTED_EVIDENCE_COUNT=444
 必须说明：
 
 - 是否命中 `snapshot:2026-06-15.full.18`
-- `relations=332`
-- `evidence=444`
+- `published=332/444`
+- `all-candidates=335/448`
+- `candidate-only=3/4`
 - 自动选择结果是 `docker` 还是 `external`
 - 若失败，失败码是什么
 
@@ -77,9 +86,12 @@ EXPECTED_EVIDENCE_COUNT=444
 通过门槛：
 
 - `source = "neo4j"`
-- `relationCount > 0`
-- `evidenceCount > 0`
-- `snapshotCount > 0`
+- `liveImport.mode = "all-candidates"`（若特意只跑 published，必须显式解释）
+- `liveImport.authoritativeSnapshotId = "snapshot:2026-06-15.full.18"`
+- `liveImport.expectedRelationCount = 335`
+- `liveImport.expectedEvidenceCount = 448`
+- `liveImport.candidateOnlyRelationCount = 3`
+- `liveImport.candidateOnlyEvidenceCount = 4`
 
 ## 6. Health 结果
 
@@ -97,7 +109,7 @@ EXPECTED_EVIDENCE_COUNT=444
 - `dependencies.neo4j.status = "up"`
 - `dependencies.redis.status = "up"`
 
-## 7. HTTP smoke 结果
+## 7. published HTTP smoke 结果
 
 按顺序粘贴关键片段：
 
@@ -125,38 +137,58 @@ EXPECTED_EVIDENCE_COUNT=444
 {}
 ```
 
-### `graph/subgraph`
+### `graph/subgraph?snapshot=published`
 
 ```json
 {}
 ```
 
-### `graph/path`
+### `graph/path?snapshot=published`
 
 ```json
 {}
 ```
 
-### `graph/stats`
+### `graph/stats?snapshot=published`
 
 ```json
 {}
 ```
 
-### `relations/.../evidence`
+### `relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence`
 
 ```json
 {}
 ```
 
-## 8. Cloudflare / 域名状态
+## 8. candidate shell 隔离校验
+
+### `graph/subgraph?snapshot=snapshot:2026-06-15.full.21-tail-closure-candidate`
+
+```json
+{}
+```
+
+### `relations/rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch/evidence`
+
+```json
+{}
+```
+
+必须说明：
+
+- published `subgraph/path` 中未混入 candidate shell relation
+- candidate shell relation 只在显式 candidate snapshot 或 direct relation evidence 校验中出现
+- 未把 `335/448` 或 `3/4` 写成 published
+
+## 9. Cloudflare / 域名状态
 
 - 使用同源 `/api` 代理，还是 `api.<domain>` 分域：
 - 若已切 Cloudflare 路由，切换时间：
 - 最终域名 smoke 是否复跑：
 - 若未复跑，原因：
 
-## 9. 失败时必交文件
+## 10. 失败时必交文件
 
 - `result.json`
 - `minimal-external-prerequisites.json`
@@ -168,10 +200,10 @@ EXPECTED_EVIDENCE_COUNT=444
 - `http/*.json` 中已产出的部分文件
 - `docker/docker-compose-ps.txt`、`docker/neo4j.log`、`docker/redis.log`（若走 docker）
 
-## 10. 最终判定
+## 11. 最终判定
 
 - `result.json.passed`：
-- 是否满足 `real_data_launch ready_for_human_decision` 的正式部署证据门槛：
+- 是否满足 `source=neo4j` 正向闭环门槛：
 - 若未通过，唯一阻塞原因：
 - 是否已接入 Cloudflare 最终路由：
 - `/opt/wanman/products.json` 状态（为空数组时只能写 `unknown:no_product_inventory`）：

@@ -12,16 +12,24 @@ usage() {
 
 说明：
   - 默认 --mode auto：优先使用显式提供的 external Neo4j/Redis；否则尝试 Docker/Compose。
+  - 默认会读取 infra/deployment/live-acceptance-manifest.json，并按 manifest 驱动 full-package live 导入。
   - 只要依赖不可达，就输出结构化失败结果；严禁回退到 mock。
-  - 成功时会完成 preflight、bring-up、import、health、detail、overview、search、suggest、subgraph、path、stats、relations/:id/evidence 验收。
+  - 成功时会完成 preflight、bring-up、import、health、published HTTP smoke，以及 candidate shell 隔离校验。
 
 环境变量：
   REPO_ROOT                  默认 /workspace/project/mag7-supply-chain
   BACKEND_DIR                默认 $REPO_ROOT/backend
-  PACKAGE_DIR                默认 /workspace/agents/evidence-collector/output/mag7-full-package
+  LIVE_ACCEPTANCE_MANIFEST_PATH 默认 $REPO_ROOT/infra/deployment/live-acceptance-manifest.json
+  PACKAGE_MANIFEST           默认由 live-acceptance-manifest.json 指定
+  LIVE_IMPORT_MODE           默认 all-candidates
   EXPECTED_PACKAGE_SNAPSHOT  默认 snapshot:2026-06-15.full.18
-  EXPECTED_RELATION_COUNT    默认 312
-  EXPECTED_EVIDENCE_COUNT    默认 410
+  EXPECTED_RELATION_COUNT    默认 332
+  EXPECTED_EVIDENCE_COUNT    默认 444
+  EXPECTED_ALL_CANDIDATE_RELATION_COUNT 默认 335
+  EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT 默认 448
+  EXPECTED_CANDIDATE_ONLY_RELATION_COUNT 默认 3
+  EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT 默认 4
+  PACKAGE_SHELL_SNAPSHOT     默认 snapshot:2026-06-15.full.21-tail-closure-candidate
   API_BASE                   默认 http://127.0.0.1:4000
   HOST                       默认 127.0.0.1
   PORT                       默认 4000
@@ -71,12 +79,51 @@ fi
 
 REPO_ROOT="${REPO_ROOT:-/workspace/project/mag7-supply-chain}"
 BACKEND_DIR="${BACKEND_DIR:-$REPO_ROOT/backend}"
-PACKAGE_DIR="${PACKAGE_DIR:-/workspace/agents/evidence-collector/output/mag7-full-package}"
-PACKAGE_MANIFEST="${PACKAGE_DIR}/mag7-full-package-manifest.json"
-EXPECTED_PACKAGE_SNAPSHOT="${EXPECTED_PACKAGE_SNAPSHOT:-snapshot:2026-06-15.full.18}"
-EXPECTED_RELATION_COUNT="${EXPECTED_RELATION_COUNT:-312}"
-EXPECTED_EVIDENCE_COUNT="${EXPECTED_EVIDENCE_COUNT:-410}"
+LIVE_ACCEPTANCE_MANIFEST_PATH="${LIVE_ACCEPTANCE_MANIFEST_PATH:-$REPO_ROOT/infra/deployment/live-acceptance-manifest.json}"
+if ! command -v jq >/dev/null 2>&1; then
+  echo "缺少 jq，无法读取 $LIVE_ACCEPTANCE_MANIFEST_PATH" >&2
+  exit 1
+fi
+
+if [[ ! -f "$LIVE_ACCEPTANCE_MANIFEST_PATH" ]]; then
+  echo "找不到 live acceptance manifest: $LIVE_ACCEPTANCE_MANIFEST_PATH" >&2
+  exit 1
+fi
+
+read_live_manifest_value() {
+  jq -r "$1 // empty" "$LIVE_ACCEPTANCE_MANIFEST_PATH"
+}
+
+PACKAGE_MANIFEST="${PACKAGE_MANIFEST:-$(read_live_manifest_value '.full_package_import.manifest_path')}"
+PACKAGE_DIR="${PACKAGE_DIR:-$(dirname "$PACKAGE_MANIFEST")}"
+LIVE_IMPORT_MODE="${LIVE_IMPORT_MODE:-$(read_live_manifest_value '.full_package_import.default_mode')}"
+EXPECTED_PACKAGE_SNAPSHOT="${EXPECTED_PACKAGE_SNAPSHOT:-$(read_live_manifest_value '.release.authoritative_snapshot')}"
+EXPECTED_RELATION_COUNT="${EXPECTED_RELATION_COUNT:-$(read_live_manifest_value '.release.counts.published.relations')}"
+EXPECTED_EVIDENCE_COUNT="${EXPECTED_EVIDENCE_COUNT:-$(read_live_manifest_value '.release.counts.published.evidence')}"
+EXPECTED_ALL_CANDIDATE_RELATION_COUNT="${EXPECTED_ALL_CANDIDATE_RELATION_COUNT:-$(read_live_manifest_value '.release.counts.all_candidates.relations')}"
+EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT="${EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT:-$(read_live_manifest_value '.release.counts.all_candidates.evidence')}"
+EXPECTED_CANDIDATE_ONLY_RELATION_COUNT="${EXPECTED_CANDIDATE_ONLY_RELATION_COUNT:-$(read_live_manifest_value '.release.counts.candidate_only_delta.relations')}"
+EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT="${EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT:-$(read_live_manifest_value '.release.counts.candidate_only_delta.evidence')}"
+PACKAGE_SHELL_SNAPSHOT="${PACKAGE_SHELL_SNAPSHOT:-$(read_live_manifest_value '.release.package_snapshot_shell')}"
+PUBLISHED_DETAIL_COMPANY_ID="${PUBLISHED_DETAIL_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.detail_company_id')}"
+PUBLISHED_OVERVIEW_COMPANY_ID="${PUBLISHED_OVERVIEW_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.overview_company_id')}"
+PUBLISHED_SEARCH_QUERY="${PUBLISHED_SEARCH_QUERY:-$(read_live_manifest_value '.http_checks.published.search_query')}"
+PUBLISHED_SEARCH_COMPANY_ID="${PUBLISHED_SEARCH_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.search_company_id')}"
+PUBLISHED_SUGGEST_QUERY="${PUBLISHED_SUGGEST_QUERY:-$(read_live_manifest_value '.http_checks.published.suggest_query')}"
+PUBLISHED_SUGGEST_COMPANY_ID="${PUBLISHED_SUGGEST_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.suggest_company_id')}"
+PUBLISHED_SUBGRAPH_COMPANY_ID="${PUBLISHED_SUBGRAPH_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.subgraph_company_id')}"
+PUBLISHED_PATH_SOURCE_COMPANY_ID="${PUBLISHED_PATH_SOURCE_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.path_source_company_id')}"
+PUBLISHED_PATH_TARGET_COMPANY_ID="${PUBLISHED_PATH_TARGET_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.path_target_company_id')}"
+PUBLISHED_STATS_COMPANY_ID="${PUBLISHED_STATS_COMPANY_ID:-$(read_live_manifest_value '.http_checks.published.stats_company_id')}"
+PUBLISHED_ANCHOR_RELATION_ID="${PUBLISHED_ANCHOR_RELATION_ID:-$(read_live_manifest_value '.http_checks.published.anchor_relation_id')}"
+CANDIDATE_COMPANY_ID="${CANDIDATE_COMPANY_ID:-$(read_live_manifest_value '.http_checks.candidate_shell.candidate_company_id')}"
+CANDIDATE_ONLY_RELATION_ID="${CANDIDATE_ONLY_RELATION_ID:-$(read_live_manifest_value '.http_checks.candidate_shell.candidate_only_relation_id')}"
 API_BASE="${API_BASE:-http://127.0.0.1:4000}"
+
+if [[ "$LIVE_IMPORT_MODE" != "published" && "$LIVE_IMPORT_MODE" != "all-candidates" ]]; then
+  echo "LIVE_IMPORT_MODE 只支持 published 或 all-candidates，当前值: ${LIVE_IMPORT_MODE:-<empty>}" >&2
+  exit 1
+fi
 
 export HOST="${HOST:-127.0.0.1}"
 export PORT="${PORT:-4000}"
@@ -87,7 +134,7 @@ export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
 export NEO4J_DATABASE="${NEO4J_DATABASE:-}"
 export REDIS_URL="${REDIS_URL:-}"
 
-OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-full18-XXXXXX)}"
+OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-full21-XXXXXX)}"
 mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR/http" "$OUTPUT_DIR/logs" "$OUTPUT_DIR/docker"
 
 PREFLIGHT_JSON="$OUTPUT_DIR/preflight.json"
@@ -124,16 +171,40 @@ printf '{}\n' >"$IMPORT_FAILURE_JSON"
 write_minimal_prerequisites() {
   jq -n \
     --arg snapshot "$EXPECTED_PACKAGE_SNAPSHOT" \
+    --arg importMode "$LIVE_IMPORT_MODE" \
+    --arg packageShellSnapshot "$PACKAGE_SHELL_SNAPSHOT" \
+    --arg publishedRelations "$EXPECTED_RELATION_COUNT" \
+    --arg publishedEvidence "$EXPECTED_EVIDENCE_COUNT" \
+    --arg allCandidateRelations "$EXPECTED_ALL_CANDIDATE_RELATION_COUNT" \
+    --arg allCandidateEvidence "$EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT" \
+    --arg candidateOnlyRelations "$EXPECTED_CANDIDATE_ONLY_RELATION_COUNT" \
+    --arg candidateOnlyEvidence "$EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT" \
     '{
       snapshot: $snapshot,
-      current_status: "blocked",
+      importMode: $importMode,
+      packageShellSnapshot: $packageShellSnapshot,
+      current_status: "awaiting_source_neo4j_positive_closure",
+      releaseBoundary: {
+        published: {
+          relations: ($publishedRelations | tonumber),
+          evidence: ($publishedEvidence | tonumber)
+        },
+        allCandidates: {
+          relations: ($allCandidateRelations | tonumber),
+          evidence: ($allCandidateEvidence | tonumber)
+        },
+        candidateOnly: {
+          relations: ($candidateOnlyRelations | tonumber),
+          evidence: ($candidateOnlyEvidence | tonumber)
+        }
+      },
       required_to_unblock_real_data_launch: [
         "Node.js v22.22.3 + npm + curl + jq",
         "可达的 Neo4j 5.26 兼容实例",
         "可达的 Redis 7.4 兼容实例",
         "若需要对外 smoke 或同源 `/api` 联调，准备一个可临时托管 Node API 的运行器和待接入的 Cloudflare Zone",
         "live 模式环境变量：NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL",
-        "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 全部成功返回"
+        "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、published=332/444 与 candidate shell=3/4 隔离同时成立"
       ],
       external_env_template: {
         GRAPH_RUNTIME_MODE: "live",
@@ -141,7 +212,8 @@ write_minimal_prerequisites() {
         NEO4J_USERNAME: "<username>",
         NEO4J_PASSWORD: "<password>",
         NEO4J_DATABASE: "neo4j",
-        REDIS_URL: "redis://<reachable-redis-host>:6379"
+        REDIS_URL: "redis://<reachable-redis-host>:6379",
+        LIVE_IMPORT_MODE: $importMode
       }
     }' >"$PREREQ_JSON"
 }
@@ -338,13 +410,17 @@ write_http_summary() {
     --argjson passed "$passed" \
     --arg apiBase "$API_BASE" \
     --arg mode "$SELECTED_MODE" \
+    --arg importMode "$LIVE_IMPORT_MODE" \
     --arg snapshot "$EXPECTED_PACKAGE_SNAPSHOT" \
+    --arg packageShellSnapshot "$PACKAGE_SHELL_SNAPSHOT" \
     --argjson checks "$(printf '%s\n' "${HTTP_CHECK_NAMES[@]}" | jq -R . | jq -s .)" \
     '{
       passed: $passed,
       mode: $mode,
+      importMode: $importMode,
       apiBase: $apiBase,
-      packageSnapshotId: $snapshot,
+      authoritativeSnapshotId: $snapshot,
+      packageShellSnapshotId: $packageShellSnapshot,
       checks: $checks
     }' >"$HTTP_SUMMARY_JSON"
 }
@@ -352,6 +428,7 @@ write_http_summary() {
 write_success_result() {
   jq -n \
     --arg mode "$SELECTED_MODE" \
+    --arg importMode "$LIVE_IMPORT_MODE" \
     --arg outputDir "$OUTPUT_DIR" \
     --slurpfile preflight "$PREFLIGHT_JSON" \
     --slurpfile selection "$MODE_JSON" \
@@ -366,6 +443,7 @@ write_success_result() {
       blocked: false,
       stage: "complete",
       mode: $mode,
+      importMode: $importMode,
       outputDir: $outputDir,
       preflight: $preflight[0],
       modeSelection: $selection[0],
@@ -419,36 +497,52 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 PACKAGE_SNAPSHOT_ID=""
+PACKAGE_AUTHORITATIVE_SNAPSHOT=""
 PACKAGE_VERSION="unknown"
-RELATION_COUNT=0
-EVIDENCE_COUNT=0
+PACKAGE_PUBLISHED_RELATION_COUNT=0
+PACKAGE_PUBLISHED_EVIDENCE_COUNT=0
+PACKAGE_ALL_CANDIDATE_RELATION_COUNT=0
+PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT=0
+PACKAGE_CANDIDATE_ONLY_RELATION_COUNT=0
+PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT=0
 
 if [[ -f "$PACKAGE_MANIFEST" ]]; then
   PACKAGE_SNAPSHOT_ID="$(jq -r '.package_snapshot_id // ""' "$PACKAGE_MANIFEST")"
+  PACKAGE_AUTHORITATIVE_SNAPSHOT="$(jq -r '.authoritative_snapshot // ""' "$PACKAGE_MANIFEST")"
   PACKAGE_VERSION="$(jq -r '.package_version // "unknown"' "$PACKAGE_MANIFEST")"
-fi
-
-if [[ -f "$PACKAGE_DIR/relations.jsonl" ]]; then
-  RELATION_COUNT="$(wc -l <"$PACKAGE_DIR/relations.jsonl" | tr -d ' ')"
-fi
-
-if [[ -f "$PACKAGE_DIR/evidence.jsonl" ]]; then
-  EVIDENCE_COUNT="$(wc -l <"$PACKAGE_DIR/evidence.jsonl" | tr -d ' ')"
+  PACKAGE_PUBLISHED_RELATION_COUNT="$(jq -r '.record_counts.relations_published // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_PUBLISHED_EVIDENCE_COUNT="$(jq -r '.record_counts.evidence_published // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_ALL_CANDIDATE_RELATION_COUNT="$(jq -r '.record_counts.relations_all_candidates // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT="$(jq -r '.record_counts.evidence_all_candidates // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_CANDIDATE_ONLY_RELATION_COUNT="$(jq -r '.full21_tail_closure.new_counts.candidate_only.relations // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT="$(jq -r '.full21_tail_closure.new_counts.candidate_only.evidence // 0' "$PACKAGE_MANIFEST")"
 fi
 
 jq -n \
   --arg mode "$MODE" \
+  --arg importMode "$LIVE_IMPORT_MODE" \
   --arg repoRoot "$REPO_ROOT" \
   --arg backendDir "$BACKEND_DIR" \
   --arg packageDir "$PACKAGE_DIR" \
   --arg packageManifest "$PACKAGE_MANIFEST" \
+  --arg liveAcceptanceManifest "$LIVE_ACCEPTANCE_MANIFEST_PATH" \
   --arg expectedSnapshot "$EXPECTED_PACKAGE_SNAPSHOT" \
   --arg expectedRelationCount "$EXPECTED_RELATION_COUNT" \
   --arg expectedEvidenceCount "$EXPECTED_EVIDENCE_COUNT" \
+  --arg expectedAllCandidateRelationCount "$EXPECTED_ALL_CANDIDATE_RELATION_COUNT" \
+  --arg expectedAllCandidateEvidenceCount "$EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT" \
+  --arg expectedCandidateOnlyRelationCount "$EXPECTED_CANDIDATE_ONLY_RELATION_COUNT" \
+  --arg expectedCandidateOnlyEvidenceCount "$EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT" \
+  --arg packageShellSnapshot "$PACKAGE_SHELL_SNAPSHOT" \
   --arg packageSnapshot "$PACKAGE_SNAPSHOT_ID" \
+  --arg packageAuthoritativeSnapshot "$PACKAGE_AUTHORITATIVE_SNAPSHOT" \
   --arg packageVersion "$PACKAGE_VERSION" \
-  --arg relationCount "$RELATION_COUNT" \
-  --arg evidenceCount "$EVIDENCE_COUNT" \
+  --arg publishedRelationCount "$PACKAGE_PUBLISHED_RELATION_COUNT" \
+  --arg publishedEvidenceCount "$PACKAGE_PUBLISHED_EVIDENCE_COUNT" \
+  --arg allCandidateRelationCount "$PACKAGE_ALL_CANDIDATE_RELATION_COUNT" \
+  --arg allCandidateEvidenceCount "$PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT" \
+  --arg candidateOnlyRelationCount "$PACKAGE_CANDIDATE_ONLY_RELATION_COUNT" \
+  --arg candidateOnlyEvidenceCount "$PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT" \
   --arg graphRuntimeMode "$GRAPH_RUNTIME_MODE" \
   --arg nodeVersion "$COMMAND_NODE" \
   --arg npmVersion "$COMMAND_NPM" \
@@ -461,20 +555,44 @@ jq -n \
   --argjson externalEnvComplete "$EXTERNAL_ENV_COMPLETE" \
   '{
     modeRequested: $mode,
+    importMode: $importMode,
     repoRoot: $repoRoot,
     backendDir: $backendDir,
     packageDir: $packageDir,
     packageManifest: $packageManifest,
+    liveAcceptanceManifest: $liveAcceptanceManifest,
     expectedPackageSnapshot: $expectedSnapshot,
-    expectedCounts: {
-      relations: ($expectedRelationCount | tonumber),
-      evidence: ($expectedEvidenceCount | tonumber)
+    expectedReleaseCounts: {
+      published: {
+        relations: ($expectedRelationCount | tonumber),
+        evidence: ($expectedEvidenceCount | tonumber)
+      },
+      allCandidates: {
+        relations: ($expectedAllCandidateRelationCount | tonumber),
+        evidence: ($expectedAllCandidateEvidenceCount | tonumber)
+      },
+      candidateOnly: {
+        relations: ($expectedCandidateOnlyRelationCount | tonumber),
+        evidence: ($expectedCandidateOnlyEvidenceCount | tonumber)
+      }
     },
     packageSnapshotId: $packageSnapshot,
+    packageAuthoritativeSnapshotId: $packageAuthoritativeSnapshot,
+    packageShellSnapshotId: $packageShellSnapshot,
     packageVersion: $packageVersion,
     packageCounts: {
-      relations: ($relationCount | tonumber),
-      evidence: ($evidenceCount | tonumber)
+      published: {
+        relations: ($publishedRelationCount | tonumber),
+        evidence: ($publishedEvidenceCount | tonumber)
+      },
+      allCandidates: {
+        relations: ($allCandidateRelationCount | tonumber),
+        evidence: ($allCandidateEvidenceCount | tonumber)
+      },
+      candidateOnly: {
+        relations: ($candidateOnlyRelationCount | tonumber),
+        evidence: ($candidateOnlyEvidenceCount | tonumber)
+      }
     },
     graphRuntimeMode: $graphRuntimeMode,
     commands: {
@@ -496,12 +614,15 @@ jq -n \
 command -v node >/dev/null 2>&1 || fail_stage "preflight" "node_missing" "缺少 Node.js" "当前运行器未安装 node。"
 command -v npm >/dev/null 2>&1 || fail_stage "preflight" "npm_missing" "缺少 npm" "当前运行器未安装 npm。"
 command -v curl >/dev/null 2>&1 || fail_stage "preflight" "curl_missing" "缺少 curl" "当前运行器未安装 curl。"
-test -f "$PACKAGE_MANIFEST" || fail_stage "preflight" "package_manifest_missing" "找不到 full.18 数据包 manifest" "$PACKAGE_MANIFEST 不存在。"
-test -f "$PACKAGE_DIR/relations.jsonl" || fail_stage "preflight" "relations_missing" "找不到 relations.jsonl" "$PACKAGE_DIR/relations.jsonl 不存在。"
-test -f "$PACKAGE_DIR/evidence.jsonl" || fail_stage "preflight" "evidence_missing" "找不到 evidence.jsonl" "$PACKAGE_DIR/evidence.jsonl 不存在。"
-[[ "$PACKAGE_SNAPSHOT_ID" = "$EXPECTED_PACKAGE_SNAPSHOT" ]] || fail_stage "preflight" "snapshot_mismatch" "数据包 snapshot 与 full.18 不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $EXPECTED_PACKAGE_SNAPSHOT。"
-[[ "$RELATION_COUNT" = "$EXPECTED_RELATION_COUNT" ]] || fail_stage "preflight" "relation_count_mismatch" "published relations 行数与 full.18 不一致" "检测到 $RELATION_COUNT，预期 $EXPECTED_RELATION_COUNT。"
-[[ "$EVIDENCE_COUNT" = "$EXPECTED_EVIDENCE_COUNT" ]] || fail_stage "preflight" "evidence_count_mismatch" "published evidence 行数与 full.18 不一致" "检测到 $EVIDENCE_COUNT，预期 $EXPECTED_EVIDENCE_COUNT。"
+test -f "$PACKAGE_MANIFEST" || fail_stage "preflight" "package_manifest_missing" "找不到 full package manifest" "$PACKAGE_MANIFEST 不存在。"
+[[ "$PACKAGE_AUTHORITATIVE_SNAPSHOT" = "$EXPECTED_PACKAGE_SNAPSHOT" ]] || fail_stage "preflight" "authoritative_snapshot_mismatch" "数据包 authoritative snapshot 与 full.18 不一致" "检测到 $PACKAGE_AUTHORITATIVE_SNAPSHOT，预期 $EXPECTED_PACKAGE_SNAPSHOT。"
+[[ "$PACKAGE_SNAPSHOT_ID" = "$PACKAGE_SHELL_SNAPSHOT" ]] || fail_stage "preflight" "package_shell_snapshot_mismatch" "数据包 package shell snapshot 与当前 full.21 壳不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $PACKAGE_SHELL_SNAPSHOT。"
+[[ "$PACKAGE_PUBLISHED_RELATION_COUNT" = "$EXPECTED_RELATION_COUNT" ]] || fail_stage "preflight" "published_relation_count_mismatch" "published relations 计数与当前正式口径不一致" "检测到 $PACKAGE_PUBLISHED_RELATION_COUNT，预期 $EXPECTED_RELATION_COUNT。"
+[[ "$PACKAGE_PUBLISHED_EVIDENCE_COUNT" = "$EXPECTED_EVIDENCE_COUNT" ]] || fail_stage "preflight" "published_evidence_count_mismatch" "published evidence 计数与当前正式口径不一致" "检测到 $PACKAGE_PUBLISHED_EVIDENCE_COUNT，预期 $EXPECTED_EVIDENCE_COUNT。"
+[[ "$PACKAGE_ALL_CANDIDATE_RELATION_COUNT" = "$EXPECTED_ALL_CANDIDATE_RELATION_COUNT" ]] || fail_stage "preflight" "all_candidate_relation_count_mismatch" "all-candidates relations 计数与当前正式口径不一致" "检测到 $PACKAGE_ALL_CANDIDATE_RELATION_COUNT，预期 $EXPECTED_ALL_CANDIDATE_RELATION_COUNT。"
+[[ "$PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT" = "$EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT" ]] || fail_stage "preflight" "all_candidate_evidence_count_mismatch" "all-candidates evidence 计数与当前正式口径不一致" "检测到 $PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT，预期 $EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT。"
+[[ "$PACKAGE_CANDIDATE_ONLY_RELATION_COUNT" = "$EXPECTED_CANDIDATE_ONLY_RELATION_COUNT" ]] || fail_stage "preflight" "candidate_only_relation_count_mismatch" "candidate-only relations 计数与当前正式口径不一致" "检测到 $PACKAGE_CANDIDATE_ONLY_RELATION_COUNT，预期 $EXPECTED_CANDIDATE_ONLY_RELATION_COUNT。"
+[[ "$PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT" = "$EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT" ]] || fail_stage "preflight" "candidate_only_evidence_count_mismatch" "candidate-only evidence 计数与当前正式口径不一致" "检测到 $PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT，预期 $EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT。"
 
 case "$MODE" in
   auto)
@@ -633,15 +754,17 @@ else
   [[ "$REDIS_PROBE" = "up" ]] || fail_stage "bringup" "redis_unreachable" "external Redis 不可达" "TCP probe 到 ${REDIS_HOST}:${REDIS_PORT} 失败。"
 fi
 
-log_cmd "npm --prefix $BACKEND_DIR run import:normalized -- --relations $PACKAGE_DIR/relations.jsonl --evidence $PACKAGE_DIR/evidence.jsonl"
-if ! npm --prefix "$BACKEND_DIR" run import:normalized -- --relations "$PACKAGE_DIR/relations.jsonl" --evidence "$PACKAGE_DIR/evidence.jsonl" >"$IMPORT_STDOUT" 2>"$IMPORT_STDERR"; then
+log_cmd "npm --prefix $BACKEND_DIR run import:full-package:live -- --manifest $PACKAGE_MANIFEST --mode $LIVE_IMPORT_MODE"
+if ! npm --prefix "$BACKEND_DIR" run import:full-package:live -- --manifest "$PACKAGE_MANIFEST" --mode "$LIVE_IMPORT_MODE" >"$IMPORT_STDOUT" 2>"$IMPORT_STDERR"; then
   jq -n \
     --arg mode "$SELECTED_MODE" \
+    --arg importMode "$LIVE_IMPORT_MODE" \
     --arg stderrFile "logs/import.stderr.log" \
     --arg stdoutFile "logs/import.stdout.log" \
     --arg detail "$(tail -n 40 "$IMPORT_STDERR" 2>/dev/null || true)" \
     '{
       mode: $mode,
+      importMode: $importMode,
       success: false,
       stdoutFile: $stdoutFile,
       stderrFile: $stderrFile,
@@ -683,10 +806,36 @@ fi
 
 jq -e '
   .source == "neo4j" and
+  .liveImport != null and
   (.relationCount > 0) and
   (.evidenceCount > 0) and
   (.snapshotCount > 0)
 ' "$IMPORT_JSON" >/dev/null || fail_stage "import" "import_not_live_neo4j" "导入未形成真实 Neo4j 写库结果" "需要 source=neo4j 且 relationCount/evidenceCount/snapshotCount 全部大于 0。"
+
+jq -e \
+  --arg importMode "$LIVE_IMPORT_MODE" \
+  --arg authoritativeSnapshot "$EXPECTED_PACKAGE_SNAPSHOT" \
+  --arg expectedPublishedRelationCount "$EXPECTED_RELATION_COUNT" \
+  --arg expectedPublishedEvidenceCount "$EXPECTED_EVIDENCE_COUNT" \
+  --arg expectedAllCandidateRelationCount "$EXPECTED_ALL_CANDIDATE_RELATION_COUNT" \
+  --arg expectedAllCandidateEvidenceCount "$EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT" \
+  --arg expectedCandidateOnlyRelationCount "$EXPECTED_CANDIDATE_ONLY_RELATION_COUNT" \
+  --arg expectedCandidateOnlyEvidenceCount "$EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT" \
+  '
+  .liveImport.mode == $importMode and
+  .liveImport.authoritativeSnapshotId == $authoritativeSnapshot and
+  (
+    if $importMode == "published" then
+      (.liveImport.expectedRelationCount == ($expectedPublishedRelationCount | tonumber)) and
+      (.liveImport.expectedEvidenceCount == ($expectedPublishedEvidenceCount | tonumber))
+    else
+      (.liveImport.expectedRelationCount == ($expectedAllCandidateRelationCount | tonumber)) and
+      (.liveImport.expectedEvidenceCount == ($expectedAllCandidateEvidenceCount | tonumber)) and
+      (.liveImport.candidateOnlyRelationCount == ($expectedCandidateOnlyRelationCount | tonumber)) and
+      (.liveImport.candidateOnlyEvidenceCount == ($expectedCandidateOnlyEvidenceCount | tonumber))
+    end
+  )
+' "$IMPORT_JSON" >/dev/null || fail_stage "import" "import_manifest_boundary_mismatch" "导入结果未命中 manifest 约束的 full.21 边界" "需要 authoritative snapshot=full.18、all-candidates=335/448、candidate-only=3/4。"
 
 log_cmd "npm --prefix $BACKEND_DIR start"
 npm --prefix "$BACKEND_DIR" start >"$SERVER_LOG" 2>&1 &
@@ -712,37 +861,57 @@ jq -e '
 ' "$OUTPUT_DIR/http/health.json" >/dev/null || fail_stage "http_smoke" "health_not_ok" "health 未进入 live 可上线状态" "需要 status=ok、repositoryMode=neo4j、dependencies.neo4j/up、dependencies.redis/up。"
 register_http_check "health"
 
-capture_json "detail" "$API_BASE/api/v1/companies/company:AAPL" || fail_stage "http_smoke" "detail_request_failed" "detail 接口返回异常" "请检查 http/detail.*。"
-jq -e '.source == "neo4j" and .item.id == "company:AAPL"' "$OUTPUT_DIR/http/detail.json" >/dev/null || fail_stage "http_smoke" "detail_validation_failed" "detail 返回不符合 live 验收要求" "需要 source=neo4j 且 item.id=company:AAPL。"
+capture_json "detail" "$API_BASE/api/v1/companies/$PUBLISHED_DETAIL_COMPANY_ID" || fail_stage "http_smoke" "detail_request_failed" "detail 接口返回异常" "请检查 http/detail.*。"
+jq -e --arg companyId "$PUBLISHED_DETAIL_COMPANY_ID" '.source == "neo4j" and .item.id == $companyId' "$OUTPUT_DIR/http/detail.json" >/dev/null || fail_stage "http_smoke" "detail_validation_failed" "detail 返回不符合 live 验收要求" "需要 source=neo4j 且 item.id 命中 published 锚点。"
 register_http_check "detail"
 
-capture_json "overview" "$API_BASE/api/v1/companies/company:AAPL/overview" || fail_stage "http_smoke" "overview_request_failed" "overview 接口返回异常" "请检查 http/overview.*。"
-jq -e '.source == "neo4j" and .companyId == "company:AAPL" and (.totalRelations > 0)' "$OUTPUT_DIR/http/overview.json" >/dev/null || fail_stage "http_smoke" "overview_validation_failed" "overview 返回不符合 live 验收要求" "需要 source=neo4j 且 totalRelations > 0。"
+capture_json "overview" "$API_BASE/api/v1/companies/$PUBLISHED_OVERVIEW_COMPANY_ID/overview" || fail_stage "http_smoke" "overview_request_failed" "overview 接口返回异常" "请检查 http/overview.*。"
+jq -e --arg companyId "$PUBLISHED_OVERVIEW_COMPANY_ID" '.source == "neo4j" and .companyId == $companyId and (.totalRelations > 0)' "$OUTPUT_DIR/http/overview.json" >/dev/null || fail_stage "http_smoke" "overview_validation_failed" "overview 返回不符合 live 验收要求" "需要 source=neo4j 且 totalRelations > 0。"
 register_http_check "overview"
 
-capture_json "search" "$API_BASE/api/v1/companies/search?q=amazon&limit=5" || fail_stage "http_smoke" "search_request_failed" "search 接口返回异常" "请检查 http/search.*。"
-jq -e '.source == "neo4j" and any(.items[]; .id == "company:AMZN")' "$OUTPUT_DIR/http/search.json" >/dev/null || fail_stage "http_smoke" "search_validation_failed" "search 返回未命中 Amazon" "需要返回 company:AMZN。"
+capture_json "search" "$API_BASE/api/v1/companies/search?q=$PUBLISHED_SEARCH_QUERY&limit=5" || fail_stage "http_smoke" "search_request_failed" "search 接口返回异常" "请检查 http/search.*。"
+jq -e --arg companyId "$PUBLISHED_SEARCH_COMPANY_ID" '.source == "neo4j" and any(.items[]; .id == $companyId)' "$OUTPUT_DIR/http/search.json" >/dev/null || fail_stage "http_smoke" "search_validation_failed" "search 返回未命中 published 公司锚点" "需要返回 manifest 指定的 published company id。"
 register_http_check "search"
 
-capture_json "suggest" "$API_BASE/api/v1/companies/suggest?q=tes&limit=5" || fail_stage "http_smoke" "suggest_request_failed" "suggest 接口返回异常" "请检查 http/suggest.*。"
-jq -e '.source == "neo4j" and any(.items[]; .id == "company:TSLA")' "$OUTPUT_DIR/http/suggest.json" >/dev/null || fail_stage "http_smoke" "suggest_validation_failed" "suggest 返回未命中 Tesla" "需要返回 company:TSLA。"
+capture_json "suggest" "$API_BASE/api/v1/companies/suggest?q=$PUBLISHED_SUGGEST_QUERY&limit=5" || fail_stage "http_smoke" "suggest_request_failed" "suggest 接口返回异常" "请检查 http/suggest.*。"
+jq -e --arg companyId "$PUBLISHED_SUGGEST_COMPANY_ID" '.source == "neo4j" and any(.items[]; .id == $companyId)' "$OUTPUT_DIR/http/suggest.json" >/dev/null || fail_stage "http_smoke" "suggest_validation_failed" "suggest 返回未命中 published 公司锚点" "需要返回 manifest 指定的 suggest company id。"
 register_http_check "suggest"
 
-capture_json "subgraph" "$API_BASE/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true" || fail_stage "http_smoke" "subgraph_request_failed" "subgraph 接口返回异常" "请检查 http/subgraph.*。"
-jq -e '(.snapshot.id | type == "string") and (.relations | length > 0)' "$OUTPUT_DIR/http/subgraph.json" >/dev/null || fail_stage "http_smoke" "subgraph_validation_failed" "subgraph 返回为空或缺少 snapshot" "需要 snapshot.id 且 relations 非空。"
+capture_json "subgraph" "$API_BASE/api/v1/graph/subgraph?companyId=$PUBLISHED_SUBGRAPH_COMPANY_ID&depth=2&snapshot=published&includeEvidence=true" || fail_stage "http_smoke" "subgraph_request_failed" "subgraph 接口返回异常" "请检查 http/subgraph.*。"
+jq -e \
+  --arg candidateRelationId "$CANDIDATE_ONLY_RELATION_ID" \
+  '(.snapshot.id | type == "string") and (.relations | length > 0) and all(.relations[]; .id != $candidateRelationId)' \
+  "$OUTPUT_DIR/http/subgraph.json" >/dev/null || fail_stage "http_smoke" "published_candidate_leak_detected" "published subgraph 混入了 candidate-only relation" "candidate shell relation 不得出现在 published subgraph。"
 register_http_check "subgraph"
 
-capture_json "path" "$API_BASE/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true" || fail_stage "http_smoke" "path_request_failed" "path 接口返回异常" "请检查 http/path.*。"
-jq -e '(.relations | length > 0) and .relations[0].id == "rel:apple:tsmc:manufacturing:apple-silicon"' "$OUTPUT_DIR/http/path.json" >/dev/null || fail_stage "http_smoke" "path_validation_failed" "path 返回不符合验收锚点" "首条 relation 应为 rel:apple:tsmc:manufacturing:apple-silicon。"
+capture_json "path" "$API_BASE/api/v1/graph/path?sourceCompanyId=$PUBLISHED_PATH_SOURCE_COMPANY_ID&targetCompanyId=$PUBLISHED_PATH_TARGET_COMPANY_ID&maxDepth=2&snapshot=published&includeEvidence=true" || fail_stage "http_smoke" "path_request_failed" "path 接口返回异常" "请检查 http/path.*。"
+jq -e \
+  --arg anchorRelationId "$PUBLISHED_ANCHOR_RELATION_ID" \
+  --arg candidateRelationId "$CANDIDATE_ONLY_RELATION_ID" \
+  '(.relations | length > 0) and .relations[0].id == $anchorRelationId and all(.relations[]; .id != $candidateRelationId)' \
+  "$OUTPUT_DIR/http/path.json" >/dev/null || fail_stage "http_smoke" "path_validation_failed" "path 返回不符合验收锚点或混入 candidate shell" "首条 relation 应命中 published anchor，且不得混入 candidate-only relation。"
 register_http_check "path"
 
-capture_json "stats" "$API_BASE/api/v1/graph/stats?snapshot=published&companyId=company:AMZN" || fail_stage "http_smoke" "stats_request_failed" "stats 接口返回异常" "请检查 http/stats.*。"
+capture_json "stats" "$API_BASE/api/v1/graph/stats?snapshot=published&companyId=$PUBLISHED_STATS_COMPANY_ID" || fail_stage "http_smoke" "stats_request_failed" "stats 接口返回异常" "请检查 http/stats.*。"
 jq -e '.source == "neo4j" and (.relationCount > 0)' "$OUTPUT_DIR/http/stats.json" >/dev/null || fail_stage "http_smoke" "stats_validation_failed" "stats 返回不符合 live 验收要求" "需要 source=neo4j 且 relationCount > 0。"
 register_http_check "stats"
 
-capture_json "evidence" "$API_BASE/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence" || fail_stage "http_smoke" "evidence_request_failed" "evidence 接口返回异常" "请检查 http/evidence.*。"
-jq -e '.source == "neo4j" and .relationId == "rel:apple:tsmc:manufacturing:apple-silicon" and (.total > 0)' "$OUTPUT_DIR/http/evidence.json" >/dev/null || fail_stage "http_smoke" "evidence_validation_failed" "evidence 返回不符合 live 验收要求" "需要 source=neo4j、relationId 正确且 total > 0。"
+capture_json "evidence" "$API_BASE/api/v1/relations/$PUBLISHED_ANCHOR_RELATION_ID/evidence" || fail_stage "http_smoke" "evidence_request_failed" "evidence 接口返回异常" "请检查 http/evidence.*。"
+jq -e --arg relationId "$PUBLISHED_ANCHOR_RELATION_ID" '.source == "neo4j" and .relationId == $relationId and (.total > 0)' "$OUTPUT_DIR/http/evidence.json" >/dev/null || fail_stage "http_smoke" "evidence_validation_failed" "evidence 返回不符合 live 验收要求" "需要 source=neo4j、relationId 正确且 total > 0。"
 register_http_check "evidence"
+
+if [[ "$LIVE_IMPORT_MODE" = "all-candidates" ]]; then
+  capture_json "candidate-subgraph" "$API_BASE/api/v1/graph/subgraph?companyId=$CANDIDATE_COMPANY_ID&depth=2&snapshot=$PACKAGE_SHELL_SNAPSHOT&includeEvidence=true" || fail_stage "http_smoke" "candidate_subgraph_request_failed" "candidate snapshot subgraph 接口返回异常" "请检查 http/candidate-subgraph.*。"
+  jq -e \
+    --arg relationId "$CANDIDATE_ONLY_RELATION_ID" \
+    '(.snapshot.id | type == "string") and .snapshot.id != "published" and any(.relations[]; .id == $relationId)' \
+    "$OUTPUT_DIR/http/candidate-subgraph.json" >/dev/null || fail_stage "http_smoke" "candidate_shell_validation_failed" "candidate snapshot 未命中 candidate-only relation" "需要在显式 candidate snapshot 中命中 manifest 指定的 candidate-only relation。"
+  register_http_check "candidate-subgraph"
+
+  capture_json "candidate-evidence" "$API_BASE/api/v1/relations/$CANDIDATE_ONLY_RELATION_ID/evidence" || fail_stage "http_smoke" "candidate_evidence_request_failed" "candidate relation evidence 接口返回异常" "请检查 http/candidate-evidence.*。"
+  jq -e --arg relationId "$CANDIDATE_ONLY_RELATION_ID" '.source == "neo4j" and .relationId == $relationId and (.total > 0)' "$OUTPUT_DIR/http/candidate-evidence.json" >/dev/null || fail_stage "http_smoke" "candidate_evidence_validation_failed" "candidate relation evidence 未形成正向闭环" "需要 source=neo4j 且 direct relation evidence 对 candidate shell relation 可回读。"
+  register_http_check "candidate-evidence"
+fi
 
 write_http_summary true
 write_success_result

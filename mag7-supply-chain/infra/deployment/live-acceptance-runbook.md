@@ -1,236 +1,185 @@
-> `superseded`：本手册仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径。
-> 当前正式入口请改用：
-> 1. `/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json`
-> 2. `/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json`
-> 3. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md`
-> 4. `/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md`
-> 本文件中的 full.18 历史过程只保留审计用途；当前正式入口已切换为 full20-wave5 收口链与 full19 live 终审链。
-> 当前正式边界是 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=341/459`、`candidate-only=9/15`。
-> `real_data_launch` 技术阻塞已解除，当前状态是 `ready_for_human_decision`；任何 human/Cloudflare 审批都只能覆盖 published `332/444`。
-> 这里引用的既有 full19 live 成立结论只锚定历史正式证据链，不等于 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。
-> 历史 `post-audit-v2`、`312/410`、`327/435`、`350/476` 只保留审计用途，不再代表当前 authoritative 入口。
+# Mag7 full.21 live 验收执行手册
 
-# Mag7 full.18 live 外部验收最终执行手册
+> 当前 live 验收唯一机器输入是 [`live-acceptance-manifest.json`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-manifest.json)。
+> 正式边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`。
+> `all-candidates` 与 `candidate-only` 只代表 candidate shell 审计边界，**不得写成 published**。
+> 旧 `312/410`、`327/435`、`341/459`、`350/476`、`9/15`、`23/41` 只保留历史审计语义，不能再作为默认值或执行口径。
 
-## 1. 结论边界
+## 1. 目标
 
-- 唯一正式链：`full20-wave5 formal review v2 + full20-wave5 formal refresh + full19 live e2e formal review v3`
-- authoritative snapshot：`snapshot:2026-06-15.full.18`
-- published：`332 relations / 444 evidence`
-- all-candidates：`341 relations / 459 evidence`
-- candidate-only：`9 relations / 15 evidence`
-- 当前正式入口：`post-audit-v3`
-- 当前 readiness：`prototype=conditional_go`，`real_data_launch=ready_for_human_decision`
+本手册只解决一件事：在可达 Neo4j/Redis 的前提下，复用仓库现有脚本拿到 **`source=neo4j` 的正向闭环证据**，并同时证明：
 
-本手册的目标不是宣称已上线，而是提供一套可直接交给 human 或外部运行器执行的 provider-neutral live acceptance 包。当前正式复审已确认 `source=neo4j` 的真实导入与 HTTP 回读闭环在既有 full19 终审链成立；该结论只锚定历史正式证据链，不等于 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。此后任何重新验收都必须维持 `332/444` published 边界，且只能作为 human 部署决策与最终环境复核证据，不能再把阻塞状态写回 `blocked`。
+1. published 查询面仍然固定在 `332/444`
+2. candidate shell 只保留在 `335/448` / `3/4` 审计边界
+3. candidate shell 不会被误写成 published
 
-## 2. 权威输入与排除项
+## 2. 唯一正式输入
 
-最终执行包只允许以下 authoritative inputs：
+执行 live 验收时，只允许使用以下正式输入：
 
-1. `/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/`
-2. `/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/`
-3. `/workspace/agents/dev/output/full20-wave5-live-import-closure-report.md`
-4. `/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/`
+1. [`live-acceptance-manifest.json`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-manifest.json)
+2. `/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md`
+3. `/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md`
+4. `/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json`
 
-以下任务或草稿不得再作为本手册的正式输入：
-
-1. `770fdf5c-ede6-40bb-a6f8-17bc28d90448`
-2. `1fcbf8ac-8a1e-434b-9ac5-60f86374f83c`
-3. `c1be4b86-a800-4d45-977e-86ddca5fc378`
-4. `69ab6247-3cc2-4c8a-b2b7-45294225be1b`
-5. `e14b3746-88f1-4c2c-921c-0e88e63db23c`
-
-`full17-live-unblock-*` 文件只保留审计用途，已被本手册与 `full18-live-acceptance-final-checklist.json` supersede。`final-release-index-post-audit-v2` 也已被 `post-audit-v3` supersede，只能保留审计用途。
+禁止再手写旧 JSONL 路径、旧计数或旧 candidate shell 默认值。
 
 ## 3. 最小外部前置
 
-执行 live acceptance 前，最少需要：
+最少需要：
 
 1. `Node.js v22.22.3`、`npm`、`curl`、`jq`
 2. 可达的 Neo4j `5.26` 兼容实例
 3. 可达的 Redis `7.4` 兼容实例
 4. 一个可临时托管 backend 的 Node 运行器
-5. `/workspace/agents/evidence-collector/output/mag7-full-package` 顶层正式包
-6. 待接入的 Cloudflare zone 与域名决策，但在验收通过前不得切正式流量
+5. `/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json`
 
-如果实例、白名单、TLS、账单或域名由 human/控制面掌管，先由 human 完成。代理不得直接使用 Cloudflare 或提供商凭据。
+如果凭据、白名单、TLS、账单、临时主机或域名由 human/控制面掌管，先由 human 完成准备。代理不得直接保存或传播这些明文凭据。
 
-## 4. Provider-Neutral 绑定规则
+## 4. 外部凭据注入规则
 
-- Neo4j 可使用 `bolt://`、`neo4j://`、`neo4j+s://`
-- Redis 可使用 `redis://`、`rediss://`
-- `NEO4J_DATABASE` 建议使用独立验收库
-- `REDIS_URL` 建议使用独立实例或独立 DB index
+必须通过以下方式之一注入外部 Neo4j/Redis 凭据：
 
-隔离原则：
+1. CI/CD Secret
+2. shell 环境变量
+3. 受控密钥管理器导出的临时环境
 
-1. 首次验收优先使用隔离的 Neo4j 数据库和隔离的 Redis
-2. 不得在共享生产图数据库上进行首次导入验收
-3. 不得以 prototype、mock、in-memory 结果替代 live 回读证据
+禁止事项：
 
-## 5. Cloudflare / 域名接入顺序
+1. 把 `NEO4J_PASSWORD`、`REDIS_URL` 等明文写入仓库文件
+2. 把凭据写进 artifact、Wanman 消息或中文报告正文
+3. 用 prototype/mock 替代 live 依赖缺口
 
-顺序不能颠倒，必须按下面执行：
+## 5. 推荐命令模板
 
-1. human 先批准 Cloudflare 连接、zone、域名方案和 provider-neutral 依赖准备，但此时不切正式流量
-2. 先完成托管 Neo4j、Redis、backend 运行器准备，并在临时地址或本地端口上跑 live acceptance
-3. 只有当 `result.json.passed=true` 后，才允许接入 Cloudflare DNS、证书、同源 `/api` 代理或 `api.<domain>`
-4. 若采用分域，前端补 `VITE_GRAPH_API_BASE_URL`，后端补 `CORS_ORIGIN`
-5. 在最终域名或最终 `/api` 路由上至少重跑一次 `health + detail + search + path + evidence` smoke
-
-禁止先接正式域名、再补做写库验收。
-
-## 6. 必填环境变量
-
-直接使用 [`live-acceptance.env.example`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance.env.example) 作为模板，至少填完：
-
-```dotenv
-GRAPH_RUNTIME_MODE=live
-NEO4J_URI=<provider-neutral-neo4j-uri>
-NEO4J_USERNAME=<neo4j-user>
-NEO4J_PASSWORD=<neo4j-password>
-NEO4J_DATABASE=<validation-database>
-REDIS_URL=<provider-neutral-redis-url>
-```
-
-建议同时确认：
-
-```dotenv
-EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
-EXPECTED_RELATION_COUNT=332
-EXPECTED_EVIDENCE_COUNT=444
-PORT=4000
-HOST=127.0.0.1
-API_BASE=http://127.0.0.1:4000
-VITE_GRAPH_API_BASE_URL=
-CORS_ORIGIN=
-```
-
-## 7. 执行命令
-
-### 7.1 preflight + import + HTTP smoke
+先加载样例环境，再用 external 或 docker 模式执行：
 
 ```bash
 cd /workspace/project/mag7-supply-chain
 set -a
 source infra/deployment/live-acceptance.env.example
 export NEO4J_URI='bolt://<reachable-neo4j-host>:7687'
-export NEO4J_USERNAME='<username>'
-export NEO4J_PASSWORD='<password>'
+export NEO4J_USERNAME='<neo4j-user>'
+export NEO4J_PASSWORD='<neo4j-password>'
 export NEO4J_DATABASE='neo4j'
 export REDIS_URL='redis://<reachable-redis-host>:6379'
 set +a
 
 bash infra/deployment/live-acceptance-commands.sh \
   --mode external \
-  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full18}"
+  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full21}"
 ```
 
-脚本会自动完成：
-
-1. `snapshot/full.18 published=332/444` preflight
-2. external 或 docker 运行时选择
-3. `npm run build` 与 `npm run import:normalized`
-4. `GET /api/v1/health`
-5. `detail / overview / search / suggest / subgraph / path / stats / evidence` smoke
-6. 输出 `result.json`、`import-summary.json`、`http/*.json`、`logs/*`
-
-### 7.2 最终域名或 Cloudflare 路由复跑
-
-若 `API_BASE` 或最终域名已经改成 Cloudflare 路由后的地址，至少再执行：
+默认导入模式已经固定为：
 
 ```bash
-curl -sS "$API_BASE/api/v1/health" | jq .
-curl -sS "$API_BASE/api/v1/companies/company:AAPL" | jq '.source, .item.id'
-curl -sS "$API_BASE/api/v1/companies/search?q=amazon&limit=5" | jq '.source, .items[0].id'
-curl -sS "$API_BASE/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true" | jq '.relations[0].id'
-curl -sS "$API_BASE/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence" | jq '.source, .relationId, .total'
+npm --prefix backend run import:full-package:live -- \
+  --manifest /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json \
+  --mode all-candidates
 ```
 
-## 8. 唯一成功判据
+理由：
 
-只有同时满足以下条件，才允许把结论写成“可提交或维持 `ready_for_human_decision` 的正式部署证据”：
+1. `all-candidates` 导入可以同时验证 published `332/444` 与 candidate shell `3/4`
+2. published 端点仍必须只暴露 `332/444`
+3. candidate shell relation 只能在显式 candidate snapshot 或 direct relation evidence 校验中出现
+
+## 6. 验收步骤
+
+脚本会自动完成以下流程：
+
+1. 读取 `live-acceptance-manifest.json`
+2. 校验 `authoritative snapshot=full.18`
+3. 校验 package manifest 计数：
+   - published `332/444`
+   - all-candidates `335/448`
+   - candidate-only `3/4`
+4. 根据 `--mode` 选择 external 或 docker
+5. 执行 `npm run build`
+6. 执行 manifest 驱动导入
+7. 校验 `import-summary.json` 为 `source=neo4j`
+8. 校验 `GET /api/v1/health`
+9. 校验 published `detail / overview / search / suggest / subgraph / path / stats / evidence`
+10. 校验 candidate shell 隔离：
+    - published 查询面不混入 candidate-only relation
+    - candidate relation 只在显式 candidate snapshot 或 direct relation evidence 中命中
+
+## 7. 唯一成功判据
+
+只有同时满足以下条件，才算通过：
 
 1. `result.json.passed = true`
 2. `import-summary.json`
    - `source = "neo4j"`
-   - `relationCount > 0`
-   - `evidenceCount > 0`
-   - `snapshotCount > 0`
+   - `liveImport.authoritativeSnapshotId = "snapshot:2026-06-15.full.18"`
+   - `liveImport.expectedRelationCount = 335`
+   - `liveImport.expectedEvidenceCount = 448`
+   - `liveImport.candidateOnlyRelationCount = 3`
+   - `liveImport.candidateOnlyEvidenceCount = 4`
 3. `http/health.json`
    - `status = "ok"`
    - `runtimeMode = "live"`
    - `repositoryMode = "neo4j"`
-   - `contracts.mockGraphBoundary = false`
    - `dependencies.neo4j.status = "up"`
    - `dependencies.redis.status = "up"`
-4. `http/detail.json`、`overview.json`、`search.json`、`suggest.json`、`subgraph.json`、`path.json`、`stats.json`、`evidence.json` 全部通过
-5. 所有带 `source` 的业务响应都必须是 `neo4j`，不得出现 `mock`
+4. published `detail / overview / search / suggest / subgraph / path / stats / evidence` 全部 `source=neo4j`
+5. published `subgraph/path` 不包含 candidate-only relation
+6. candidate shell relation 只在显式 candidate snapshot 或 direct relation evidence 校验中出现
 
-`degraded`、`503 dependency_unavailable`、prototype 模式、或全量包内存测试都不能当成通过；`all-candidates 341/459` 也不能当成已批准发布范围。
+以下情况都算失败：
 
-## 9. 失败分流
+1. `source=mock`
+2. `status=degraded`
+3. `503 dependency_unavailable`
+4. 把 `335/448` 或 `3/4` 写成 published
+5. 把 candidate shell relation 混进 published 查询面
+
+## 8. 失败分流
 
 - `external_env_incomplete`
-  - 必填 env 未填完
-- `neo4j_unreachable`
-  - Neo4j 主机或端口不可达，先修网络、白名单、TLS 或实例状态
-- `redis_unreachable`
-  - Redis 主机或端口不可达，先修网络或实例状态
-- `snapshot_mismatch` / `relation_count_mismatch` / `evidence_count_mismatch`
-  - 运行器拿错包或不是 final full.18 published 数据
-- `import_command_failed`
-  - live 写库失败，查看 `import-failure.json` 和 `logs/import.stderr.log`
-- `health_not_ok`
-  - 依赖仍未全部 ready，不能继续 Cloudflare 路由切换
-- `*_validation_failed`
-  - 某个业务接口返回不满足最终锚点
+  - 外部环境变量未完整注入
+- `package_counts_mismatch`
+  - package manifest 计数不是 `332/444`、`335/448`、`3/4`
+- `snapshot_mismatch`
+  - authoritative snapshot 不是 `snapshot:2026-06-15.full.18`
+- `import_not_live_neo4j`
+  - 导入成功退出但不是 `source=neo4j`
+- `published_candidate_leak_detected`
+  - published 查询面出现 candidate-only relation
+- `candidate_shell_validation_failed`
+  - candidate relation 在显式 snapshot / evidence 校验中未命中
 
-## 10. 回滚与清理
+## 9. 失败回滚
 
-如果任一步失败，严格按下列顺序处理：
+任一步失败时，严格按以下顺序回滚：
 
-1. 停止临时 backend 进程
-2. 保留整个输出目录作为失败证据
-3. 清理或销毁隔离的 Neo4j 验收库
-4. 清理隔离的 Redis 实例或独立 DB index
-5. 如果只创建了 Cloudflare 预备记录但尚未切正式流量，可撤销这些预备记录
-6. 不得把失败回滚写成“切回 prototype/mock 即完成”
+1. 停止 backend 进程
+2. 保留整个 `output-dir`
+3. 清理隔离的 Neo4j database
+4. 清理隔离的 Redis keyspace
+5. 如果已创建临时域名或 Cloudflare 预备记录，撤回预备记录
+6. 不得把失败结论写成“切回 prototype/mock 即恢复”
 
-## 11. 24 小时内执行清单
+## 10. 交付物
 
-批准后 24 小时内建议按下面窗口推进：
-
-1. `0-2h`
-   - 确认 Cloudflare zone、域名策略、托管 Neo4j/Redis、backend 运行器已就绪
-   - 明确是同源 `/api` 代理还是分域 `api.<domain>`
-2. `2-6h`
-   - 填写 env
-   - 执行 `live-acceptance-commands.sh`
-   - 汇总 `result.json`、`import-summary.json`、`http/*.json`
-3. `6-12h`
-   - 仅在 `result.json.passed=true` 后接入 Cloudflare DNS、证书、代理路由
-   - 在最终路由重跑最小 smoke
-4. `12-24h`
-   - 复查 `health/detail/search/path/evidence`
-   - 若 `/opt/wanman/products.json` 仍未正式接入，则继续维持 `unknown:no_product_inventory`
-
-## 12. 对外交付物
-
-本执行包最终至少回传：
+一次可签字的复验至少应回传：
 
 1. `result.json`
-2. `import-summary.json` 或 `import-failure.json`
-3. `http/health.json`
-4. `http/detail.json`
-5. `http/overview.json`
-6. `http/search.json`
-7. `http/suggest.json`
-8. `http/subgraph.json`
-9. `http/path.json`
-10. `http/stats.json`
-11. `http/evidence.json`
-12. `logs/backend-live.log`
-13. `infra/deployment/full18-live-acceptance-final-checklist.json`
-14. `infra/deployment/full18-live-acceptance-superseded-map.json`
+2. `import-summary.json`
+3. `preflight.json`
+4. `mode-selection.json`
+5. `bringup.json`
+6. `http/health.json`
+7. `http/detail.json`
+8. `http/overview.json`
+9. `http/search.json`
+10. `http/suggest.json`
+11. `http/subgraph.json`
+12. `http/path.json`
+13. `http/stats.json`
+14. `http/evidence.json`
+15. `http/candidate-subgraph.json`
+16. `http/candidate-evidence.json`
+17. `logs/backend-live.log`
+
+推荐同时附上 [`live-acceptance-evidence-template.md`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-evidence-template.md) 的完整填写版。

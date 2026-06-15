@@ -1,0 +1,107 @@
+{
+  "schema": "wanman.live-acceptance-manifest",
+  "version": 1,
+  "generated_at": "2026-06-16T00:15:00Z",
+  "source": {
+    "formal_review_primary": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "api_refresh_supporting": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
+    "full_package_manifest": "/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json",
+    "full_package_merge_report": "/workspace/agents/evidence-collector/output/mag7-full-package/full21-tail-closure/full21-tail-closure-merge-report.md"
+  },
+  "release": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "package_snapshot_shell": "snapshot:2026-06-15.full.21-tail-closure-candidate",
+    "counts": {
+      "published": {
+        "relations": 332,
+        "evidence": 444
+      },
+      "all_candidates": {
+        "relations": 335,
+        "evidence": 448
+      },
+      "candidate_only_delta": {
+        "relations": 3,
+        "evidence": 4
+      }
+    },
+    "rules": [
+      "authoritative snapshot 只能写 snapshot:2026-06-15.full.18",
+      "published 只能写 332/444",
+      "all-candidates 只能写 335/448",
+      "candidate-only 只能写 3/4",
+      "candidate shell 不得写成 published"
+    ],
+    "prohibited_regressions": [
+      "312/410",
+      "327/435",
+      "341/459",
+      "350/476",
+      "9/15",
+      "23/41"
+    ]
+  },
+  "full_package_import": {
+    "manifest_path": "/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json",
+    "default_mode": "all-candidates",
+    "supported_modes": [
+      "published",
+      "all-candidates"
+    ],
+    "command_template": "npm --prefix backend run import:full-package:live -- --manifest /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json --mode all-candidates"
+  },
+  "external_runtime": {
+    "required_env": [
+      "GRAPH_RUNTIME_MODE",
+      "NEO4J_URI",
+      "NEO4J_USERNAME",
+      "NEO4J_PASSWORD",
+      "NEO4J_DATABASE",
+      "REDIS_URL",
+      "HOST",
+      "PORT",
+      "API_BASE"
+    ],
+    "secret_injection_rule": "外部 Neo4j/Redis 凭据只能通过环境变量、密钥管理器或 CI/CD Secret 注入；不得把明文凭据提交进仓库、脚本默认值、artifact 或 Wanman 消息。"
+  },
+  "http_checks": {
+    "published": {
+      "detail_company_id": "company:AAPL",
+      "overview_company_id": "company:AAPL",
+      "search_query": "amazon",
+      "search_company_id": "company:AMZN",
+      "suggest_query": "tes",
+      "suggest_company_id": "company:TSLA",
+      "subgraph_company_id": "company:AAPL",
+      "path_source_company_id": "company:TSMC",
+      "path_target_company_id": "company:AAPL",
+      "stats_company_id": "company:AMZN",
+      "anchor_relation_id": "rel:apple:tsmc:manufacturing:apple-silicon"
+    },
+    "candidate_shell": {
+      "candidate_snapshot_id": "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      "candidate_company_id": "company:AMZN",
+      "candidate_only_relation_id": "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
+      "candidate_only_relation_id_secondary": "rel:amazon:sk-hynix:component_supply:amzn-r18-16-memory_candidate-hbm3",
+      "shared_family_relation_ids": [
+        "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
+        "rel:amazon:astera-labs:component_supply:amzn-r18-13-procurement_candidate-signal_conditioning"
+      ]
+    }
+  },
+  "success_criteria": [
+    "import-summary.json source=neo4j",
+    "import-summary.json liveImport.mode=all-candidates 或显式记录为 published",
+    "health status=ok runtimeMode=live repositoryMode=neo4j",
+    "published detail/overview/search/suggest/subgraph/path/stats/evidence 全部 source=neo4j",
+    "published subgraph/path 不能混入 candidate_only relation",
+    "candidate shell relation 只能在显式 candidate snapshot 或 direct relation evidence 校验中出现",
+    "失败后只能保留证据并回滚依赖/路由，不能把 prototype/mock 写成通过"
+  ],
+  "rollback_rules": [
+    "停止 backend 进程并保留 output 目录",
+    "清理隔离的 Neo4j database 与 Redis keyspace",
+    "若已创建临时 Cloudflare 或反向代理预备记录，先撤回预备记录",
+    "不得把 candidate shell 误写成 published，也不得把失败回退写成 prototype/mock 成功"
+  ]
+}
