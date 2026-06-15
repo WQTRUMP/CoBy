@@ -731,6 +731,197 @@ describe("prepareNormalizedImport", () => {
     });
   });
 
+  it("normalizes sec_filing and mixed anchor source types during direct load", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:amazon:astera-labs:component_supply:compat-sec-filing",
+          snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          company: "Amazon",
+          company_slug: "amazon",
+          supplier: "Astera Labs",
+          supplier_slug: "astera-labs",
+          tier: 3,
+          depth_from_mag7: 3,
+          relationship_type: "component_supply",
+          relationship_subtype: "compat_sec_filing",
+          product_scope: ["Amazon parent procurement"],
+          evidence_ids: [
+            "evidence:amazon:astera-labs:compat-sec-filing:1",
+            "evidence:amazon:astera-labs:compat-anchor:1",
+          ],
+          primary_evidence_id: "evidence:amazon:astera-labs:compat-sec-filing:1",
+          evidence_date: "2026-02-05",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Compatibility rows for full.21 source type aliases.",
+          source_url: "https://example.com/amazon-astera-labs",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.79,
+          source_method: "cross_reported",
+          source_count: 2,
+          status: "approved",
+          summary: "Compatibility rows for sec_filing and mixed anchor aliases.",
+          lineage_key: "Amazon|Astera Labs|component_supply|compat_sec_filing",
+          source_report_path: "output/evidence/amazon-astera-labs.json",
+          last_verified_at: "2026-06-15T18:00:00Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:amazon:astera-labs:compat-sec-filing:1",
+          relation_id: "rel:amazon:astera-labs:component_supply:compat-sec-filing",
+          source_type: "sec_filing" as never,
+          title: "Astera Labs 8-K",
+          publisher: "SEC",
+          source_url: "https://example.com/amazon-astera-labs-8k",
+          source_domain: "sec.gov",
+          published_at: "2026-02-05",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T18:00:00Z",
+          excerpt: "Amazon procurement framework disclosed in 8-K.",
+          citation_text: "Amazon procurement framework disclosed in 8-K.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/amazon-astera-labs.json",
+        },
+        {
+          evidence_id: "evidence:amazon:astera-labs:compat-anchor:1",
+          relation_id: "rel:amazon:astera-labs:component_supply:compat-sec-filing",
+          source_type: "industry_media_plus_official_anchor" as never,
+          title: "Mixed media and official anchor note",
+          publisher: "Example Media",
+          source_url: "https://example.com/amazon-astera-labs-anchor",
+          source_domain: "example.com",
+          published_at: "2026-02-06",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T18:00:00Z",
+          excerpt: "Cross-reported media row with an official anchor.",
+          citation_text: "Cross-reported media row with an official anchor.",
+          reliability_tier: 2,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/amazon-astera-labs.json",
+        },
+      ],
+    });
+
+    expect(prepared.evidence.map((item) => item.sourceType)).toEqual([
+      "official_filing",
+      "authoritative_media",
+    ]);
+  });
+
+  it("remaps candidate-only all-candidates rows into a draft candidate shell snapshot while preserving authoritative metadata", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "full21-tail-closure-"));
+
+    try {
+      const relationsPath = join(tempDir, "relations-all-candidates.jsonl");
+      const evidencePath = join(tempDir, "evidence-all-candidates.jsonl");
+      const manifestPath = join(tempDir, "mag7-full-package-manifest.json");
+
+      await writeFile(
+        manifestPath,
+        JSON.stringify({
+          package_snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          authoritative_snapshot: "snapshot:2026-06-15.full.18",
+          formal_boundary_reconciliation: {
+            resolved_counts: {
+              candidate_only_delta: {
+                relations: 1,
+                evidence: 1,
+              },
+            },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        relationsPath,
+        `${JSON.stringify({
+          schema_version: "mag7-supply-chain.import-relations.v3",
+          relation_id: "rel:amazon:astera-labs:component_supply:candidate-shell",
+          snapshot_id: "snapshot:2026-06-15.full.18",
+          company: "Amazon",
+          company_slug: "amazon",
+          supplier: "Astera Labs",
+          supplier_slug: "astera-labs",
+          tier: 3,
+          depth_from_mag7: 3,
+          relationship_type: "component_supply",
+          relationship_subtype: "candidate_shell",
+          product_scope: ["Amazon parent procurement"],
+          evidence_ids: ["evidence:amazon:astera-labs:candidate-shell:1"],
+          primary_evidence_id: "evidence:amazon:astera-labs:candidate-shell:1",
+          evidence_date: "2026-02-05",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Candidate shell compatibility row.",
+          source_url: "https://example.com/amazon-astera-labs-8k",
+          confidence_label: "strong_evidence",
+          confidence_score: 0.79,
+          source_method: "cross_reported",
+          source_count: 1,
+          status: "candidate_only",
+          summary: "Candidate shell compatibility row.",
+          notes: "decision=candidate_only",
+          lineage_key: "Amazon|Astera Labs|component_supply|candidate_shell",
+          source_report_path: "output/evidence/amazon-astera-labs.json",
+          last_verified_at: "2026-06-15T18:00:00Z",
+        })}\n`,
+        "utf8",
+      );
+      await writeFile(
+        evidencePath,
+        `${JSON.stringify({
+          evidence_id: "evidence:amazon:astera-labs:candidate-shell:1",
+          relation_id: "rel:amazon:astera-labs:component_supply:candidate-shell",
+          source_type: "sec_filing",
+          title: "Astera Labs 8-K",
+          publisher: "SEC",
+          source_url: "https://example.com/amazon-astera-labs-8k",
+          source_domain: "sec.gov",
+          published_at: "2026-02-05",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T18:00:00Z",
+          excerpt: "Candidate shell compatibility row.",
+          citation_text: "Candidate shell compatibility row.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/amazon-astera-labs.json",
+        })}\n`,
+        "utf8",
+      );
+
+      const pkg = await loadNormalizedImportPackage(relationsPath, evidencePath, manifestPath);
+      const prepared = prepareNormalizedImport(pkg);
+
+      expect(pkg.boundaryMetadata).toEqual({
+        packageSnapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        authoritativeSnapshotId: "snapshot:2026-06-15.full.18",
+        candidateOnlyRelationCount: 1,
+        candidateOnlyEvidenceCount: 1,
+      });
+      expect(pkg.relations[0]).toMatchObject({
+        snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        status: "draft",
+      });
+      expect(pkg.evidence[0]).toMatchObject({
+        source_type: "official_filing",
+      });
+      expect(prepared.relations[0]).toMatchObject({
+        snapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        status: "draft",
+      });
+      expect(prepared.snapshots).toEqual([
+        expect.objectContaining({
+          id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          status: "draft",
+          notes: expect.stringContaining("authoritative published snapshot remains snapshot:2026-06-15.full.18"),
+        }),
+      ]);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("coerces full.19 mixed-schema published rows into canonical tier and entity refs during direct load", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "full19-direct-load-"));
 

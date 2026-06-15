@@ -23,10 +23,17 @@ export type NormalizedEvidenceRecord = StandardizedImportEvidenceRecord;
 export type NormalizedRelationInput = z.input<typeof standardizedImportRelationRecordSchema>;
 export type NormalizedEvidenceInput = z.input<typeof standardizedImportEvidenceRecordSchema>;
 type RawNormalizedRecord = Record<string, unknown>;
+interface ImportBoundaryMetadata {
+  packageSnapshotId: string | null;
+  authoritativeSnapshotId: string | null;
+  candidateOnlyRelationCount: number | null;
+  candidateOnlyEvidenceCount: number | null;
+}
 export type NormalizedImportPackage = z.input<typeof standardizedImportPackageSchema> & {
   skuGranularityByRelationId?: Record<string, SkuGranularity>;
   rawRelationsById?: Record<string, RawNormalizedRecord>;
   rawEvidenceById?: Record<string, RawNormalizedRecord>;
+  boundaryMetadata?: ImportBoundaryMetadata;
 };
 
 interface CompanySeed {
@@ -145,7 +152,7 @@ export interface ImportEvidenceBinding {
 export interface ImportSnapshotNode {
   id: string;
   version: string;
-  status: "published";
+  status: "draft" | "published";
   publishedAt: string | null;
   scope: string[];
   notes: string | null;
@@ -158,6 +165,7 @@ export interface PreparedNormalizedImport {
   evidenceBindings: ImportEvidenceBinding[];
   companies: ImportCompanyNode[];
   snapshots: ImportSnapshotNode[];
+  boundaryMetadata?: ImportBoundaryMetadata;
 }
 
 const companyRegistry = new Map<string, CompanySeed>([
@@ -736,13 +744,24 @@ function normalizeLegacySourceType(value: unknown) {
     case "official_half_year_report":
       return "official_report";
     case "official_exchange_filing":
+    case "sec_filing":
     case "third_party_filing":
       return "official_filing";
     case "official_ir_record":
       return "official_doc";
+    case "industry_media_plus_official_anchor":
+      return "authoritative_media";
     default:
       return value;
   }
+}
+
+function normalizeLegacyRelationStatusValue(value: unknown) {
+  if (value === "candidate_only") {
+    return "draft";
+  }
+
+  return value;
 }
 
 function normalizeLegacySkuGranularityValue(value: unknown): SkuGranularity | null {
@@ -971,6 +990,9 @@ function normalizeLegacyRelationRecord(record: unknown) {
 
   const relation = { ...(normalized as Record<string, unknown>) };
   relation.tier = normalizeLegacyInteger(relation.tier);
+  if ("status" in relation) {
+    relation.status = normalizeLegacyRelationStatusValue(relation.status);
+  }
 
   const companyEntityRef = buildCompatEntityRef(relation, "company");
   if (companyEntityRef) {
@@ -983,6 +1005,82 @@ function normalizeLegacyRelationRecord(record: unknown) {
   }
 
   return relation;
+}
+
+async function readImportBoundaryMetadata(
+  relationFile: string,
+  manifestFile?: string,
+): Promise<ImportBoundaryMetadata> {
+  const candidatePath = manifestFile ?? join(dirname(relationFile), "mag7-full-package-manifest.json");
+
+  try {
+    await access(candidatePath);
+  } catch {
+    return {
+      packageSnapshotId: null,
+      authoritativeSnapshotId: null,
+      candidateOnlyRelationCount: null,
+      candidateOnlyEvidenceCount: null,
+    };
+  }
+
+  const manifest = JSON.parse(await readFile(candidatePath, "utf8")) as {
+    package_snapshot_id?: unknown;
+    authoritative_snapshot?: unknown;
+    formal_boundary_reconciliation?: {
+      resolved_counts?: {
+        candidate_only_delta?: {
+          relations?: unknown;
+          evidence?: unknown;
+        };
+      };
+    };
+    coverage_summary?: {
+      candidate_only_totals?: {
+        relations?: unknown;
+        evidence?: unknown;
+      };
+    };
+  };
+
+  const candidateOnlyRelationCount =
+    typeof manifest.formal_boundary_reconciliation?.resolved_counts?.candidate_only_delta?.relations === "number"
+      ? manifest.formal_boundary_reconciliation.resolved_counts.candidate_only_delta.relations
+      : typeof manifest.coverage_summary?.candidate_only_totals?.relations === "number"
+        ? manifest.coverage_summary.candidate_only_totals.relations
+        : null;
+  const candidateOnlyEvidenceCount =
+    typeof manifest.formal_boundary_reconciliation?.resolved_counts?.candidate_only_delta?.evidence === "number"
+      ? manifest.formal_boundary_reconciliation.resolved_counts.candidate_only_delta.evidence
+      : typeof manifest.coverage_summary?.candidate_only_totals?.evidence === "number"
+        ? manifest.coverage_summary.candidate_only_totals.evidence
+        : null;
+
+  return {
+    packageSnapshotId: typeof manifest.package_snapshot_id === "string" ? manifest.package_snapshot_id : null,
+    authoritativeSnapshotId:
+      typeof manifest.authoritative_snapshot === "string" ? manifest.authoritative_snapshot : null,
+    candidateOnlyRelationCount,
+    candidateOnlyEvidenceCount,
+  };
+}
+
+function applyCandidateShellCompatibility(
+  record: RawNormalizedRecord,
+  boundaryMetadata: ImportBoundaryMetadata,
+): RawNormalizedRecord {
+  if (
+    record.status !== "draft" ||
+    typeof boundaryMetadata.packageSnapshotId !== "string" ||
+    boundaryMetadata.packageSnapshotId.length === 0
+  ) {
+    return record;
+  }
+
+  return {
+    ...record,
+    snapshot_id: boundaryMetadata.packageSnapshotId,
+  };
 }
 
 async function discoverManifestSkuGranularityMap(
@@ -1090,10 +1188,11 @@ export async function loadNormalizedImportPackage(
   evidenceFile: string,
   manifestFile?: string,
 ): Promise<NormalizedImportPackage> {
-  const [relationsRaw, evidenceRaw, skuGranularityByRelationId] = await Promise.all([
+  const [relationsRaw, evidenceRaw, skuGranularityByRelationId, boundaryMetadata] = await Promise.all([
     readFile(relationFile, "utf8"),
     readFile(evidenceFile, "utf8"),
     discoverManifestSkuGranularityMap(relationFile, manifestFile),
+    readImportBoundaryMetadata(relationFile, manifestFile),
   ]);
 
   const rawRelationsById: Record<string, RawNormalizedRecord> = {};
@@ -1102,7 +1201,10 @@ export async function loadNormalizedImportPackage(
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const normalized = normalizeLegacyRelationRecord(JSON.parse(line) as unknown) as RawNormalizedRecord;
+      const normalized = applyCandidateShellCompatibility(
+        normalizeLegacyRelationRecord(JSON.parse(line) as unknown) as RawNormalizedRecord,
+        boundaryMetadata,
+      );
       const relationId = typeof normalized.relation_id === "string" ? normalized.relation_id : null;
       if (relationId) {
         rawRelationsById[relationId] = normalized;
@@ -1141,6 +1243,7 @@ export async function loadNormalizedImportPackage(
     skuGranularityByRelationId,
     rawRelationsById,
     rawEvidenceById,
+    boundaryMetadata,
   };
 }
 
@@ -1148,6 +1251,7 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
   const skuGranularityByRelationId = pkg.skuGranularityByRelationId ?? {};
   const rawRelationsById = pkg.rawRelationsById ?? {};
   const rawEvidenceById = pkg.rawEvidenceById ?? {};
+  const boundaryMetadata = pkg.boundaryMetadata;
   const relations = pkg.relations.map((relation) => {
     const relationId = typeof relation?.relation_id === "string" ? relation.relation_id : null;
     const normalized =
@@ -1200,13 +1304,17 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
     const existingSnapshot = snapshotMap.get(relation.snapshot_id);
     const scope = new Set(existingSnapshot?.scope ?? []);
     scope.add(companySeed.id);
+    const isCandidateShellSnapshot =
+      boundaryMetadata?.packageSnapshotId === relation.snapshot_id && relation.status === "draft";
     snapshotMap.set(relation.snapshot_id, {
       id: relation.snapshot_id,
       version: relation.snapshot_id.replace("snapshot:", "").replace(/-/g, "."),
-      status: "published",
+      status: isCandidateShellSnapshot ? "draft" : "published",
       publishedAt: relation.last_verified_at,
       scope: [...scope],
-      notes: "Imported from normalized Mag7 sample package",
+      notes: isCandidateShellSnapshot
+        ? `Candidate shell imported from the top-level all-candidates boundary; authoritative published snapshot remains ${boundaryMetadata?.authoritativeSnapshotId ?? "unknown"}.`
+        : "Imported from normalized Mag7 sample package",
     });
   }
 
@@ -1320,5 +1428,6 @@ export function prepareNormalizedImport(pkg: NormalizedImportPackage): PreparedN
       relationId: evidence.relation_id,
       evidenceId: evidence.evidence_id,
     })),
+    boundaryMetadata,
   };
 }

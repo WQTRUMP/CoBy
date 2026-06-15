@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
+import { resolveFullPackageLiveImportSpec } from "../src/lib/full-package-live-import.js";
 import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,
@@ -63,6 +64,18 @@ const cacheClient: CacheClient = {
 
 function matchesSnapshot(snapshotId: string, snapshotQuery: string) {
   return snapshotQuery === "published" ? true : snapshotId === snapshotQuery;
+}
+
+function matchesPreparedSnapshot(
+  snapshots: PreparedNormalizedImport["snapshots"],
+  snapshotId: string,
+  snapshotQuery: string,
+) {
+  if (snapshotQuery !== "published") {
+    return snapshotId === snapshotQuery;
+  }
+
+  return snapshots.some((snapshot) => snapshot.id === snapshotId && snapshot.status === "published");
 }
 
 function compareSnapshotRecency(
@@ -168,10 +181,15 @@ function pickLatestRelationSnapshotId(relations: Array<Pick<RelationDTO, "snapsh
 function buildCompanyDetails(prepared: PreparedNormalizedImport) {
   const byId = new Map<string, CompanyDetailDTO>();
   const relationByCompany = new Map<string, { snapshotId: string; lastVerifiedAt: string | null }>();
+  const publishedSnapshotIds = new Set(
+    prepared.snapshots
+      .filter((snapshot) => snapshot.status === "published")
+      .map((snapshot) => snapshot.id),
+  );
 
   for (const edge of prepared.relationEdges) {
     const relation = prepared.relations.find((item) => item.id === edge.relationId);
-    if (!relation) {
+    if (!relation || !publishedSnapshotIds.has(edge.snapshotId)) {
       continue;
     }
 
@@ -445,7 +463,7 @@ class RealSampleGraphRepository implements GraphRepository {
     const rootCompany = this.companyById.get(query.companyId) ?? null;
     const relations = [...this.relationById.values()]
       .filter((relation) => relation.depthFromMag7 <= query.depth)
-      .filter((relation) => matchesSnapshot(relation.snapshotId, query.snapshot))
+      .filter((relation) => matchesPreparedSnapshot(this.prepared.snapshots, relation.snapshotId, query.snapshot))
       .filter((relation) => !query.relationshipTypes || query.relationshipTypes.includes(relation.relationshipType))
       .filter((relation) => relation.sourceId === query.companyId || relation.targetId === query.companyId)
       .map((relation) => ({
@@ -484,7 +502,7 @@ class RealSampleGraphRepository implements GraphRepository {
   async getPath(query: GraphPathQuery): Promise<SubgraphDTO> {
     const directRelations = [...this.relationById.values()]
       .filter((relation) => relation.depthFromMag7 <= query.maxDepth)
-      .filter((relation) => matchesSnapshot(relation.snapshotId, query.snapshot))
+      .filter((relation) => matchesPreparedSnapshot(this.prepared.snapshots, relation.snapshotId, query.snapshot))
       .filter(
         (relation) =>
           (relation.sourceId === query.sourceCompanyId && relation.targetId === query.targetCompanyId) ||
@@ -514,7 +532,7 @@ class RealSampleGraphRepository implements GraphRepository {
   async getGraphStats(query: GraphStatsQuery): Promise<GraphStatsDTO> {
     const scopedRelations = [...this.relationById.values()].filter(
       (relation) =>
-        matchesSnapshot(relation.snapshotId, query.snapshot) &&
+        matchesPreparedSnapshot(this.prepared.snapshots, relation.snapshotId, query.snapshot) &&
         (!query.companyId || relation.sourceId === query.companyId || relation.targetId === query.companyId),
     );
 
@@ -634,11 +652,14 @@ class RealSampleGraphRepository implements GraphRepository {
 }
 
 let app: Awaited<ReturnType<typeof buildApp>>;
+let allCandidatesApp: Awaited<ReturnType<typeof buildApp>>;
 let round19App: Awaited<ReturnType<typeof buildApp>>;
 let latestPublishedSnapshotId = "snapshot:published";
 let latestPublishedSnapshotVersion = "published";
 let rootPackageSnapshotId = "snapshot:published";
+let allCandidatesPackageSnapshotId = "snapshot:published";
 let preparedFullPackage: PreparedNormalizedImport;
+let preparedAllCandidatesPackage: PreparedNormalizedImport;
 let round19PublishedSnapshotId = "snapshot:published";
 let round19PublishedSnapshotVersion = "published";
 let preparedRound19Package: PreparedNormalizedImport;
@@ -685,9 +706,36 @@ async function buildSampleAppFromPackage(
   };
 }
 
+async function buildSampleAppFromManifestMode(
+  manifestPath: string,
+  mode: "published" | "all-candidates",
+) {
+  const spec = await resolveFullPackageLiveImportSpec(manifestPath, mode);
+  const pkg = await loadNormalizedImportPackage(spec.relationFile, spec.evidenceFile, manifestPath);
+  const prepared = prepareNormalizedImport(pkg);
+  const graphRepository = new RealSampleGraphRepository(prepared);
+  const neo4jHealth = async (): Promise<Neo4jHealth> => ({
+    status: "up",
+    detail: `full-package sample repository (${mode})`,
+    required: true,
+  });
+
+  return {
+    app: await buildApp({
+      cacheClient,
+      graphRepository,
+      neo4jHealth,
+      runtimeMode: "live",
+    }),
+    prepared,
+    spec,
+  };
+}
+
 beforeAll(async () => {
-  const [fullPackageHarness, round19Harness] = await Promise.all([
+  const [fullPackageHarness, allCandidatesHarness, round19Harness] = await Promise.all([
     buildSampleAppFromPackage(FULL_PACKAGE_DIR, FULL_PACKAGE_MANIFEST, "authoritative"),
+    buildSampleAppFromManifestMode(FULL_PACKAGE_MANIFEST, "all-candidates"),
     buildSampleAppFromPackage(ROUND19_REFRESH_PACKAGE_DIR, ROUND19_REFRESH_MANIFEST),
   ]);
   app = fullPackageHarness.app;
@@ -695,6 +743,9 @@ beforeAll(async () => {
   latestPublishedSnapshotId = fullPackageHarness.snapshotId;
   latestPublishedSnapshotVersion = fullPackageHarness.snapshotVersion;
   rootPackageSnapshotId = fullPackageHarness.packageSnapshotId;
+  allCandidatesApp = allCandidatesHarness.app;
+  preparedAllCandidatesPackage = allCandidatesHarness.prepared;
+  allCandidatesPackageSnapshotId = allCandidatesHarness.spec.packageSnapshotId;
   round19App = round19Harness.app;
   preparedRound19Package = round19Harness.prepared;
   round19PublishedSnapshotId = round19Harness.snapshotId;
@@ -707,6 +758,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await app?.close();
+  await allCandidatesApp?.close();
   await round19App?.close();
 });
 
@@ -767,10 +819,97 @@ describe("full package app", () => {
     });
   });
 
-  it("distinguishes the full20-wave5 candidate shell from the authoritative full.18 published snapshot", () => {
-    expect(rootPackageSnapshotId).toBe("snapshot:2026-06-15.full.20-wave5-candidate");
+  it("distinguishes the full21 tail-closure candidate shell from the authoritative full.18 published snapshot", () => {
+    expect(rootPackageSnapshotId).toBe("snapshot:2026-06-15.full.21-tail-closure-candidate");
     expect(latestPublishedSnapshotId).toBe("snapshot:2026-06-15.full.18");
     expect(rootPackageSnapshotId).not.toBe(latestPublishedSnapshotId);
+  });
+
+  it("keeps the 3/4 candidate shell out of published queries while exposing it through the package snapshot in all-candidates mode", async () => {
+    const [
+      detail,
+      overview,
+      publishedSubgraph,
+      candidateSubgraph,
+      publishedStats,
+      candidateStats,
+      keepEvidence,
+      removedEvidence,
+    ] = await Promise.all([
+      allCandidatesApp.inject({ method: "GET", url: "/api/v1/companies/company:AMZN" }),
+      allCandidatesApp.inject({ method: "GET", url: "/api/v1/companies/company:AMZN/overview" }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: "/api/v1/graph/subgraph?companyId=company:AMZN&depth=3&snapshot=published&includeEvidence=true",
+      }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: `/api/v1/graph/subgraph?companyId=company:AMZN&depth=3&snapshot=${encodeURIComponent(allCandidatesPackageSnapshotId)}&includeEvidence=true`,
+      }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: "/api/v1/graph/stats?snapshot=published&companyId=company:AMZN",
+      }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: `/api/v1/graph/stats?snapshot=${encodeURIComponent(allCandidatesPackageSnapshotId)}&companyId=company:AMZN`,
+      }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: "/api/v1/relations/rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch/evidence",
+      }),
+      allCandidatesApp.inject({
+        method: "GET",
+        url: "/api/v1/relations/rel:amazon:astera-labs:component_supply:amzn-r18-14-procurement_candidate-optical_engine/evidence",
+      }),
+    ]);
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().item.activeSnapshotId).toBe(latestPublishedSnapshotId);
+    expect(overview.statusCode).toBe(200);
+    expect(overview.json().activeSnapshotId).toBe(latestPublishedSnapshotId);
+
+    expect(publishedSubgraph.statusCode).toBe(200);
+    expect(
+      publishedSubgraph.json().relations.some(
+        (relation: { id: string }) =>
+          relation.id === "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
+      ),
+    ).toBe(false);
+
+    expect(candidateSubgraph.statusCode).toBe(200);
+    expect(candidateSubgraph.json().snapshot).toMatchObject({
+      id: allCandidatesPackageSnapshotId,
+      status: "draft",
+    });
+    expect(candidateSubgraph.json().relations.map((relation: { id: string }) => relation.id).sort()).toEqual([
+      "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
+      "rel:amazon:astera-labs:component_supply:amzn-r18-13-procurement_candidate-signal_conditioning",
+      "rel:amazon:sk-hynix:component_supply:amzn-r18-16-memory_candidate-hbm3",
+    ]);
+
+    expect(publishedStats.statusCode).toBe(200);
+    expect(publishedStats.json().snapshot).toMatchObject({
+      id: latestPublishedSnapshotId,
+    });
+
+    expect(candidateStats.statusCode).toBe(200);
+    expect(candidateStats.json()).toMatchObject({
+      relationCount: 3,
+      evidenceCount: 4,
+      snapshot: {
+        id: allCandidatesPackageSnapshotId,
+        status: "draft",
+      },
+      source: "neo4j",
+    });
+
+    expect(keepEvidence.statusCode).toBe(200);
+    expect(keepEvidence.json().total).toBeGreaterThan(0);
+    expect(removedEvidence.statusCode).toBe(404);
+    expect(removedEvidence.json()).toMatchObject({
+      error: "relation_evidence_not_found",
+    });
   });
 
   it("serves real search, suggest, path, stats, and evidence payloads from the full package", async () => {
