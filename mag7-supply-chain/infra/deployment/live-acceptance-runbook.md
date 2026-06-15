@@ -26,6 +26,9 @@
 - 主脚本：`infra/deployment/live-acceptance-commands.sh`
 - 环境样例：`infra/deployment/live-acceptance.env.example`
 - 验收模板：`infra/deployment/live-acceptance-evidence-template.md`
+- 外部解阻塞运行手册：`infra/deployment/full17-live-unblock-runbook.md`
+- 外部 provider-neutral 配置模板：`infra/deployment/full17-live-unblock.env.template`
+- 机器可读 checklist：`infra/deployment/full17-live-unblock-checklist.json`
 
 ## 4. 自动模式选择
 
