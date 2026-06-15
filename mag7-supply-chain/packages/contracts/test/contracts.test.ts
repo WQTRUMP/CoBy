@@ -305,6 +305,7 @@ describe("@mag7/contracts", () => {
       "official_report",
       "official_supplier_list",
       "official_engineering_blog",
+      "official_product_page",
       "official_company_release",
       "official_annual_report",
       "industry_platform",

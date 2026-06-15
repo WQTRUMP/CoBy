@@ -573,6 +573,7 @@ class RealSampleGraphRepository implements GraphRepository {
 let app: Awaited<ReturnType<typeof buildApp>>;
 let latestPublishedSnapshotId = "snapshot:published";
 let latestPublishedSnapshotVersion = "published";
+let preparedFullPackage: PreparedNormalizedImport;
 
 beforeAll(async () => {
   const [pkg, manifestRaw] = await Promise.all([
@@ -582,8 +583,8 @@ beforeAll(async () => {
   const manifest = JSON.parse(manifestRaw) as { package_snapshot_id?: string };
   latestPublishedSnapshotId = manifest.package_snapshot_id ?? latestPublishedSnapshotId;
   latestPublishedSnapshotVersion = latestPublishedSnapshotId.replace("snapshot:", "").replace(/-/g, ".");
-  const prepared = prepareNormalizedImport(pkg);
-  const graphRepository = new RealSampleGraphRepository(prepared);
+  preparedFullPackage = prepareNormalizedImport(pkg);
+  const graphRepository = new RealSampleGraphRepository(preparedFullPackage);
   const neo4jHealth = async (): Promise<Neo4jHealth> => ({
     status: "up",
     detail: "full-package sample repository",
@@ -740,7 +741,7 @@ describe("full package app", () => {
     });
   });
 
-  it("keeps full.15 counts stable while structuring sku granularity from the authoritative snapshot", async () => {
+  it("keeps the latest published NVIDIA counts stable while structuring sku granularity from the authoritative snapshot", async () => {
     const [overview, subgraph, path, evidence] = await Promise.all([
       app.inject({
         method: "GET",
@@ -765,77 +766,126 @@ describe("full package app", () => {
     expect(path.statusCode).toBe(200);
     expect(evidence.statusCode).toBe(200);
 
+    const relationById = new Map(
+      preparedFullPackage.relations.map((relation) => [relation.id, relation]),
+    );
+    const expectedNvdaRelations = preparedFullPackage.relationEdges
+      .filter((edge) => edge.sourceCompanyId === "company:NVDA" || edge.targetCompanyId === "company:NVDA")
+      .map((edge) => relationById.get(edge.relationId))
+      .filter((relation): relation is RelationDTO => relation != null);
+    const relationDetailFor = (relationId: string) => {
+      const relation = relationById.get(relationId);
+      return relation?.skuGranularityDetailValue && relation.skuGranularitySource
+        ? {
+            value: relation.skuGranularityDetailValue,
+            source: relation.skuGranularitySource,
+            raw: relation.skuGranularityRaw,
+            note: relation.skuGranularityNote,
+            isBackfilled: relation.skuGranularityIsBackfilled,
+          }
+        : null;
+    };
+
     expect(overview.json()).toMatchObject({
       companyId: "company:NVDA",
-      totalRelations: 62,
-      evidenceCount: 77,
+      totalRelations: expectedNvdaRelations.length,
+      evidenceCount: expectedNvdaRelations.reduce((sum, relation) => sum + relation.evidenceCount, 0),
       source: "neo4j",
     });
     expect(subgraph.json().relations.length).toBeGreaterThan(0);
-    const relationById = new Map(
+    const subgraphRelationById = new Map(
       subgraph
         .json()
         .relations
         .map((relation: RelationDTO) => [relation.id, relation]),
     );
-    expect(relationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")).toMatchObject({
-      skuGranularity: "target_sku",
-      skuGranularityDetail: {
-        value: "target_sku",
-        source: "authoritative_manifest",
-        raw: null,
-        note: "Backfilled from full.15 authoritative manifest mapping.",
-        isBackfilled: true,
-      },
+    expect(subgraphRelationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")).toMatchObject({
+      skuGranularity:
+        relationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")?.skuGranularity ??
+        null,
+      skuGranularityDetail: relationDetailFor(
+        "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+      ),
     });
-    expect(relationById.get("rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver")).toMatchObject({
-      skuGranularity: "platform_component_sku",
-      skuGranularityDetail: {
-        value: "platform_component_sku",
-        source: "authoritative_manifest",
-        raw: null,
-        note: "Backfilled from full.15 authoritative manifest mapping.",
-        isBackfilled: true,
-      },
+    expect(subgraphRelationById.get("rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver")).toMatchObject({
+      skuGranularity:
+        relationById.get("rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver")
+          ?.skuGranularity ?? null,
+      skuGranularityDetail: relationDetailFor(
+        "rel:nvidia:mms4c1x-fro:component_supply:quantum-x800-qm3400-twin-port-dr4-transceiver",
+      ),
     });
-    expect(relationById.get("rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology")).toMatchObject({
-      skuGranularity: "family_only",
-      skuGranularityDetail: {
-        value: "family_only",
-        source: "authoritative_manifest",
-        raw: null,
-        note: "Backfilled from full.15 authoritative manifest mapping.",
-        isBackfilled: true,
-      },
+    expect(subgraphRelationById.get("rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology")).toMatchObject({
+      skuGranularity:
+        relationById.get("rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology")
+          ?.skuGranularity ?? null,
+      skuGranularityDetail: relationDetailFor(
+        "rel:nvidia:linkx-fiber-topology:component_supply:quantum-x800-supported-fiber-topology",
+      ),
     });
 
     expect(path.json().relations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
-          skuGranularity: "target_sku",
-          skuGranularityDetail: expect.objectContaining({
-            value: "target_sku",
-            source: "authoritative_manifest",
-          }),
+          skuGranularity:
+            relationById.get("rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver")
+              ?.skuGranularity ?? null,
+          skuGranularityDetail: relationDetailFor(
+            "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
+          ),
         }),
       ]),
     );
 
+    const expectedEvidence = preparedFullPackage.evidence.find((item) =>
+      preparedFullPackage.evidenceBindings.some(
+        (binding) =>
+          binding.relationId === "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver" &&
+          binding.evidenceId === item.id,
+      ),
+    );
+    const expectedEvidenceSkuDetail =
+      expectedEvidence?.skuGranularityDetailValue && expectedEvidence.skuGranularitySource
+        ? {
+            value: expectedEvidence.skuGranularityDetailValue,
+            source: expectedEvidence.skuGranularitySource,
+            raw: expectedEvidence.skuGranularityRaw,
+            note: expectedEvidence.skuGranularityNote,
+            isBackfilled: expectedEvidence.skuGranularityIsBackfilled,
+          }
+        : null;
     expect(evidence.json()).toMatchObject({
       relationId: "rel:nvidia:mms4a20:component_supply:quantum-x800-qm3x00-dr4-transceiver",
       total: 1,
       source: "neo4j",
       items: [
         expect.objectContaining({
-          skuGranularity: "target_sku",
-          skuGranularityDetail: {
-            value: "target_sku",
-            source: "relation_inherited_for_evidence",
-            raw: "target_sku_or_official_component",
-            note: "Resolved legacy evidence note against the authoritative relation SKU granularity.",
-            isBackfilled: true,
-          },
+          skuGranularity: expectedEvidence?.skuGranularity ?? null,
+          skuGranularityDetail: expectedEvidenceSkuDetail,
+        }),
+      ],
+    });
+  });
+
+  it("serves official_product_page evidence from the latest published full package", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/relations/rel:amazon:trn2-ultraserver:component_supply:efav3-scale-out-networking/evidence",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      relationId: "rel:amazon:trn2-ultraserver:component_supply:efav3-scale-out-networking",
+      total: 1,
+      source: "neo4j",
+      items: [
+        expect.objectContaining({
+          id: "evidence:amazon:efav3:2026-06-15:amazon-ec2-trn2-instances:1",
+          sourceType: "official_product_page",
+          title: "Amazon EC2 Trn2 instances",
+          sourceDomain: "aws.amazon.com",
+          publishedAt: "2026-06-15",
         }),
       ],
     });

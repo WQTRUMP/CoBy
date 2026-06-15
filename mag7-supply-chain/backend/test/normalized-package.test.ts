@@ -607,4 +607,65 @@ describe("prepareNormalizedImport", () => {
       title: "Apple and Corning expand US manufacturing commitment",
     });
   });
+
+  it("accepts official_product_page evidence from the latest full package during normalized import preparation", () => {
+    const prepared = prepareNormalizedImport({
+      relations: [
+        {
+          relation_id: "rel:amazon:trn2-ultraserver:component_supply:efav3-scale-out-networking",
+          snapshot_id: "snapshot:2026-06-15.full.17",
+          company: "Amazon",
+          company_slug: "amazon",
+          supplier: "Trn2 UltraServer",
+          supplier_slug: "trn2-ultraserver",
+          tier: 1,
+          depth_from_mag7: 1,
+          relationship_type: "component_supply",
+          relationship_subtype: "efav3_scale_out_networking",
+          product_scope: ["Amazon EC2 Trn2 instances"],
+          evidence_ids: ["evidence:amazon:efav3:2026-06-15:amazon-ec2-trn2-instances:1"],
+          primary_evidence_id: "evidence:amazon:efav3:2026-06-15:amazon-ec2-trn2-instances:1",
+          evidence_date: "2026-06-15",
+          evidence_date_resolution: "day",
+          evidence_excerpt: "Trn2 UltraServers deliver 12.8 Tbps of EFAv3 networking.",
+          source_url: "https://aws.amazon.com/ec2/instance-types/trn2/",
+          confidence_label: "confirmed",
+          confidence_score: 0.95,
+          source_method: "direct_disclosure",
+          source_count: 1,
+          status: "approved",
+          summary: "AWS documents EFAv3 networking on the Trn2 product page.",
+          lineage_key: "Amazon|Trn2 UltraServer|component_supply|efav3_scale_out_networking",
+          source_report_path: "output/evidence/amazon-trn2.json",
+          last_verified_at: "2026-06-15T06:45:00Z",
+        },
+      ],
+      evidence: [
+        {
+          evidence_id: "evidence:amazon:efav3:2026-06-15:amazon-ec2-trn2-instances:1",
+          relation_id: "rel:amazon:trn2-ultraserver:component_supply:efav3-scale-out-networking",
+          source_type: "official_product_page",
+          title: "Amazon EC2 Trn2 instances",
+          publisher: "AWS",
+          source_url: "https://aws.amazon.com/ec2/instance-types/trn2/",
+          source_domain: "aws.amazon.com",
+          published_at: "2026-06-15",
+          published_at_resolution: "day",
+          retrieved_at: "2026-06-15T06:45:00Z",
+          excerpt: "Trn2 UltraServers deliver 12.8 Tbps of EFAv3 networking.",
+          citation_text: "Trn2 UltraServers deliver 12.8 Tbps of EFAv3 networking.",
+          reliability_tier: 1,
+          parser_version: "manual-normalization-v3",
+          source_report_path: "output/evidence/amazon-trn2.json",
+        },
+      ],
+    });
+
+    expect(prepared.evidence[0]).toMatchObject({
+      id: "evidence:amazon:efav3:2026-06-15:amazon-ec2-trn2-instances:1",
+      sourceType: "official_product_page",
+      title: "Amazon EC2 Trn2 instances",
+      sourceDomain: "aws.amazon.com",
+    });
+  });
 });

@@ -689,6 +689,7 @@ describe("backend app", () => {
         previousSchemaVersions: ["mag7-supply-chain.import-relations.v2"],
       },
       enums: {
+        source_type: expect.arrayContaining(["official_product_page"]),
         date_resolution: expect.arrayContaining(["month", "published_at"]),
         alias_type: expect.arrayContaining(["canonical", "legal_entity", "brand", "facility"]),
         sku_granularity: expect.arrayContaining(["target_sku", "platform_component_sku", "family_only"]),
