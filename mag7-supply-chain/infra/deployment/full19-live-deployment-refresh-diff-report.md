@@ -1,4 +1,8 @@
-# full.19/full20 正式部署口径刷新差异报告
+# full.19/full20 正式部署口径刷新差异报告（historical_audit_only）
+
+> 当前文件只保留 `historical/superseded/audit-only` 语义。
+> 截至 `2026-06-16` UTC，当前正式入口已切换到 `full.21` 纠偏后的 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`，且 `real_data_launch` 仍等待基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环。
+> 下文保留的 `341/459`、`9/15` 与 `ready_for_human_decision` 只描述历史阶段，不得复述为当前部署入口或当前本机已复放通过的结论。
 
 日期：2026-06-15 UTC
 

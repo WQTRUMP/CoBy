@@ -1,31 +1,31 @@
 {
   "schema": "wanman.superseded-document-map",
   "version": 1,
-  "current_package": "full18-live-acceptance-final",
-  "current_package_status": "historical_audit_only",
-  "current_authoritative_release_entry": [
+  "historical_package": "full18-live-acceptance-final",
+  "historical_package_status": "historical_audit_only",
+  "referenced_current_authoritative_release_entry": [
     "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
     "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
-    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
-    "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md"
+    "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md"
   ],
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-  "current_authoritative_release_counts": {
+  "referenced_current_authoritative_release_counts": {
     "published": {
       "relations": 332,
       "evidence": 444
     },
     "all_candidates": {
-      "relations": 341,
-      "evidence": 459
+      "relations": 335,
+      "evidence": 448
     },
     "candidate_only": {
-      "relations": 9,
-      "evidence": 15
+      "relations": 3,
+      "evidence": 4
     }
   },
-  "current_real_data_launch": "ready_for_human_decision",
-  "formal_post_audit_entry": "v3",
+  "referenced_current_real_data_launch": "awaiting_source_neo4j_positive_closure",
+  "referenced_formal_post_audit_entry": "full21-live-closure-formal-review-v2",
   "replaces": [
     {
       "old_path": "infra/deployment/live-acceptance-runbook.md",
@@ -73,19 +73,19 @@
       "old_path": "infra/deployment/live-acceptance-runbook.md",
       "old_scope": "full.18 live 外部验收最终执行手册作为当前发布入口",
       "new_path": "infra/deployment/deployment-manifest.json",
-      "reason": "当前 authoritative 入口已统一到 published=332/444、all-candidates=341/459、candidate-only=9/15 与 post-audit-v3；327/435、350/476、312/410、328/439 只保留 historical_audit_only"
+      "reason": "当前 authoritative 入口已统一到 published=332/444、all-candidates=335/448、candidate-only=3/4 与 full21 live closure 正式链；341/459、9/15、327/435、350/476、312/410、328/439 只保留 historical_audit_only"
     },
     {
       "old_path": "infra/deployment/live-acceptance.env.example",
       "old_scope": "full.18 env 模板作为当前发布计数来源",
       "new_path": "infra/deployment/products-candidate.json",
-      "reason": "模板内 EXPECTED_* 已对齐当前 authoritative 332/444；旧计数仅保留 historical_audit_only，不得再被 human/final-release-index 误读为当前正式计数"
+      "reason": "模板内 EXPECTED_* 已对齐当前 authoritative 332/444 与 candidate shell 335/448；旧计数仅保留 historical_audit_only，不得再被 human/final-release-index 误读为当前正式计数"
     },
     {
       "old_path": "infra/deployment/full18-live-acceptance-final-checklist.json",
       "old_scope": "full.18 机器可读清单作为当前发布入口",
-      "new_path": "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
-      "reason": "正式 post-audit 入口已固定为 v3；full.18 检查清单只能保留审计用途"
+      "new_path": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+      "reason": "当前正式入口已被 full21 live closure 正式链取代；full.18 检查清单只能保留审计用途"
     }
   ],
   "historical_audit_only_release_references": [

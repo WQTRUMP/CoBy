@@ -1,68 +1,73 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-15T23:59:00Z",
+  "generated_at": "2026-06-16T00:25:00Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
     "display_name": "Mag7 供应链交互式探索平台",
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
-    "readiness": "prototype_passed_real_data_launch_ready_for_human_decision",
-    "summary": "唯一正式数据收口链已切换为 full20-wave5 正式终审 v2 与 full20-wave5 formal refresh。authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 root/canonical published 视图固定为 332 relations / 444 evidence，all-candidates 固定为 341 relations / 459 evidence，candidate-only 差额 9 / 15 继续成立且其 published evidence 读取继续返回 404 relation_evidence_not_found。既有 full19 live 终审 v3 已证明 source=neo4j 的真实 live 导入与 HTTP 回读能力成立，但该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过；wave5 只刷新当前 payload 与候选壳边界，不构成新的 authoritative promotion。可访问性 v2 与安全复审现已通过，ready_for_human_decision 继续成立，但 human 审批范围仅限 published 332/444。"
+    "readiness": "prototype_passed_real_data_launch_awaiting_source_neo4j_positive_closure",
+    "summary": "当前唯一正式口径已切换到 full.21 工程闭环终审：authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 published 视图固定为 332 relations / 444 evidence，candidate shell 收敛为 all-candidates 335 relations / 448 evidence、candidate-only 3 / 4。full.21 只完成 published reconciliation 与 candidate shell 收敛，不构成新的 authoritative promotion。当前 sandbox 仅验证到 live 缺依赖时 health=degraded、业务接口返回结构化 503 dependency_unavailable，尚未取得基于外部 Neo4j/Redis 的 source=neo4j 正向闭环；historical full19 live 证据只能保留 audit-only 语义，不得写成 2026-06-15 当前本机已复放通过。"
   },
   "release_gate_status": {
-    "post_audit_status": "ready_for_human_decision_restored",
-    "authoritative_post_audit_report": "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
+    "post_audit_status": "awaiting_source_neo4j_positive_closure",
+    "authoritative_post_audit_report": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
     "supersedes": [
+      "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
       "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
     ],
-    "decision_scope": "published_only",
-    "decision_scope_summary": "仅允许对 published 332 relations / 444 evidence 发起 Cloudflare 连接与正式部署审批。",
+    "decision_scope": "defer_deployment_until_live_closure",
+    "decision_scope_summary": "当前只允许推进外部 Neo4j/Redis 正向闭环准备，不得对 Cloudflare 或正式部署发起审批；待 source=neo4j 正向样本补齐后，后续审批范围也只能覆盖 published 332 relations / 444 evidence。",
     "non_blocking_residual_risks": [
       "可访问性 v2 尚无 NVDA/VoiceOver/TalkBack 实机签字"
     ],
     "closed_historical_items": [
       "backend/test/server.runtime.test.ts 的全量 npm test timeout 抖动已由 /workspace/agents/dev/output/mag7-backend-timeout-flake-fix/mag7-backend-timeout-flake-fix-report.md 所述修复链关闭，不再构成当前发布入口残余风险",
-      "根层旧 JSONL 仍是当前正式 payload 的表述已由 /workspace/agents/code-reviewer/output/evidence-root-payload-final-review-rerun/evidence-root-payload-final-review-rerun-report.md 与任务 0ae34a1e 对应修正链关闭；当前正式入口应表述为根层四个 JSONL 已 in-place promotion，旧 312/410 与 328/439 仅保留在 historical_audit_only 元数据段"
+      "根层旧 JSONL 仍是当前正式 payload 的表述已由 /workspace/agents/code-reviewer/output/evidence-root-payload-final-review-rerun/evidence-root-payload-final-review-rerun-report.md 与任务 0ae34a1e 对应修正链关闭；当前正式入口应表述为根层四个 JSONL 已 in-place promotion，旧 312/410 与 328/439 仅保留在 historical_audit_only 元数据段",
+      "full19 live e2e 与 full20-wave5 中出现的 ready_for_human_decision、341/459、9/15 现在只保留 historical/superseded/audit-only 语义，不得继续作为当前部署入口"
     ]
   },
   "authoritative_supply_chain_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "formal_decision_source": "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
-    "live_runtime_verification_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+    "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "live_runtime_verification_source": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
     "counts": {
       "published": {
         "relations": 332,
         "evidence": 444
       },
       "all_candidates": {
-        "relations": 341,
-        "evidence": 459
+        "relations": 335,
+        "evidence": 448
       },
       "candidate_only_delta": {
-        "relations": 9,
-        "evidence": 15
+        "relations": 3,
+        "evidence": 4
       }
     },
     "boundary_summary": {
-      "published_view": "332/444 已由 root 与 full20-wave5 canonical 四个 JSONL SHA256 全量一致、且 full20-wave5 formal refresh 对 published 视图零漂移复验共同锁定。",
-      "candidate_only_boundary": "341/459 仍是 all-candidates / contracts 边界；其中 9/15 keep-only 尾项不得表述成已进入 published live 图。",
-      "authoritative_snapshot_rule": "root payload 虽已重建到 snapshot:2026-06-15.full.20-wave5-candidate，但 authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18，不得把 authoritative snapshot 前移到 full20-wave5。"
+      "published_view": "332/444 已由 root 与 canonical published JSONL SHA256 全量一致、且 full21 published reconciliation 对 published 视图零漂移复验共同锁定。",
+      "candidate_only_boundary": "335/448 是当前 candidate shell / contracts 边界；其中 3/4 尾项不得表述成已进入 published live 图。",
+      "authoritative_snapshot_rule": "root/canonical published 虽已在 full.21 收口中完成一致性修平，但 authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18，不得把 authoritative snapshot 前移到 full.21。"
     },
     "input_policy": {
       "formal_conclusion_source_only": true,
       "allowed_formal_source": [
+        "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+        "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
+        "/workspace/agents/evidence-collector/output/mag7-full-package/full21-published-reconciliation/full21-published-reconciliation-report.md",
+        "/workspace/agents/devops/output/full21-live-positive-closure-plan/full21-live-positive-closure-plan-report.md"
+      ],
+      "excluded_historical_audit_only_inputs": [
         "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
         "/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md",
-        "/workspace/agents/evidence-collector/output/mag7-full-package/full20-wave5/full20-wave5-merge-report.md",
-        "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
-      ],
-      "excluded_audit_only_inputs": [
+        "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
         "0cd6875d",
         "6e45bce1"
       ],
-      "notes": "本 manifest 的数据边界与 human 审批范围只接受 wave5 正式收口链作为最终来源；真实 live 能力是否已经建立，则继续锚定 full19-live-e2e-formal-review-v3 的 source=neo4j 运行时证据。0cd6875d 与 6e45bce1 都仅保留审计用途，不得作为最终输入。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
+      "notes": "本 manifest 的当前数据边界与 readiness 结论只接受 full.21 工程闭环终审、live closure refresh、published reconciliation 与 devops 正向闭环执行包作为最终来源。historical full19 live 与 full20-wave5 证据仅保留审计用途，不得再用来声明当前 sandbox 已完成 source=neo4j 正向闭环。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
     }
   },
   "runtime": {
@@ -114,7 +119,7 @@
       "name": "api",
       "display_name": "Mag7 Atlas API",
       "kind": "node_rest_api",
-      "status": "live_verified_ready_for_human_decision",
+      "status": "live_contract_verified_external_runtime_pending",
       "source_root": "/workspace/project/mag7-supply-chain/backend",
       "source_entrypoint": "backend/src/server.ts",
       "entrypoint": "backend/dist/backend/src/server.js",
@@ -156,9 +161,9 @@
         }
       ],
       "live_verification_summary": [
-        "source=neo4j 的真实 live 导入与 HTTP 回读能力继续锚定 full19-live-e2e-formal-review-v3，证明正式运行态并非 mock/prototype。",
-        "full20-wave5 已把 root 与 canonical payload 对齐到 332/444、341/459、9/15，四个 JSONL SHA256 全量一致。",
-        "full20-wave5 formal refresh 确认 9 条 candidate-only keep 关系在 published evidence 端点继续返回 404 relation_evidence_not_found，证明 341/459 仍停留在 contracts/all-candidates 边界。"
+        "full.21 当前只正式证明：published 332/444 与 candidate shell 335/448、3/4 的边界在工程代码、README 与测试中已一致收口。",
+        "当前 sandbox 在 GRAPH_RUNTIME_MODE=live 下只观察到 health=degraded、repositoryMode=neo4j、dependencies.neo4j/redis=down，且业务接口统一返回结构化 503 dependency_unavailable。",
+        "historical full19 live 与 full20-wave5 链只保留 audit-only 语义；当前仍需外部 Neo4j/Redis 才能补齐 source=neo4j 的 import-summary 与 HTTP 正向样本。"
       ]
     },
     {
@@ -258,33 +263,30 @@
           "degraded"
         ]
       },
-      "observed_live_verification": {
+      "current_observed_runtime_state": {
         "backend_url": "http://127.0.0.1:4403",
         "health": {
           "path": "/api/v1/health",
           "http_status": 200,
-          "body_status": "ok",
+          "body_status": "degraded",
           "runtimeMode": "live",
           "repositoryMode": "neo4j",
           "dependencies": {
-            "neo4j": "up",
-            "redis": "up"
+            "neo4j": "down",
+            "redis": "down"
           }
         },
-        "business_endpoints_passed": [
-          "GET /api/v1/companies/company:AAPL",
-          "GET /api/v1/companies/company:AAPL/overview",
-          "GET /api/v1/companies/search?q=amazon&limit=5",
-          "GET /api/v1/companies/suggest?q=tes&limit=5",
-          "GET /api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true",
-          "GET /api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true",
-          "GET /api/v1/stats?snapshot=published&companyId=company:AAPL",
-          "GET /api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
+        "business_endpoints_currently_blocked": [
+          "GET /api/v1/companies/company:AAPL -> 503 dependency_unavailable",
+          "GET /api/v1/companies/company:AAPL/overview -> 503 dependency_unavailable",
+          "GET /api/v1/companies/search?q=amazon&limit=5 -> 503 dependency_unavailable",
+          "GET /api/v1/companies/suggest?q=tes&limit=5 -> 503 dependency_unavailable",
+          "GET /api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true -> 503 dependency_unavailable",
+          "GET /api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true -> 503 dependency_unavailable",
+          "GET /api/v1/stats?snapshot=published&companyId=company:AAPL -> 503 dependency_unavailable",
+          "GET /api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence -> 503 dependency_unavailable"
         ],
-        "negative_boundary_checks": [
-          "candidate-only relation evidence -> 404 relation_evidence_not_found",
-          "company:DOES_NOT_EXIST -> 404 company_not_found"
-        ]
+        "historical_audit_only_reference": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
       }
     }
   },
@@ -293,8 +295,8 @@
     "deployment_runner_only": true,
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
-    "real_data_launch_allowed_after_approval": true,
-    "summary": "source=neo4j 的真实 live 运行时能力已在既有 full19 终审链成立；该表述只锚定历史正式证据链，不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。full20-wave5 进一步把当前 root payload 与候选边界锁定为 published 332/444、all-candidates 341/459、candidate-only 9/15。可访问性 v2 与安全复审均已通过，当前继续维持 ready_for_human_decision，但审批范围只覆盖 published 332/444。Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 human 在 Wanman 中连接 Cloudflare 并批准部署，由受信部署流程执行。"
+    "real_data_launch_allowed_after_approval": false,
+    "summary": "当前正式口径只允许先补齐外部 Neo4j/Redis 的 source=neo4j 正向闭环。full.21 把当前 root payload 与 candidate shell 锁定为 published 332/444、all-candidates 335/448、candidate-only 3/4，但这不等于 ready_for_human_decision。historical full19 live 证据不能再被写成 2026-06-15 当前本机已复放通过；因此 Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 live 正向闭环补齐后，再由 human 在 Wanman 中批准并交给受信部署流程执行。"
   },
   "deployment_tiers": {
     "prototype": {
@@ -306,26 +308,26 @@
       ]
     },
     "real_data_launch": {
-      "allowed": true,
-      "readiness": "ready_for_human_decision",
+      "allowed": false,
+      "readiness": "awaiting_source_neo4j_positive_closure",
       "evidence": [
-        "full19-live-e2e-formal-review-v3-report.md：正式裁定真实 live 运行时能力已成立，real_data_launch 不再因 source=neo4j 闭环缺失而继续 blocked。",
-        "full20-wave5-formal-review-v2-report.md：正式裁定当前 payload 的 published/all-candidates/candidate-only 边界刷新为 332/444、341/459、9/15，且 authoritative snapshot 仍维持 full.18。"
+        "full21-live-closure-formal-review-v2-report.md：正式裁定 authoritative snapshot 仍为 full.18、published 仍为 332/444，candidate shell 收敛为 335/448、3/4，但当前环境尚未形成 source=neo4j 的 live API 正向闭环。",
+        "full21-live-closure-refresh-report.md：当前 sandbox 只验证到 live 缺依赖时的 degraded/503 语义正确，仍缺可达 Neo4j/Redis 的真实导入与 HTTP 正向样本。"
       ],
       "remaining_gates": [
-        "human 连接 Cloudflare 并在 Wanman 批准部署",
-        "按最终域名/代理方案填写 Cloudflare account/zone/project/routing 字段",
-        "批准后再由受信部署流程执行外部流量与有状态资源变更"
+        "提供可达的外部 Neo4j/Redis 或可用的临时 live 验证环境",
+        "按 full.21 manifest 驱动完成 source=neo4j 的 import-summary 与 health/detail/overview/search/suggest/subgraph/path/stats/evidence 正向样本",
+        "在闭环补齐后，方可进入 human 连接 Cloudflare 与正式部署审批阶段"
       ]
     }
   },
   "verification": {
-    "date": "2026-06-15",
+    "date": "2026-06-16",
     "workspace_evidence": [
-      "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
-      "/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md",
-      "/workspace/agents/evidence-collector/output/mag7-full-package/full20-wave5/full20-wave5-merge-report.md",
-      "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
+      "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+      "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
+      "/workspace/agents/evidence-collector/output/mag7-full-package/full21-published-reconciliation/full21-published-reconciliation-report.md",
+      "/workspace/agents/devops/output/full21-live-positive-closure-plan/full21-live-positive-closure-plan-report.md"
     ],
     "current_repo_runtime_facts": [
       "/workspace/project/mag7-supply-chain/package.json",
@@ -338,19 +340,19 @@
   "sources": [
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md"
+      "path": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md"
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md"
+      "path": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md"
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/evidence-collector/output/mag7-full-package/full20-wave5/full20-wave5-merge-report.md"
+      "path": "/workspace/agents/evidence-collector/output/mag7-full-package/full21-published-reconciliation/full21-published-reconciliation-report.md"
     },
     {
       "type": "workspace_file",
-      "path": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
+      "path": "/workspace/agents/devops/output/full21-live-positive-closure-plan/full21-live-positive-closure-plan-report.md"
     },
     {
       "type": "workspace_file",

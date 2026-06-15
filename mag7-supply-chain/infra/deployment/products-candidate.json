@@ -1,28 +1,32 @@
 {
-  "generated_at": "2026-06-15T23:59:30Z",
+  "generated_at": "2026-06-16T00:25:00Z",
   "generated_by": "devops",
-  "inventory_status": "pending_human_approval",
-  "post_audit_status": "ready_for_human_decision_restored",
-  "authoritative_post_audit_report": "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
+  "inventory_status": "pending_source_neo4j_positive_closure",
+  "post_audit_status": "awaiting_source_neo4j_positive_closure",
+  "authoritative_post_audit_report": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
   "supersedes": [
+    "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
     "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
   ],
   "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-  "formal_decision_source": "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
-  "live_runtime_verification_source": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+  "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+  "live_runtime_verification_source": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
   "published_counts": {
     "relations": 332,
     "evidence": 444
   },
   "all_candidates_counts": {
-    "relations": 341,
-    "evidence": 459
+    "relations": 335,
+    "evidence": 448
   },
   "candidate_only_delta": {
-    "relations": 9,
-    "evidence": 15
+    "relations": 3,
+    "evidence": 4
   },
-  "audit_only_exclusions": [
+  "historical_audit_only_inputs": [
+    "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
+    "/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md",
+    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
     "0cd6875d",
     "6e45bce1"
   ],
@@ -31,8 +35,8 @@
       "name": "mag7-supply-chain",
       "display_name": "Mag7 供应链交互式探索平台",
       "kind": "interactive_supply_chain_platform",
-      "readiness": "real_data_launch_ready_for_human_decision",
-      "summary": "wave5 正式收口后，当前发布边界已刷新为 published 332/444、all-candidates 341/459、candidate-only 9/15；9 条 keep-only 尾项在 published evidence 端点继续返回 404 relation_evidence_not_found。authoritative snapshot 继续固定为 snapshot:2026-06-15.full.18；真实 source=neo4j live 能力仍锚定既有 full19 终审链，但该表述不等于 2026-06-15 当前 sandbox 已在本机把 Neo4j/Redis 重放通过，wave5 也不构成新的 authoritative promotion。本候选清单对应的 post-audit v3 结论继续维持 ready_for_human_decision，但 human 审批范围只允许覆盖 published 332/444。",
+      "readiness": "real_data_launch_awaiting_source_neo4j_positive_closure",
+      "summary": "当前唯一正式口径已切换到 full.21 工程闭环终审：authoritative snapshot 仍固定为 snapshot:2026-06-15.full.18，published 固定为 332/444，candidate shell 收敛为 all-candidates 335/448、candidate-only 3/4。full.21 只完成 candidate shell 收敛与 published reconciliation，不构成新的 authoritative promotion。当前 sandbox 只验证到 live 缺依赖时返回结构化 503 dependency_unavailable，尚未取得基于外部 Neo4j/Redis 的 source=neo4j 正向闭环，因此不得继续表述为 ready_for_human_decision，也不得把 historical full19 live 证据写成 2026-06-15 当前本机已复放通过。",
       "urls": {
         "web_health": {
           "path": "/",
@@ -58,7 +62,7 @@
           "run_command": "npm run preview -- --host 127.0.0.1 --port 4174"
         },
         "api": {
-          "status": "live_verified_ready_for_human_decision",
+          "status": "live_contract_verified_external_runtime_pending",
           "runtime": "Fastify 5 + TypeScript",
           "validated_node_version": "v22.22.3",
           "build_command": "npm run build",
@@ -69,9 +73,10 @@
       "runtime_constraints": [
         "默认 GRAPH_RUNTIME_MODE=live；只有显式 GRAPH_RUNTIME_MODE=prototype 时才允许 mock。",
         "真实数据链路必须同时连通 NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL。",
-        "candidate-only relation 不得被写成已发布 live 数据；其 evidence 读取应继续返回 404 relation_evidence_not_found。",
-        "当前 published/all-candidates/candidate-only 唯一正式结论源只能是 /workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md 与 /workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md；0cd6875d 与 6e45bce1 仅保留审计用途。",
-        "post-audit v3 已显式 supersede /workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md；当前只允许对 published 332/444 发起 human 审批。"
+        "candidate shell 只能写 all-candidates=335/448、candidate-only=3/4；不得被写成已发布 live 数据。",
+        "当前唯一正式结论源只能是 /workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md 与 /workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md。",
+        "historical full19 live 与 full20-wave5 证据链仅保留审计用途；不得再把 ready_for_human_decision 或 341/459、9/15 复述成当前正式入口。",
+        "在补齐 source=neo4j 正向闭环前，不得向 human 发起 Cloudflare 正式部署审批。"
       ],
       "monitoring_scope_after_approval": {
         "eligible": [
@@ -80,7 +85,7 @@
           "detail/overview/search/suggest/subgraph/path/stats/relations/:id/evidence 的 live 抽样巡检"
         ],
         "still_excluded": [
-          "341/459 all-candidates 的 candidate-only 数据",
+          "335/448 all-candidates 的 candidate-only 数据",
           "未经批准直接写入 /opt/wanman/products.json 前的正式 uptime 承诺"
         ]
       },
@@ -98,7 +103,8 @@
         "cloudflare.ssl_mode": "pending_human_fill",
         "cloudflare.preview_enabled": "pending_human_fill",
         "cloudflare.custom_domain_web": "pending_human_fill",
-        "cloudflare.custom_domain_api": "pending_human_fill"
+        "cloudflare.custom_domain_api": "pending_human_fill",
+        "closure_prerequisite": "must_finish_source_neo4j_positive_closure_first"
       }
     }
   ]

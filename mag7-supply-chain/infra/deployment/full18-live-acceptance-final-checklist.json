@@ -2,27 +2,27 @@
   "schema": "wanman.live-acceptance-checklist",
   "version": 1,
   "status": "superseded_for_release_entry",
-  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口或 human 决策口径；当前 authoritative 口径统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=341/459、candidate-only=9/15、real_data_launch=ready_for_human_decision、post-audit=v3。旧的 312/410、327/435、350/476 与 post-audit-v2 仅保留 historical/superseded/audit-only 语义。",
+  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口、current release 或 human 决策口径；当前正式口径已统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=335/448、candidate-only=3/4，且 real_data_launch 当前仍等待基于外部 Neo4j/Redis 的 source=neo4j 正向闭环。historical full19 live、341/459、9/15 与 ready_for_human_decision 只保留 historical/superseded/audit-only 语义。",
   "superseded_by": [
     "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
     "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
     "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
     "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md"
   ],
-  "current_authoritative_release_reference": {
+  "referenced_current_authoritative_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "formal_post_audit_entry": "v3",
+    "formal_post_audit_entry": "full21-live-closure-formal-review-v2",
     "published": {
       "relations": 332,
       "evidence": 444
     },
     "all_candidates": {
-      "relations": 341,
-      "evidence": 459
+      "relations": 335,
+      "evidence": 448
     },
     "candidate_only": {
-      "relations": 9,
-      "evidence": 15
+      "relations": 3,
+      "evidence": 4
     }
   },
   "historical_audit_only_release_references": [
@@ -66,19 +66,19 @@
   ],
   "readiness": {
     "prototype": "conditional_go",
-    "real_data_launch": "ready_for_human_decision"
+    "real_data_launch": "awaiting_source_neo4j_positive_closure"
   },
   "published_counts": {
     "relations": 332,
     "evidence": 444
   },
   "all_candidates_counts": {
-    "relations": 341,
-    "evidence": 459
+    "relations": 335,
+    "evidence": 448
   },
   "candidate_only_counts": {
-    "relations": 9,
-    "evidence": 15
+    "relations": 3,
+    "evidence": 4
   },
   "historical_audit_only_counts": {
     "superseded_full18_live_acceptance_package": {
