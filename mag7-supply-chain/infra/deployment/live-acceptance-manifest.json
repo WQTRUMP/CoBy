@@ -2,6 +2,8 @@
   "schema": "wanman.live-acceptance-manifest",
   "version": 1,
   "generated_at": "2026-06-16T00:15:00Z",
+  "entry_scope": "live_acceptance_helper_only_not_release_gate",
+  "usage_note": "本 manifest 只定义 full.21 当前口径下的 source=neo4j 正向闭环执行模板，不代表已获得 human 部署批准，也不替代 deployment-manifest.json、products-candidate.json 或 cloudflare-handoff-checklist.json 作为当前正式发布入口。",
   "source": {
     "formal_review_primary": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
     "api_refresh_supporting": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",

@@ -1,6 +1,8 @@
 {
   "schema": "wanman.live-unblock-checklist",
   "version": 1,
+  "historical_package_status": "historical_audit_only",
+  "usage_note": "本清单只保留 full.17 外部 live 解阻塞审计用途，不代表 2026-06-15 当前正式发布入口、current release、human 决策口径或 source=neo4j 正向闭环已在本机复放通过。当前正式口径必须以 /workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json、products-candidate.json、cloudflare-handoff-checklist.json 与 /workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md 为准。",
   "snapshot": "snapshot:2026-06-15.full.17",
   "formal_chain": "ac99e36b + ec276475 -> 1b401c37",
   "current_status": "blocked",
