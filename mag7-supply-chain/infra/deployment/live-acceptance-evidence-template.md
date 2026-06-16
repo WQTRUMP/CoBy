@@ -1,4 +1,4 @@
-# Mag7 full.21 source=neo4j live 验收证据模板
+# Mag7 full22 source=neo4j live 验收证据模板
 
 ## 1. 执行摘要
 
@@ -51,10 +51,10 @@ LIVE_IMPORT_MODE=all-candidates
 EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18
 EXPECTED_RELATION_COUNT=332
 EXPECTED_EVIDENCE_COUNT=444
-EXPECTED_ALL_CANDIDATE_RELATION_COUNT=335
-EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT=448
-EXPECTED_CANDIDATE_ONLY_RELATION_COUNT=3
-EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT=4
+EXPECTED_ALL_CANDIDATE_RELATION_COUNT=334
+EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT=447
+EXPECTED_CANDIDATE_ONLY_RELATION_COUNT=2
+EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT=3
 PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-16.full.22-amazon-tail-candidate
 ```
 
@@ -88,10 +88,10 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-16.full.22-amazon-tail-candidate
 - `source = "neo4j"`
 - `liveImport.mode = "all-candidates"`（若特意只跑 published，必须显式解释）
 - `liveImport.authoritativeSnapshotId = "snapshot:2026-06-15.full.18"`
-- `liveImport.expectedRelationCount = 335`
-- `liveImport.expectedEvidenceCount = 448`
-- `liveImport.candidateOnlyRelationCount = 3`
-- `liveImport.candidateOnlyEvidenceCount = 4`
+- `liveImport.expectedRelationCount = 334`
+- `liveImport.expectedEvidenceCount = 447`
+- `liveImport.candidateOnlyRelationCount = 2`
+- `liveImport.candidateOnlyEvidenceCount = 3`
 
 ## 6. Health 结果
 

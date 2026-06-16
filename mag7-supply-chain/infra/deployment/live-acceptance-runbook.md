@@ -73,7 +73,7 @@ set +a
 
 bash infra/deployment/live-positive-capture.sh \
   --mode external \
-  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-positive-capture-full21}"
+  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-positive-capture}"
 ```
 
 底层调试入口：
@@ -91,7 +91,7 @@ set +a
 
 bash infra/deployment/live-acceptance-commands.sh \
   --mode external \
-  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full21}"
+  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance}"
 ```
 
 默认导入模式已经固定为：

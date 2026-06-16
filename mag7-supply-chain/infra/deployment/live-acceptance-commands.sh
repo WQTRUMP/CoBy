@@ -134,7 +134,7 @@ export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
 export NEO4J_DATABASE="${NEO4J_DATABASE:-}"
 export REDIS_URL="${REDIS_URL:-}"
 
-OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-full21-XXXXXX)}"
+OUTPUT_DIR="${OUTPUT_DIR:-$(mktemp -d /tmp/mag7-live-acceptance-XXXXXX)}"
 mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR/http" "$OUTPUT_DIR/logs" "$OUTPUT_DIR/docker"
 
 PREFLIGHT_JSON="$OUTPUT_DIR/preflight.json"
