@@ -179,7 +179,7 @@ curl -X POST http://127.0.0.1:4000/api/v1/imports/normalized-package \
   }'
 ```
 
-CLI 在 `--manifest` 模式下会先校验 JSONL 实际行数是否与 manifest 一致；如果不是 `332/444`、`335/448`、`3/4` 这组当前正式口径，导入会直接失败，避免误把旧 `327/435`、`341/459` 或 `350/476` 数据当成当前 live 基线。
+CLI 在 `--manifest` 与 `--package-dir` 两种模式下都会先读取同级 `version-manifest.json`，并显式比对 `/workspace/project/mag7-supply-chain/infra/data-governance/data-version-manifest.json` 里的正式基线；只有同时满足 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`，导入才允许继续。任何仅 package manifest 自洽、但仍停留在旧 `341/459`、`350/476`、`9/15`、`23/41` 或其他漂移 candidate shell 的包都会直接失败。
 
 `--mode all-candidates` 现在会把 `candidate_only` 行归入独立的 draft candidate shell snapshot：
 
@@ -188,6 +188,15 @@ CLI 在 `--manifest` 模式下会先校验 JSONL 实际行数是否与 manifest 
 - `relations/:id/evidence` 对保留的 candidate shell relation 仍可直接返回证据；被清出的 6 条 stop-investing / historical-audit-only relation 继续返回 `404`
 
 这样可以在 Neo4j/Redis live 模式下同时保留候选审计能力和 authoritative published 边界，而不会把 candidate shell 混入默认 published 探索流。
+
+验证命令同样遵循这条硬门槛，并在输出里带出正式 governance baseline 与当前 `real_data_launch=awaiting_source_neo4j_positive_closure` 状态：
+
+```bash
+npm run validate:normalized-package -- \
+  --manifest /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json
+```
+
+注意：静态校验通过只表示包边界与正式基线一致，不表示 `real_data_launch` 已解锁。拿到 `source=neo4j` 的导入与 HTTP 正向回读证据前，不得把 `real_data_launch` 前移到 `ready_for_human_decision`、`approved` 或 `launched`。
 
 ## 数据库初始化
 

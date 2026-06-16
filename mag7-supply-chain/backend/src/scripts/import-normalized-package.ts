@@ -71,6 +71,15 @@ try {
                 expectedEvidenceCount: liveSpec.expectedEvidenceCount,
                 candidateOnlyRelationCount: liveSpec.candidateOnlyRelationCount,
                 candidateOnlyEvidenceCount: liveSpec.candidateOnlyEvidenceCount,
+                governanceBaseline: {
+                  path: liveSpec.governance.sourcePath,
+                  authoritativeSnapshot: liveSpec.governance.authoritativeSnapshot,
+                  activeCandidateShell: liveSpec.governance.activeCandidateShell,
+                  published: liveSpec.governance.published,
+                  allCandidates: liveSpec.governance.allCandidates,
+                  candidateOnly: liveSpec.governance.candidateOnly,
+                  realDataLaunch: liveSpec.governance.realDataLaunch,
+                },
               }
             : null,
         ...summary,

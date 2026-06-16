@@ -194,6 +194,7 @@ curl http://127.0.0.1:4173/api/v1/health
 - `full.21`、`full.19-candidate` 与其他 candidate/审计壳层都不得表述成新的正式 promotion；若引用它们，必须明确是 shell 收敛、历史审计或交接模板用途
 - 正式增量口径：`formal net new=Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
 - 正式发布边界：`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`
+- 后端 `validate:normalized-package` 与 `import:full-package:live` 现在都强制显式比对 `/workspace/project/mag7-supply-chain/infra/data-governance/data-version-manifest.json`；顶层 candidate root 在补齐 `version-manifest.json` 后，`--manifest` 与 `--package-dir` 两种入口都必须经过同一硬门槛，不能再接受仅 package manifest 自洽但正式基线已漂移的候选包
 - `prototype`：可发布。允许前端静态站点接独立 API；仅当后端显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许使用 `repositoryMode=mock` / `source=mock` 的原型演示链路。
 - `real_data_launch`：当前缺口仍是基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环；在该闭环补齐前，不得把本机状态写成已完成 live 复放，亦不得把 candidate shell 收敛表述成新的 ready/authoritative promotion。
 - 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。

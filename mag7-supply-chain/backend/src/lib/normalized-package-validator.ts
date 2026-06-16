@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
-  loadVersionManifestFromLegacyRootManifest,
+  assertVersionManifestMatchesGovernanceBaseline,
+  loadFormalGovernanceBaseline,
+  type FormalGovernanceBaseline,
+} from "./data-version-governance.js";
+import {
   resolveVersionManifestFromPackageDir,
   type VersionManifest,
 } from "./version-manifest.js";
@@ -30,6 +34,7 @@ interface JsonlInspection<Row> {
 
 export interface NormalizedPackageValidationSummary {
   manifest: VersionManifest;
+  governance: FormalGovernanceBaseline;
   schemaVersion: string;
   published: {
     relations: number;
@@ -162,6 +167,7 @@ function assertCandidateOnlyEvidence(rows: EvidenceLikeRow[], candidateRelationI
 }
 
 async function validateAgainstVersionManifest(manifest: VersionManifest): Promise<NormalizedPackageValidationSummary> {
+  const governance = await loadFormalGovernanceBaseline();
   const [publishedRelations, publishedEvidence, allRelations, allEvidence] = await Promise.all([
     inspectJsonl<RelationLikeRow>(manifest.published.relationFile),
     inspectJsonl<EvidenceLikeRow>(manifest.published.evidenceFile),
@@ -224,9 +230,11 @@ async function validateAgainstVersionManifest(manifest: VersionManifest): Promis
     candidateOnlyEvidence.length,
     manifest.candidateOnly.evidence,
   );
+  assertVersionManifestMatchesGovernanceBaseline(manifest, governance);
 
   return {
     manifest,
+    governance,
     schemaVersion,
     published: {
       relations: publishedRelations.count,
@@ -250,7 +258,7 @@ async function validateAgainstVersionManifest(manifest: VersionManifest): Promis
 export async function validateNormalizedPackageManifest(
   manifestPath: string,
 ): Promise<NormalizedPackageValidationSummary> {
-  const manifest = await loadVersionManifestFromLegacyRootManifest(manifestPath);
+  const manifest = await resolveVersionManifestFromPackageDir(inferPackageDirFromManifestPath(manifestPath));
   return validateAgainstVersionManifest(manifest);
 }
 

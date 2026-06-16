@@ -1,6 +1,12 @@
 import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
-import { loadVersionManifestFromLegacyRootManifest } from "./version-manifest.js";
+import {
+  assertVersionManifestMatchesGovernanceBaseline,
+  loadFormalGovernanceBaseline,
+  type FormalGovernanceBaseline,
+} from "./data-version-governance.js";
+import { resolveVersionManifestFromPackageDir } from "./version-manifest.js";
 
 export type FullPackageImportMode = "published" | "all-candidates";
 
@@ -15,6 +21,7 @@ export interface FullPackageLiveImportSpec {
   authoritativeSnapshotId: string;
   candidateOnlyRelationCount: number;
   candidateOnlyEvidenceCount: number;
+  governance: FormalGovernanceBaseline;
 }
 
 function assertString(value: unknown, field: string): string {
@@ -44,7 +51,9 @@ export async function resolveFullPackageLiveImportSpec(
   manifestPath: string,
   mode: FullPackageImportMode,
 ): Promise<FullPackageLiveImportSpec> {
-  const manifest = await loadVersionManifestFromLegacyRootManifest(manifestPath);
+  const manifest = await resolveVersionManifestFromPackageDir(dirname(manifestPath));
+  const governance = await loadFormalGovernanceBaseline();
+  assertVersionManifestMatchesGovernanceBaseline(manifest, governance);
   const modeConfig = mode === "published" ? manifest.published : manifest.allCandidates;
 
   return {
@@ -58,6 +67,7 @@ export async function resolveFullPackageLiveImportSpec(
     authoritativeSnapshotId: manifest.authoritativeRootSnapshot,
     candidateOnlyRelationCount: assertCount(manifest.candidateOnly.relations, "candidate_only.relations"),
     candidateOnlyEvidenceCount: assertCount(manifest.candidateOnly.evidence, "candidate_only.evidence"),
+    governance,
   };
 }
 

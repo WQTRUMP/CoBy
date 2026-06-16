@@ -227,6 +227,19 @@ describe("normalized package validator", () => {
     }
   });
 
+  it("enforces the same hard gate for manifest mode when candidate version-manifest.json is missing", async () => {
+    const fixture = await createCandidateFixture();
+
+    try {
+      await rm(fixture.versionManifest);
+      await expect(validateNormalizedPackageManifest(fixture.legacyManifest)).rejects.toThrow(
+        /missing version-manifest\.json/i,
+      );
+    } finally {
+      await rm(fixture.dir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects mixed-schema raw files", async () => {
     const fixture = await createCandidateFixture();
 
@@ -305,6 +318,21 @@ describe("normalized package validator", () => {
 
       await expect(validateNormalizedPackageDirectory(fixture.dir)).rejects.toThrow(
         /Published relations contain candidate_only rows/i,
+      );
+    } finally {
+      await rm(fixture.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects self-consistent candidate packages that drift from the formal governance baseline", async () => {
+    const fixture = await createCandidateFixture();
+
+    try {
+      await expect(validateNormalizedPackageDirectory(fixture.dir)).rejects.toThrow(
+        /Formal governance baseline mismatch/i,
+      );
+      await expect(validateNormalizedPackageManifest(fixture.legacyManifest)).rejects.toThrow(
+        /Formal governance baseline mismatch/i,
       );
     } finally {
       await rm(fixture.dir, { recursive: true, force: true });
