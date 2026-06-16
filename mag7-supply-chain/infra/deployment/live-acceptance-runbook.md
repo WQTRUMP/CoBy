@@ -1,5 +1,8 @@
 # Mag7 full.21 live 验收执行手册
 
+> 推荐先走 [`live-positive-capture.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-positive-capture.sh) 与 [`live-positive-capture-runbook.md`](/workspace/project/mag7-supply-chain/infra/deployment/live-positive-capture-runbook.md)。
+> 本文档保留为底层执行器 [`live-acceptance-commands.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-commands.sh) 的详细说明。
+
 > 当前 live 验收唯一机器输入是 [`live-acceptance-manifest.json`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-manifest.json)。
 > 正式边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`。
 > `all-candidates` 与 `candidate-only` 只代表 candidate shell 审计边界，**不得写成 published**。
@@ -52,7 +55,27 @@
 
 ## 5. 推荐命令模板
 
-先加载样例环境，再用 external 或 docker 模式执行：
+推荐先加载样例环境，再走中文预检/取证入口；若需要底层调试，再直接调用 `live-acceptance-commands.sh`。
+
+推荐入口：
+
+```bash
+cd /workspace/project/mag7-supply-chain
+set -a
+source infra/deployment/live-acceptance.env.example
+export NEO4J_URI='bolt://<reachable-neo4j-host>:7687'
+export NEO4J_USERNAME='<neo4j-user>'
+export NEO4J_PASSWORD='<neo4j-password>'
+export NEO4J_DATABASE='neo4j'
+export REDIS_URL='redis://<reachable-redis-host>:6379'
+set +a
+
+bash infra/deployment/live-positive-capture.sh \
+  --mode external \
+  --output-dir "${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-positive-capture-full21}"
+```
+
+底层调试入口：
 
 ```bash
 cd /workspace/project/mag7-supply-chain

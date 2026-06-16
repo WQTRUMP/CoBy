@@ -362,6 +362,27 @@ parse_url_host_port() {
   ' "$1" "$2"
 }
 
+sanitize_uri() {
+  node -e '
+    const raw = process.argv[1];
+    if (!raw) {
+      process.exit(0);
+    }
+    try {
+      const url = new URL(raw);
+      if (url.username) {
+        url.username = "***";
+      }
+      if (url.password) {
+        url.password = "***";
+      }
+      process.stdout.write(url.toString());
+    } catch (error) {
+      process.stdout.write(raw.replace(/:\/\/([^/@]+)@/, "://***@"));
+    }
+  ' "$1"
+}
+
 probe_tcp() {
   local host="$1"
   local port="$2"
@@ -727,14 +748,16 @@ if [[ "$SELECTED_MODE" = "docker" ]]; then
 else
   read -r NEO4J_HOST NEO4J_PORT <<<"$(parse_url_host_port "$NEO4J_URI" 7687)"
   read -r REDIS_HOST REDIS_PORT <<<"$(parse_url_host_port "$REDIS_URL" 6379)"
+  SANITIZED_NEO4J_URI="$(sanitize_uri "$NEO4J_URI")"
+  SANITIZED_REDIS_URL="$(sanitize_uri "$REDIS_URL")"
 
   NEO4J_PROBE="$(probe_tcp "$NEO4J_HOST" "$NEO4J_PORT")"
   REDIS_PROBE="$(probe_tcp "$REDIS_HOST" "$REDIS_PORT")"
 
   jq -n \
     --arg mode "$SELECTED_MODE" \
-    --arg neo4jUri "$NEO4J_URI" \
-    --arg redisUrl "$REDIS_URL" \
+    --arg neo4jUri "$SANITIZED_NEO4J_URI" \
+    --arg redisUrl "$SANITIZED_REDIS_URL" \
     --arg neo4jHost "$NEO4J_HOST" \
     --arg neo4jPort "$NEO4J_PORT" \
     --arg redisHost "$REDIS_HOST" \
