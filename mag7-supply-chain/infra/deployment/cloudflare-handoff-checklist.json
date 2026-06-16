@@ -109,7 +109,7 @@
       "/api/v1/companies/suggest?q=tes&limit=5",
       "/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true",
       "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true",
-      "/api/v1/stats?snapshot=published&companyId=company:AAPL",
+      "/api/v1/graph/stats?snapshot=published&companyId=company:AAPL",
       "/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
     ]
   },

@@ -534,8 +534,8 @@ if [[ -f "$PACKAGE_MANIFEST" ]]; then
   PACKAGE_PUBLISHED_EVIDENCE_COUNT="$(jq -r '.record_counts.evidence_published // 0' "$PACKAGE_MANIFEST")"
   PACKAGE_ALL_CANDIDATE_RELATION_COUNT="$(jq -r '.record_counts.relations_all_candidates // 0' "$PACKAGE_MANIFEST")"
   PACKAGE_ALL_CANDIDATE_EVIDENCE_COUNT="$(jq -r '.record_counts.evidence_all_candidates // 0' "$PACKAGE_MANIFEST")"
-  PACKAGE_CANDIDATE_ONLY_RELATION_COUNT="$(jq -r '.full21_tail_closure.new_counts.candidate_only.relations // 0' "$PACKAGE_MANIFEST")"
-  PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT="$(jq -r '.full21_tail_closure.new_counts.candidate_only.evidence // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_CANDIDATE_ONLY_RELATION_COUNT="$(jq -r '.full22_top_level_tail_merge.new_counts.candidate_only.relations // 0' "$PACKAGE_MANIFEST")"
+  PACKAGE_CANDIDATE_ONLY_EVIDENCE_COUNT="$(jq -r '.full22_top_level_tail_merge.new_counts.candidate_only.evidence // 0' "$PACKAGE_MANIFEST")"
 fi
 
 jq -n \

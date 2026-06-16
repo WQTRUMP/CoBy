@@ -290,7 +290,7 @@
           "GET /api/v1/companies/suggest?q=tes&limit=5 -> 503 dependency_unavailable",
           "GET /api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true -> 503 dependency_unavailable",
           "GET /api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true -> 503 dependency_unavailable",
-          "GET /api/v1/stats?snapshot=published&companyId=company:AAPL -> 503 dependency_unavailable",
+          "GET /api/v1/graph/stats?snapshot=published&companyId=company:AAPL -> 503 dependency_unavailable",
           "GET /api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence -> 503 dependency_unavailable"
         ],
         "historical_audit_only_reference": "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md"
@@ -324,7 +324,7 @@
       ],
       "remaining_gates": [
         "准备 Node.js v22.22.3 + npm + curl + jq，并确保可达 Neo4j 5.26、可达 Redis 7.4，以及 GRAPH_RUNTIME_MODE=live / NEO4J_* / REDIS_URL 这组 live 环境变量",
-        "按 full.21 manifest 驱动完成 source=neo4j 的 import-summary 与 health/detail/overview/search/suggest/subgraph/path/stats/evidence 正向样本",
+        "按当前 full22 live manifest 驱动完成 source=neo4j 的 import-summary 与 health/detail/overview/search/suggest/subgraph/path/stats/evidence 正向样本",
         "在闭环补齐后，Cloudflare 连接、临时托管和正式部署审批才可作为可选后续步骤进入 human 决策范围"
       ]
     }
