@@ -19,11 +19,15 @@ export function App() {
   const [activeTab, setActiveTab] = useState<"overview" | "evidence" | "financials">("evidence");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 980px)").matches : false,
+  );
   const [relationshipTypes, setRelationshipTypes] = useState<GraphRelationViewModel["relationshipType"][]>([]);
   const [relationshipSubtype, setRelationshipSubtype] = useState<string | null>(null);
   const [isExplorerFullscreen, setIsExplorerFullscreen] = useState(false);
   const deferredSearch = useDeferredValue(search);
   const explorerShellRef = useRef<HTMLDivElement | null>(null);
+  const mobileSheetTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const explorer = useGraphExplorer(
     graphExplorerApi,
@@ -58,6 +62,23 @@ export function App() {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 980px)");
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      setIsMobileViewport(event.matches);
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleViewportChange);
+    return () => {
+      mediaQuery.removeEventListener("change", handleViewportChange);
     };
   }, []);
 
@@ -148,7 +169,7 @@ export function App() {
       setActiveNodeId(companyId);
       setActiveRelationId(null);
       setActiveTab("evidence");
-      setSidebarOpen(true);
+      setSidebarOpen(!isMobileViewport);
       setMobileSheetExpanded(false);
       setZoom(1);
     });
@@ -161,7 +182,7 @@ export function App() {
     setActiveRelationId(relation?.id ?? null);
     setActiveTab(relation ? "evidence" : "overview");
     setSidebarOpen(true);
-    setMobileSheetExpanded(false);
+    setMobileSheetExpanded(Boolean(isMobileViewport && relation));
   }
 
   function handleRelationSelect(relation: GraphRelationViewModel) {
@@ -185,7 +206,8 @@ export function App() {
   function handleSidebarClose() {
     setSidebarOpen(false);
     setMobileSheetExpanded(false);
-    lastTriggerRef.current?.focus();
+    const returnTarget = isMobileViewport ? mobileSheetTriggerRef.current ?? lastTriggerRef.current : lastTriggerRef.current;
+    returnTarget?.focus();
   }
 
   function handleSidebarOpen() {
@@ -341,7 +363,7 @@ export function App() {
               zoom={zoom}
             />
 
-            {sidebarOpen ? (
+            {!isMobileViewport && sidebarOpen ? (
               <CompanySidebar
                 activeNode={activeNode}
                 activeRelation={activeRelation}
@@ -371,13 +393,15 @@ export function App() {
               evidenceError={evidenceError}
               evidenceLoading={evidenceLoading}
               evidenceSummary={graph.evidenceOverview}
+              isMobileViewport={isMobileViewport}
               isExpanded={mobileSheetExpanded}
               isOpen={sidebarOpen}
+              onExpand={setMobileSheetExpanded}
               onClose={handleSidebarClose}
-              onExpandToggle={() => setMobileSheetExpanded((current) => !current)}
               onOpen={handleSidebarOpen}
               onRetryEvidence={handleRetryEvidence}
               onTabChange={setActiveTab}
+              triggerRef={mobileSheetTriggerRef}
             />
           </div>
         </div>
