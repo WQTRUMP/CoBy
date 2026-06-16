@@ -101,6 +101,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           <div>
             <h3>{company.displayName}</h3>
             <p>焦点公司</p>
+            <span>{company.canonicalName}</span>
           </div>
         </div>
         <button aria-label="关闭证据侧栏" className="closeSidebar" onClick={onClose} type="button">
