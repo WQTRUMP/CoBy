@@ -37,7 +37,7 @@
 - 前端 API 基址变量：`VITE_GRAPH_API_BASE_URL`
 - 后端默认运行态：`GRAPH_RUNTIME_MODE=live`
 - 后端 live 依赖变量：`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL`
-- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`。当前正式数据边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`；`full.21` 仅完成 candidate shell 收敛，不构成新的 authoritative promotion。当前仍缺少基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环证据，因此这里不得表述成 `2026-06-15` 当前 sandbox 已在本机把 Neo4j/Redis 重放通过。
+- 发布约束：只有显式设置 `GRAPH_RUNTIME_MODE=prototype` 时才允许 `source=mock`；默认 live/验收模式缺依赖时业务接口必须返回 `503 dependency_unavailable`。当前唯一正式数据边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=334/447`、`candidate-only=2/3`，active candidate shell 为 `snapshot:2026-06-16.full.22-amazon-tail-candidate`；旧 `335/448`、`3/4` 仅保留历史审计用途，不再代表当前正式候选壳口径。`real_data_launch` 继续锁定为 `awaiting_source_neo4j_positive_closure`，当前仍缺少基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环证据，因此这里不得表述成已 `ready_for_human_decision`，也不得表述成当前 sandbox 已在本机把 Neo4j/Redis 重放通过。
 
 ## 快速开始
 
@@ -188,15 +188,15 @@ curl http://127.0.0.1:4173/api/v1/health
 
 ## 部署与上线约束
 
-当前 README 的部署与上线表述采用 `full.21` 文档纠偏后的正式口径：
+当前 README 的部署与上线表述采用 `full.22` 顶层候选壳与 live 正向闭环终审后的正式口径：
 
-- 唯一 authoritative promotion 仍是 `snapshot:2026-06-15.full.18`；`full.21` 仅完成 candidate shell 收敛与 live 验收文档模板纠偏，不构成新的 authoritative promotion
-- `full.21`、`full.19-candidate` 与其他 candidate/审计壳层都不得表述成新的正式 promotion；若引用它们，必须明确是 shell 收敛、历史审计或交接模板用途
+- 唯一 authoritative promotion 仍是 `snapshot:2026-06-15.full.18`；`full.22` 仅完成顶层 active candidate shell 从旧 `335/448`、`3/4` 收敛到 `334/447`、`2/3`，不构成新的 authoritative promotion
+- `full.22`、`full.21`、`full.19-candidate` 与其他 candidate/审计壳层都不得表述成新的正式 promotion；若引用它们，必须明确是当前候选壳收敛、历史审计或交接模板用途，旧 `335/448`、`3/4` 仅可作为历史审计基线引用
 - 正式增量口径：`formal net new=Apple 0 / Alphabet 0 / Meta 0 / Tesla 0`
-- 正式发布边界：`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`
+- 正式发布边界：`published=332/444`、`all-candidates=334/447`、`candidate-only=2/3`
 - 后端 `validate:normalized-package` 与 `import:full-package:live` 现在都强制显式比对 `/workspace/project/mag7-supply-chain/infra/data-governance/data-version-manifest.json`；顶层 candidate root 在补齐 `version-manifest.json` 后，`--manifest` 与 `--package-dir` 两种入口都必须经过同一硬门槛，不能再接受仅 package manifest 自洽但正式基线已漂移的候选包
 - `prototype`：可发布。允许前端静态站点接独立 API；仅当后端显式设置 `GRAPH_RUNTIME_MODE=prototype` 时，才允许使用 `repositoryMode=mock` / `source=mock` 的原型演示链路。
-- `real_data_launch`：当前缺口仍是基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环；在该闭环补齐前，不得把本机状态写成已完成 live 复放，亦不得把 candidate shell 收敛表述成新的 ready/authoritative promotion。
+- `real_data_launch`：当前唯一正式状态仍是 `awaiting_source_neo4j_positive_closure`，缺口仍是基于外部 Neo4j/Redis 的 `source=neo4j` 正向闭环；在该闭环补齐前，不得把本机状态写成已完成 live 复放，亦不得把 candidate shell 收敛表述成新的 `ready_for_human_decision` 或 authoritative promotion。
 - 默认 `GRAPH_RUNTIME_MODE=live`；若 `NEO4J_URI` / `REDIS_URL` 缺失或依赖不可达，允许的失败语义只有 `health=degraded` 与业务接口 `503 dependency_unavailable`，不得静默回退 `mock`。
 - 若 `/opt/wanman/products.json` 仍为空数组，则 `system_status=unknown:no_product_inventory`，不得宣称正式 uptime 覆盖。
 - 不得把全量包 in-memory real-shape 测试、prototype/mock 返回或 degraded 运行结果表述成真实 Neo4j + Redis 验收。
