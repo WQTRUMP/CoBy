@@ -1,0 +1,137 @@
+{
+  "schema": "wanman.live-unblock-checklist",
+  "version": 1,
+  "historical_package_status": "historical_audit_only",
+  "usage_note": "本清单只保留 full.17 外部 live 解阻塞审计用途，不代表 2026-06-15 当前正式发布入口、current release、human 决策口径或 source=neo4j 正向闭环已在本机复放通过。当前正式口径必须以 /workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json、products-candidate.json、cloudflare-handoff-checklist.json 与 /workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md 为准。",
+  "snapshot": "snapshot:2026-06-15.full.17",
+  "formal_chain": "ac99e36b + ec276475 -> 1b401c37",
+  "current_status": "blocked",
+  "target_status": "real_data_launch_passed",
+  "minimum_external_prerequisites": [
+    "Node.js v22.22.3",
+    "npm",
+    "curl",
+    "jq",
+    "reachable Neo4j 5.26 compatible instance",
+    "reachable Redis 7.4 compatible instance",
+    "package dir /workspace/agents/evidence-collector/output/mag7-full-package"
+  ],
+  "provider_neutral_bindings": {
+    "neo4j_uri_schemes": [
+      "bolt",
+      "neo4j",
+      "neo4j+s"
+    ],
+    "redis_url_schemes": [
+      "redis",
+      "rediss"
+    ],
+    "isolation_policy": [
+      "prefer dedicated validation Neo4j database",
+      "prefer dedicated Redis instance or DB index",
+      "do not run first validation against shared production graph"
+    ]
+  },
+  "required_env": [
+    "GRAPH_RUNTIME_MODE",
+    "NEO4J_URI",
+    "NEO4J_USERNAME",
+    "NEO4J_PASSWORD",
+    "NEO4J_DATABASE",
+    "REDIS_URL"
+  ],
+  "execution_steps": [
+    {
+      "id": "toolchain_and_package_preflight",
+      "command": "node -v && npm -v && jq --version && curl --version | head -n 1 && jq -r '.package_snapshot_id' /workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json",
+      "success": [
+        "node version equals v22.22.3",
+        "package snapshot equals snapshot:2026-06-15.full.17"
+      ]
+    },
+    {
+      "id": "external_dependency_probe",
+      "command": "timeout 3 bash -lc 'exec 3<>/dev/tcp/<neo4j-host>/<neo4j-port>' && timeout 3 bash -lc 'exec 3<>/dev/tcp/<redis-host>/<redis-port>'",
+      "success": [
+        "neo4j probe exit code is 0",
+        "redis probe exit code is 0"
+      ]
+    },
+    {
+      "id": "build_frontend_and_backend",
+      "command": "cd /workspace/project/mag7-supply-chain && npm run build && cd /workspace/project/mag7-supply-chain/backend && npm run build",
+      "success": [
+        "frontend build succeeds",
+        "backend build succeeds"
+      ]
+    },
+    {
+      "id": "run_external_live_acceptance",
+      "command": "cd /workspace/project/mag7-supply-chain && set -a && source /tmp/mag7-full17-live.env && set +a && bash infra/deployment/live-acceptance-commands.sh --mode external --output-dir ${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full17}",
+      "success": [
+        "command exit code is 0",
+        "result.json exists",
+        "result.json.passed is true"
+      ]
+    }
+  ],
+  "success_criteria": {
+    "import_summary": {
+      "source": "neo4j",
+      "relationCount_gt": 0,
+      "evidenceCount_gt": 0,
+      "snapshotCount_gt": 0
+    },
+    "health": {
+      "status": "ok",
+      "runtimeMode": "live",
+      "repositoryMode": "neo4j",
+      "contracts.mockGraphBoundary": false,
+      "dependencies.neo4j.status": "up",
+      "dependencies.redis.status": "up"
+    },
+    "http_checks_must_pass": [
+      "detail",
+      "overview",
+      "search",
+      "suggest",
+      "subgraph",
+      "path",
+      "stats",
+      "evidence"
+    ],
+    "forbidden_sources": [
+      "mock"
+    ]
+  },
+  "rollback_policy": {
+    "allowed_only_on_isolated_dependencies": true,
+    "steps": [
+      "stop local backend process",
+      "preserve validation output directory as evidence",
+      "delete or destroy isolated validation Neo4j database or instance",
+      "clear isolated Redis instance or DB index",
+      "do not change traffic, DNS, Cloudflare, or paid resource routing"
+    ],
+    "forbidden": [
+      "rollback to prototype",
+      "rollback to mock",
+      "first validation against shared production graph"
+    ]
+  },
+  "human_handoff_files": [
+    "result.json",
+    "import-summary.json",
+    "import-failure.json",
+    "http/health.json",
+    "http/detail.json",
+    "http/overview.json",
+    "http/search.json",
+    "http/suggest.json",
+    "http/subgraph.json",
+    "http/path.json",
+    "http/stats.json",
+    "http/evidence.json",
+    "logs/backend-live.log"
+  ]
+}

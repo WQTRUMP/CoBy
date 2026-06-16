@@ -1,0 +1,35 @@
+{
+  "name": "@mag7/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "npm install --prefix ../packages/contracts",
+    "prebuild": "npm --prefix ../packages/contracts run build",
+    "pretest": "npm --prefix ../packages/contracts run build",
+    "preimport:normalized": "npm --prefix ../packages/contracts run build",
+    "preimport:full-package:live": "npm --prefix ../packages/contracts run build",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/backend/src/server.js",
+    "test": "vitest run",
+    "import:normalized": "tsx src/scripts/import-normalized-package.ts",
+    "import:full-package:live": "tsx src/scripts/import-normalized-package.ts",
+    "validate:normalized-package": "tsx src/scripts/validate-normalized-package.ts"
+  },
+  "dependencies": {
+    "@mag7/contracts": "file:../packages/contracts",
+    "@fastify/cors": "^10.0.2",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "neo4j-driver": "^5.28.1",
+    "redis": "^4.7.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

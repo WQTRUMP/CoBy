@@ -1,0 +1,123 @@
+{
+  "schema": "wanman.cloudflare-handoff-checklist",
+  "version": 1,
+  "generated_at": "2026-06-16T04:29:28Z",
+  "generated_by": "devops",
+  "handoff_status": "deferred_until_source_neo4j_positive_closure",
+  "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
+  "live_runtime_verification_source": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
+  "boundary_review_basis": {
+    "current_formal_review_task": "c576bb95-5777-4627-87ea-784346c64361",
+    "current_formal_review_report": "/workspace/agents/code-reviewer/output/full21-live-positive-capture-kit-boundary-review-v2/full21-live-positive-capture-kit-boundary-review-v2-report.md",
+    "historical_audit_only_task": "c4ffad54-5699-4ce4-9a4c-f44f899bd761",
+    "historical_audit_only_report": "/workspace/agents/code-reviewer/output/full21-live-positive-capture-kit-boundary-review/full21-live-positive-capture-kit-boundary-review-report.md"
+  },
+  "decision_summary": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "published": "332 relations / 444 evidence",
+    "all_candidates": "334 relations / 447 evidence",
+    "candidate_only_delta": "2 relations / 3 evidence",
+    "real_data_launch": "full22 只完成顶层 candidate shell 收敛；当前仍缺少基于外部 Neo4j/Redis 的 source=neo4j 正向闭环。historical full19 live 证据只能保留 audit-only 语义，不能写成 2026-06-15 当前 sandbox 已在本机复放通过。"
+  },
+  "historical_audit_only_inputs": [
+    "/workspace/agents/code-reviewer/output/full20-wave5-formal-review-v2/full20-wave5-formal-review-v2-report.md",
+    "/workspace/agents/api-tester-2/output/full20-wave5-formal-refresh/full20-wave5-formal-refresh-report.md",
+    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+    "0cd6875d",
+    "6e45bce1"
+  ],
+  "cloudflare_connection_gate": {
+    "human_action_required": false,
+    "trusted_runner_only": true,
+    "forbidden": [
+      "代理人直接使用 Cloudflare 凭据",
+      "在未补齐 source=neo4j 正向闭环前发起 Cloudflare 正式部署审批",
+      "在未获 Wanman 控制面批准前切换正式流量",
+      "把 candidate shell 334/447 或 candidate-only 2/3 描述成已发布 live 数据",
+      "把 historical full19 live 证据写成 2026-06-15 当前本机已复放通过",
+      "把 0cd6875d、6e45bce1 或 full19 live 终审 v3 当成当前最终部署输入"
+    ]
+  },
+  "required_human_fields": [
+    "cloudflare.account_id",
+    "cloudflare.zone_id",
+    "cloudflare.project_type",
+    "cloudflare.web_project_name",
+    "cloudflare.api_routing_mode",
+    "cloudflare.ssl_mode",
+    "cloudflare.preview_enabled",
+    "cloudflare.custom_domain_web",
+    "cloudflare.custom_domain_api"
+  ],
+  "routing_decisions": [
+    {
+      "id": "web_hosting",
+      "question": "前端落地方式",
+      "options": [
+        "Cloudflare Pages",
+        "GitHub Pages",
+        "Vercel"
+      ],
+      "recommended": "Cloudflare Pages"
+    },
+    {
+      "id": "api_routing_mode",
+      "question": "API 路由方式",
+      "options": [
+        "api.<主域> 独立子域",
+        "主站同源 /api 反向代理"
+      ],
+      "recommended": "主站同源 /api 反向代理"
+    }
+  ],
+  "deployment_sequence": [
+    {
+      "order": 1,
+      "step": "先准备 Node.js v22.22.3 + npm + curl + jq，并确保可达 Neo4j 5.26、可达 Redis 7.4，以及 GRAPH_RUNTIME_MODE=live / NEO4J_* / REDIS_URL；然后按当前 full22 候选壳脚本补齐 source=neo4j 正向闭环。",
+      "gate": "未拿到 source=neo4j 的 import-summary 与 HTTP 正向样本前，不得进入 Cloudflare handoff。"
+    },
+    {
+      "order": 2,
+      "step": "在闭环通过后，再由 human 视需要在 Wanman 中连接 Cloudflare、补录 account/zone/project/routing 字段，或安排临时托管/同源联调等后续动作。",
+      "gate": "此时仍不得放大到 candidate shell；Cloudflare 连接只为 published 332/444 做准备。"
+    },
+    {
+      "order": 3,
+      "step": "human 在 Wanman 中批准仅覆盖 published 332/444 的 paid/domain-impacting 部署。",
+      "gate": "不得把 all-candidates 334/447 或 candidate-only 2/3 放大进审批范围。"
+    },
+    {
+      "order": 4,
+      "step": "受信部署流程按批准结果创建前端站点、后端托管、Cloudflare DNS/证书与 /api 路由；部署后复跑 health 与 live 抽样巡检。",
+      "gate": "写入系统库存前，系统上下文仍应维持 unknown:no_product_inventory。"
+    }
+  ],
+  "health_targets": {
+    "web": {
+      "path": "/",
+      "expected_http_status": 200
+    },
+    "api": {
+      "path": "/api/v1/health",
+      "expected_http_status": 200,
+      "expected_body_status": "ok"
+    },
+    "live_smoke_paths": [
+      "/api/v1/companies/company:AAPL",
+      "/api/v1/companies/company:AAPL/overview",
+      "/api/v1/companies/search?q=amazon&limit=5",
+      "/api/v1/companies/suggest?q=tes&limit=5",
+      "/api/v1/graph/subgraph?companyId=company:AAPL&depth=2&snapshot=published&includeEvidence=true",
+      "/api/v1/graph/path?sourceCompanyId=company:TSMC&targetCompanyId=company:AAPL&maxDepth=2&snapshot=published&includeEvidence=true",
+      "/api/v1/graph/stats?snapshot=published&companyId=company:AAPL",
+      "/api/v1/relations/rel:apple:tsmc:manufacturing:apple-silicon/evidence"
+    ]
+  },
+  "boundary_assertions": [
+    "authoritative snapshot 仍为 snapshot:2026-06-15.full.18。",
+    "published 332/444 与 candidate shell 334/447、2/3 边界已按当前 full22 正式链锁定。",
+    "candidate-only relation 在 published 视图中必须继续不可取证；candidate shell 只能作为审计边界存在。",
+    "当前数据边界的唯一正式结论源只能是 full21-live-closure-formal-review-v2 与 full21-live-closure-refresh。",
+    "historical full19 live 与 full20-wave5 证据只保留 audit-only 语义；当前外部部署前仍需先完成 source=neo4j 正向闭环，再由 human 批准。"
+  ]
+}

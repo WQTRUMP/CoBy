@@ -1,0 +1,37 @@
+import type { FastifyInstance } from "fastify";
+
+import { toPublicHealthDependencyDetail } from "../../lib/dependency-failures.js";
+
+export async function registerHealthRoutes(app: FastifyInstance) {
+  app.get("/api/v1/health", async () => {
+    const [neo4j, redis] = await Promise.all([app.neo4jHealth(), app.cacheClient.health()]);
+    const status = [neo4j.status, redis.status].every((item) => item === "up")
+      ? "ok"
+      : "degraded";
+
+    return {
+      status,
+      service: "mag7-backend",
+      time: new Date().toISOString(),
+      runtimeMode: app.runtimeMode,
+      repositoryMode: app.graphRepository.source,
+      contracts: {
+        importSchemaVersion: "mag7-supply-chain.import-relations.v3",
+        mockGraphBoundary: app.runtimeMode === "prototype" && app.graphRepository.source === "mock",
+      },
+      dependencies: {
+        neo4j: {
+          status: neo4j.status,
+          required: neo4j.required,
+          detail: toPublicHealthDependencyDetail(neo4j.status),
+        },
+        redis: {
+          status: redis.status,
+          enabled: redis.enabled,
+          required: redis.required,
+          detail: toPublicHealthDependencyDetail(redis.status),
+        },
+      },
+    };
+  });
+}

@@ -1,0 +1,39 @@
+CREATE CONSTRAINT company_id IF NOT EXISTS
+FOR (n:Company)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT company_ticker IF NOT EXISTS
+FOR (n:Company)
+REQUIRE n.ticker IS UNIQUE;
+
+CREATE CONSTRAINT facility_id IF NOT EXISTS
+FOR (n:Facility)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT product_id IF NOT EXISTS
+FOR (n:Product)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT technology_id IF NOT EXISTS
+FOR (n:Technology)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT material_id IF NOT EXISTS
+FOR (n:Material)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT evidence_id IF NOT EXISTS
+FOR (n:Evidence)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT evidence_hash IF NOT EXISTS
+FOR (n:Evidence)
+REQUIRE n.hash IS UNIQUE;
+
+CREATE CONSTRAINT snapshot_id IF NOT EXISTS
+FOR (n:Snapshot)
+REQUIRE n.id IS UNIQUE;
+
+CREATE CONSTRAINT supply_relation_id IF NOT EXISTS
+FOR (n:SupplyRelation)
+REQUIRE n.id IS UNIQUE;

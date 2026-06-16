@@ -1,0 +1,80 @@
+{
+  "productName": "mag7-supply-chain",
+  "productKind": "interactive-supply-chain-platform",
+  "preparedBy": "devops",
+  "updatedAt": "2026-06-14",
+  "sourceBlueprint": "/workspace/agents/cto/output/mag7-platform-tech-spec-report.md",
+  "developmentEnvironment": {
+    "composeFiles": [
+      "docker-compose.dev.yml",
+      "infra/docker/docker-compose.dev.yml"
+    ],
+    "services": [
+      {
+        "name": "neo4j",
+        "kind": "graph-database",
+        "runtime": "docker",
+        "image": "neo4j:5.26",
+        "ports": [7474, 7687],
+        "healthcheck": "cypher-shell RETURN 1",
+        "envBindings": ["NEO4J_USERNAME", "NEO4J_PASSWORD", "NEO4J_DATABASE", "NEO4J_URI"],
+        "paidResourcePolicy": "development-local-only"
+      },
+      {
+        "name": "redis",
+        "kind": "cache",
+        "runtime": "docker",
+        "image": "redis:7.4-alpine",
+        "ports": [6379],
+        "healthcheck": "redis-cli ping",
+        "envBindings": ["REDIS_URL"],
+        "paidResourcePolicy": "development-local-only"
+      },
+      {
+        "name": "minio",
+        "kind": "object-storage",
+        "runtime": "docker",
+        "image": "minio/minio:latest",
+        "ports": [9000, 9001],
+        "healthcheck": "http://127.0.0.1:9000/minio/health/live",
+        "envBindings": [
+          "MINIO_ROOT_USER",
+          "MINIO_ROOT_PASSWORD",
+          "MINIO_BUCKET_RAW",
+          "MINIO_BUCKET_CURATED",
+          "MINIO_BUCKET_EXPORTS",
+          "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_REGION",
+          "OBJECT_STORAGE_FORCE_PATH_STYLE"
+        ],
+        "paidResourcePolicy": "development-local-only"
+      }
+    ]
+  },
+  "plannedDeploymentServices": [
+    {
+      "name": "web",
+      "kind": "static-site",
+      "runtime": "vercel-or-github-pages",
+      "status": "planned",
+      "domains": [],
+      "healthcheck": "GET /"
+    },
+    {
+      "name": "api",
+      "kind": "node-rest-api",
+      "runtime": "railway-or-render",
+      "status": "planned",
+      "domains": [],
+      "healthcheck": "GET /api/v1/health",
+      "dependsOn": ["neo4j", "redis", "object-storage"]
+    },
+    {
+      "name": "pipeline",
+      "kind": "python-worker",
+      "runtime": "railway-worker-or-cron",
+      "status": "planned",
+      "dependsOn": ["neo4j", "object-storage"]
+    }
+  ]
+}

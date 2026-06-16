@@ -8,6 +8,7 @@ node_modules/
 # Build output and local tool state
 dist/
 .vite/
+mag7-supply-chain/.env
 
 # Temporary visual QA screenshots
 mag7-supply-chain/prototype-shot-*.png

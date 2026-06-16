@@ -1,0 +1,178 @@
+import { useEffect, useMemo, useState } from "react";
+import { adaptCompanyOptions, adaptGraphViewModel, adaptRelationEvidence } from "../adapters/graphExplorerAdapter";
+import { ApiRequestError, type GraphExplorerApi } from "../services/graphExplorerApi";
+import type { CompanyDetailResponseDTO, CompanyOverviewDTO, SubgraphDTO } from "@mag7/contracts";
+import type {
+  CompanyOptionViewModel,
+  EvidenceViewModel,
+  GraphQuery,
+  GraphRelationViewModel,
+  GraphViewModel,
+} from "../types/viewModels";
+import { getGraphQueryKey } from "../utils/graphQueryKey.js";
+import { resolveFallbackCompanyId } from "./graphExplorerSelection";
+
+interface ExplorerState {
+  companies: CompanyOptionViewModel[];
+  error: string | null;
+  loading: boolean;
+}
+
+interface RawGraphState {
+  company: CompanyDetailResponseDTO;
+  overview: CompanyOverviewDTO;
+  subgraph: SubgraphDTO;
+}
+
+export function useGraphExplorer(api: GraphExplorerApi, query: GraphQuery) {
+  const [state, setState] = useState<ExplorerState>({
+    companies: [],
+    error: null,
+    loading: true,
+  });
+  const [reloadToken, setReloadToken] = useState(0);
+  const [rawGraph, setRawGraph] = useState<RawGraphState | null>(null);
+  const [relationEvidenceById, setRelationEvidenceById] = useState<Record<string, EvidenceViewModel[]>>({});
+  const queryKey = getGraphQueryKey(query);
+  const requestCompanyId = query.companyId?.trim() || null;
+  const searchQuery = query.search?.trim() ?? "";
+
+  useEffect(() => {
+    let alive = true;
+
+    async function load() {
+      setState((current) => ({ ...current, error: null, loading: true }));
+
+      try {
+        const companiesResponse = await api.listCompanies(query.search);
+        const companies = adaptCompanyOptions(companiesResponse);
+        const fallbackCompanyId = resolveFallbackCompanyId(companies, requestCompanyId);
+        const initialCompanyId = requestCompanyId ?? fallbackCompanyId;
+
+        if (!initialCompanyId) {
+          if (!alive) return;
+
+          setRawGraph(null);
+          setRelationEvidenceById({});
+          setState({
+            companies,
+            error: "No companies are available for this view.",
+            loading: false,
+          });
+          return;
+        }
+
+        const loadGraph = async (companyId: string) => {
+          const [company, overview, subgraph] = await Promise.all([
+            api.getCompany(companyId),
+            api.getCompanyOverview(companyId),
+            api.getSubgraph({
+              companyId,
+              depth: query.depth,
+              snapshot: "published",
+              includeEvidence: true,
+            }),
+          ]);
+
+          return { company, overview, subgraph };
+        };
+
+        let nextRawGraph: RawGraphState;
+
+        try {
+          nextRawGraph = await loadGraph(initialCompanyId);
+        } catch (error) {
+          const canFallback =
+            requestCompanyId !== null &&
+            fallbackCompanyId !== null &&
+            fallbackCompanyId !== requestCompanyId &&
+            error instanceof ApiRequestError &&
+            error.status === 404;
+
+          if (!canFallback) {
+            throw error;
+          }
+
+          nextRawGraph = await loadGraph(fallbackCompanyId);
+        }
+
+        if (!alive) return;
+
+        setRawGraph(nextRawGraph);
+
+        setState({
+          companies,
+          error: null,
+          loading: false,
+        });
+      } catch (error) {
+        if (!alive) return;
+
+        setRawGraph(null);
+        setState((current) => ({
+          ...current,
+          error: error instanceof Error ? error.message : "Failed to load graph explorer.",
+          loading: false,
+        }));
+      }
+    }
+
+    void load();
+
+    return () => {
+      alive = false;
+    };
+  }, [api, query.depth, reloadToken, requestCompanyId, searchQuery]);
+
+  const graph = useMemo<GraphViewModel | null>(() => {
+    if (!rawGraph) {
+      return null;
+    }
+
+    const focusCompanyOption = state.companies.find((company) => company.id === rawGraph.company.item.id) ?? null;
+
+    return adaptGraphViewModel({
+      company: rawGraph.company,
+      overview: rawGraph.overview,
+      subgraph: rawGraph.subgraph,
+      query,
+      focusCompanyOption,
+    });
+  }, [queryKey, query, rawGraph, state.companies]);
+
+  useEffect(() => {
+    if (!graph) {
+      setRelationEvidenceById({});
+      return;
+    }
+
+    setRelationEvidenceById((current) => ({
+      ...Object.fromEntries(graph.relations.filter((relation) => relation.evidence.length > 0).map((relation) => [relation.id, relation.evidence])),
+      ...current,
+    }));
+  }, [graph]);
+
+  async function loadRelationEvidence(relation: GraphRelationViewModel | null) {
+    if (!relation) {
+      return [];
+    }
+
+    const existing = relationEvidenceById[relation.id];
+    if (existing) {
+      return existing;
+    }
+
+    const response = await api.getRelationEvidence(relation.id);
+    const evidence = adaptRelationEvidence(response, relation);
+    setRelationEvidenceById((current) => ({ ...current, [relation.id]: evidence }));
+    return evidence;
+  }
+
+  return {
+    ...state,
+    graph,
+    relationEvidenceById,
+    loadRelationEvidence,
+    reload: () => setReloadToken((current) => current + 1),
+  };
+}

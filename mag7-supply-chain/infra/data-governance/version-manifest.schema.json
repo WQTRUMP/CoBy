@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wanman.ai/schemas/mag7/data-version-manifest.schema.json",
+  "title": "Mag7 Data Version Manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "version",
+    "generated_at",
+    "generated_by",
+    "product",
+    "release",
+    "counts",
+    "gates",
+    "inputs",
+    "policies"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "mag7.data-version-manifest"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "product": {
+      "type": "object",
+      "required": [
+        "name",
+        "repository_root",
+        "governance_scope"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "governance_scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "required": [
+        "authoritative_snapshot",
+        "active_candidate_shell",
+        "authoritative_promotion_advanced",
+        "real_data_launch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "authoritative_snapshot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "active_candidate_shell": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authoritative_promotion_advanced": {
+          "type": "boolean"
+        },
+        "real_data_launch": {
+          "type": "object",
+          "required": [
+            "status",
+            "allowed_to_advance",
+            "blocking_gate",
+            "summary"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowed_to_advance": {
+              "type": "boolean"
+            },
+            "blocking_gate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "published",
+        "all_candidates",
+        "candidate_only"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "published": {
+          "$ref": "#/$defs/countPair"
+        },
+        "all_candidates": {
+          "$ref": "#/$defs/countPair"
+        },
+        "candidate_only": {
+          "$ref": "#/$defs/countPair"
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "required": [
+        "source_neo4j_positive_closure",
+        "candidate_shell_isolation",
+        "deployment_approval"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_neo4j_positive_closure": {
+          "$ref": "#/$defs/gate"
+        },
+        "candidate_shell_isolation": {
+          "$ref": "#/$defs/gate"
+        },
+        "deployment_approval": {
+          "$ref": "#/$defs/gate"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "formal_review",
+        "runtime_review",
+        "full_package_manifest",
+        "deployment_manifest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "formal_review": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_review": {
+          "type": "string",
+          "minLength": 1
+        },
+        "full_package_manifest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deployment_manifest": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "policies": {
+      "type": "object",
+      "required": [
+        "do_not_promote_candidate_shell",
+        "do_not_advance_real_data_launch_before_live_closure",
+        "historical_inputs_are_audit_only"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "do_not_promote_candidate_shell": {
+          "type": "string",
+          "minLength": 1
+        },
+        "do_not_advance_real_data_launch_before_live_closure": {
+          "type": "string",
+          "minLength": 1
+        },
+        "historical_inputs_are_audit_only": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "countPair": {
+      "type": "object",
+      "required": [
+        "relations",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "relations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": [
+        "status",
+        "required",
+        "summary"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

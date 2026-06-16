@@ -1,0 +1,64 @@
+{
+  "schema": "mag7.data-version-manifest",
+  "version": 1,
+  "generated_at": "2026-06-16T23:59:00Z",
+  "generated_by": "dev",
+  "product": {
+    "name": "mag7-supply-chain",
+    "repository_root": "/workspace/project/mag7-supply-chain",
+    "governance_scope": "formal_supply_chain_snapshot_and_release_gate"
+  },
+  "release": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "active_candidate_shell": "snapshot:2026-06-16.full.22-amazon-tail-candidate",
+    "authoritative_promotion_advanced": false,
+    "real_data_launch": {
+      "status": "awaiting_source_neo4j_positive_closure",
+      "allowed_to_advance": false,
+      "blocking_gate": "source_neo4j_positive_closure",
+      "summary": "full.22 Amazon 尾项并回只完成 top-level candidate shell 收敛；在拿到 source=neo4j 的 import-summary 与 HTTP 正向样本前，不得把 real_data_launch 前移到 ready_for_human_decision 或更高阶段。"
+    }
+  },
+  "counts": {
+    "published": {
+      "relations": 332,
+      "evidence": 444
+    },
+    "all_candidates": {
+      "relations": 334,
+      "evidence": 447
+    },
+    "candidate_only": {
+      "relations": 2,
+      "evidence": 3
+    }
+  },
+  "gates": {
+    "source_neo4j_positive_closure": {
+      "status": "required_not_yet_satisfied",
+      "required": true,
+      "summary": "必须在可达 Neo4j/Redis 的 live 环境中拿到 source=neo4j 的导入与 health/detail/overview/search/suggest/subgraph/path/stats/evidence 正向回读证据。"
+    },
+    "candidate_shell_isolation": {
+      "status": "enforced",
+      "required": true,
+      "summary": "active candidate shell 仅可表达 all-candidates=334/447 与 candidate-only=2/3 审计边界，禁止把 shell 边界写成 published 或 authoritative promotion。"
+    },
+    "deployment_approval": {
+      "status": "blocked_until_live_closure",
+      "required": true,
+      "summary": "在 source=neo4j 正向闭环补齐前，不得推动 Cloudflare 正式部署审批；即便后续解锁，审批范围也只能覆盖 published 332/444。"
+    }
+  },
+  "inputs": {
+    "formal_review": "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
+    "runtime_review": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
+    "full_package_manifest": "/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json",
+    "deployment_manifest": "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json"
+  },
+  "policies": {
+    "do_not_promote_candidate_shell": "authoritative snapshot 仍固定为 snapshot:2026-06-15.full.18；snapshot:2026-06-16.full.22-amazon-tail-candidate 只是 active candidate shell，不构成新的正式 promotion。",
+    "do_not_advance_real_data_launch_before_live_closure": "source=neo4j 正向闭环未完成前，不得把 real_data_launch 从 awaiting_source_neo4j_positive_closure 前移到 ready_for_human_decision、approved 或 launched。",
+    "historical_inputs_are_audit_only": "341/459、350/476、9/15、23/41 以及 historical full19/full20-wave5 live 证据只保留 audit-only 语义，不得回流成当前治理基线。"
+  }
+}

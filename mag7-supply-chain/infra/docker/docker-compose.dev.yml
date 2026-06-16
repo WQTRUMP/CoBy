@@ -1,0 +1,103 @@
+name: ${COMPOSE_PROJECT_NAME:-mag7-supply-chain-dev}
+
+services:
+  neo4j:
+    image: neo4j:5.26
+    container_name: mag7-neo4j
+    restart: unless-stopped
+    ports:
+      - "${NEO4J_HTTP_PORT:-7474}:7474"
+      - "${NEO4J_BOLT_PORT:-7687}:7687"
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-mag7-dev-password}
+      NEO4J_dbms_default__database: ${NEO4J_DATABASE:-neo4j}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 512m
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-plugins:/plugins
+      - ../../infra/neo4j:/docker-entrypoint-initdb.d/custom:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -u ${NEO4J_USERNAME:-neo4j} -p ${NEO4J_PASSWORD:-mag7-dev-password} -d system 'RETURN 1;' >/dev/null 2>&1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  neo4j-init:
+    image: neo4j:5.26
+    container_name: mag7-neo4j-init
+    restart: "no"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    environment:
+      NEO4J_USERNAME: ${NEO4J_USERNAME:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-mag7-dev-password}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:-neo4j}
+    volumes:
+      - ../../infra/neo4j:/cypher:ro
+    entrypoint: ["/bin/sh", "/cypher/apply.sh"]
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: mag7-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+      - ../../infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: mag7-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: mag7-minio-init
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET_RAW: ${MINIO_BUCKET_RAW:-mag7-raw}
+      MINIO_BUCKET_CURATED: ${MINIO_BUCKET_CURATED:-mag7-curated}
+      MINIO_BUCKET_EXPORTS: ${MINIO_BUCKET_EXPORTS:-mag7-exports}
+    volumes:
+      - ../../infra/minio/init.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+
+volumes:
+  neo4j-data:
+  neo4j-logs:
+  neo4j-plugins:
+  redis-data:
+  minio-data:

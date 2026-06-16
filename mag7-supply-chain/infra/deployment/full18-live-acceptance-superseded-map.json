@@ -1,0 +1,123 @@
+{
+  "schema": "wanman.superseded-document-map",
+  "version": 1,
+  "historical_package": "full18-live-acceptance-final",
+  "historical_package_status": "historical_audit_only",
+  "referenced_current_authoritative_release_entry": [
+    "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
+    "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
+    "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
+    "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md"
+  ],
+  "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+  "referenced_current_authoritative_release_counts": {
+    "published": {
+      "relations": 332,
+      "evidence": 444
+    },
+    "all_candidates": {
+      "relations": 334,
+      "evidence": 447
+    },
+    "candidate_only": {
+      "relations": 2,
+      "evidence": 3
+    }
+  },
+  "referenced_current_real_data_launch": "awaiting_source_neo4j_positive_closure",
+  "referenced_formal_post_audit_entry": "full22-top-level-tail-formal-review + full21-live-closure-formal-review-v2",
+  "replaces": [
+    {
+      "old_path": "infra/deployment/live-acceptance-runbook.md",
+      "old_scope": "full.17 自助运行包旧口径",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "同名入口已升级为 full.18 最终执行包"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance.env.example",
+      "old_scope": "full.17 默认 snapshot 与输出目录",
+      "new_path": "infra/deployment/live-acceptance.env.example",
+      "reason": "默认值已切换到当前 authoritative published=332/444；312/410 仅保留 historical_audit_only"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance-evidence-template.md",
+      "old_scope": "full.17 证据模板",
+      "new_path": "infra/deployment/live-acceptance-evidence-template.md",
+      "reason": "证据模板已升级为 full.18 最终链与禁止回退 mock 约束"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock-runbook.md",
+      "old_scope": "full.17 外部解阻塞手册",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "被 full.18 最终 provider-neutral runbook supersede，仅保留审计用途"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock-checklist.json",
+      "old_scope": "full.17 机器可读清单",
+      "new_path": "infra/deployment/full18-live-acceptance-final-checklist.json",
+      "reason": "最终执行清单已切换到 full.18 正式链与 Cloudflare 顺序"
+    },
+    {
+      "old_path": "infra/deployment/full17-live-unblock.env.template",
+      "old_scope": "full.17 外部 env 模板",
+      "new_path": "infra/deployment/live-acceptance.env.example",
+      "reason": "统一改用通用 live acceptance env 模板"
+    },
+    {
+      "old_path": "output/full18-launch-doc-refresh-v4/cloudflare-handoff-v4.md",
+      "old_scope": "Cloudflare 决策摘要",
+      "new_path": "infra/deployment/live-acceptance-runbook.md",
+      "reason": "其 Cloudflare/域名接入顺序已吸收进最终执行手册"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance-runbook.md",
+      "old_scope": "full.18 live 外部验收最终执行手册作为当前发布入口",
+      "new_path": "infra/deployment/deployment-manifest.json",
+      "reason": "当前 authoritative 入口已统一到 published=332/444、all-candidates=334/447、candidate-only=2/3，并以 full22 top-level tail formal review + full21 live closure 正式链共同锁定；341/459、9/15、327/435、350/476、312/410、328/439 只保留 historical_audit_only"
+    },
+    {
+      "old_path": "infra/deployment/live-acceptance.env.example",
+      "old_scope": "full.18 env 模板作为当前发布计数来源",
+      "new_path": "infra/deployment/products-candidate.json",
+      "reason": "模板内 EXPECTED_* 已对齐当前 authoritative 332/444 与 candidate shell 334/447；旧计数仅保留 historical_audit_only，不得再被 human/final-release-index 误读为当前正式计数"
+    },
+    {
+      "old_path": "infra/deployment/full18-live-acceptance-final-checklist.json",
+      "old_scope": "full.18 机器可读清单作为当前发布入口",
+      "new_path": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+      "reason": "当前正式入口已被 full21 live closure 正式链取代；full.18 检查清单只能保留审计用途"
+    }
+  ],
+  "historical_audit_only_release_references": [
+    {
+      "label": "superseded_full18_live_acceptance_package",
+      "published": {
+        "relations": 312,
+        "evidence": 410
+      },
+      "all_candidates": {
+        "relations": 328,
+        "evidence": 439
+      }
+    },
+    {
+      "label": "predecessor_post_audit_v3_release_entry",
+      "published": {
+        "relations": 327,
+        "evidence": 435
+      },
+      "all_candidates": {
+        "relations": 350,
+        "evidence": 476
+      }
+    }
+  ],
+  "historical_only": [
+    "770fdf5c-ede6-40bb-a6f8-17bc28d90448",
+    "1fcbf8ac-8a1e-434b-9ac5-60f86374f83c",
+    "c1be4b86-a800-4d45-977e-86ddca5fc378",
+    "69ab6247-3cc2-4c8a-b2b7-45294225be1b",
+    "e14b3746-88f1-4c2c-921c-0e88e63db23c"
+  ]
+}

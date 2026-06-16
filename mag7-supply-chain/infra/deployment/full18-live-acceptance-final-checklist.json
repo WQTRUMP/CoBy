@@ -1,0 +1,229 @@
+{
+  "schema": "wanman.live-acceptance-checklist",
+  "version": 1,
+  "status": "superseded_for_release_entry",
+  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口、current release 或 human 决策口径；当前正式口径已统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=334/447、candidate-only=2/3，且 real_data_launch 当前仍等待基于外部 Neo4j/Redis 的 source=neo4j 正向闭环。historical full19 live、341/459、9/15 与 ready_for_human_decision 只保留 historical/superseded/audit-only 语义。",
+  "superseded_by": [
+    "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
+    "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
+    "/workspace/agents/code-reviewer-6/output/full19-live-e2e-formal-review-v3/full19-live-e2e-formal-review-v3-report.md",
+    "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md"
+  ],
+  "referenced_current_authoritative_release": {
+    "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+    "formal_post_audit_entry": "full22-top-level-tail-formal-review + full21-live-closure-formal-review-v2",
+    "published": {
+      "relations": 332,
+      "evidence": 444
+    },
+    "all_candidates": {
+      "relations": 334,
+      "evidence": 447
+    },
+    "candidate_only": {
+      "relations": 2,
+      "evidence": 3
+    }
+  },
+  "historical_audit_only_release_references": [
+    {
+      "label": "superseded_full18_live_acceptance_package",
+      "published": {
+        "relations": 312,
+        "evidence": 410
+      },
+      "all_candidates": {
+        "relations": 328,
+        "evidence": 439
+      }
+    },
+    {
+      "label": "predecessor_post_audit_v3_release_entry",
+      "published": {
+        "relations": 327,
+        "evidence": 435
+      },
+      "all_candidates": {
+        "relations": 350,
+        "evidence": 476
+      },
+      "usage": "historical_audit_only"
+    }
+  ],
+  "package_name": "Mag7 full.18 live 外部验收最终执行包",
+  "authoritative_snapshot": "snapshot:2026-06-15.full.18",
+  "formal_chain": "7b0963ea -> fd7161a9 -> fb8bc7b2",
+  "final_authoritative_inputs": [
+    "/workspace/agents/api-tester-2/output/full18-root-promotion-refresh/",
+    "/workspace/agents/code-reviewer-6/output/full18-root-promotion-formal-review-v3/"
+  ],
+  "excluded_tasks": [
+    "770fdf5c-ede6-40bb-a6f8-17bc28d90448",
+    "1fcbf8ac-8a1e-434b-9ac5-60f86374f83c",
+    "c1be4b86-a800-4d45-977e-86ddca5fc378",
+    "69ab6247-3cc2-4c8a-b2b7-45294225be1b",
+    "e14b3746-88f1-4c2c-921c-0e88e63db23c"
+  ],
+  "readiness": {
+    "prototype": "conditional_go",
+    "real_data_launch": "awaiting_source_neo4j_positive_closure"
+  },
+  "published_counts": {
+    "relations": 332,
+    "evidence": 444
+  },
+  "all_candidates_counts": {
+    "relations": 334,
+    "evidence": 447
+  },
+  "candidate_only_counts": {
+    "relations": 2,
+    "evidence": 3
+  },
+  "historical_audit_only_counts": {
+    "superseded_full18_live_acceptance_package": {
+      "published": {
+        "relations": 312,
+        "evidence": 410
+      },
+      "all_candidates": {
+        "relations": 328,
+        "evidence": 439
+      }
+    },
+    "predecessor_post_audit_v3_release_entry": {
+      "published": {
+        "relations": 327,
+        "evidence": 435
+      },
+      "all_candidates": {
+        "relations": 350,
+        "evidence": 476
+      }
+    }
+  },
+  "minimum_prerequisites": [
+    "Node.js v22.22.3",
+    "npm",
+    "curl",
+    "jq",
+    "可达的 Neo4j 5.26 兼容实例",
+    "可达的 Redis 7.4 兼容实例",
+    "historical_audit_only：可临时托管 backend 的 Node 运行器只属于闭环通过后的可选部署/同源联调步骤，不是执行 source=neo4j 正向闭环的最小前置",
+    "historical_audit_only：Cloudflare zone 与域名决策只属于闭环通过后的可选部署步骤，不得继续视为执行 source=neo4j 正向闭环的必需项"
+  ],
+  "required_env": [
+    "GRAPH_RUNTIME_MODE=live",
+    "NEO4J_URI",
+    "NEO4J_USERNAME",
+    "NEO4J_PASSWORD",
+    "NEO4J_DATABASE",
+    "REDIS_URL"
+  ],
+  "optional_env": [
+    "PORT",
+    "HOST",
+    "API_BASE",
+    "CORS_ORIGIN",
+    "VITE_GRAPH_API_BASE_URL",
+    "EXPECTED_PACKAGE_SNAPSHOT=snapshot:2026-06-15.full.18",
+    "EXPECTED_RELATION_COUNT=332",
+    "EXPECTED_EVIDENCE_COUNT=444"
+  ],
+  "cloudflare_domain_sequence": [
+    {
+      "order": 1,
+      "step": "仅批准 Cloudflare 连接与域名规划，不做正式流量切换",
+      "gate": "prototype 可候选部署；real_data_launch 仍 blocked"
+    },
+    {
+      "order": 2,
+      "step": "先准备隔离的托管 Neo4j/Redis 与 backend 运行器，完成 provider-neutral live 验收",
+      "gate": "result.json.passed 必须为 true"
+    },
+    {
+      "order": 3,
+      "step": "验收通过后再接入 Cloudflare DNS、证书、同源 /api 代理或 api 子域",
+      "gate": "不得先接正式域名再补写库验收"
+    },
+    {
+      "order": 4,
+      "step": "若采用分域，前端补齐 VITE_GRAPH_API_BASE_URL，后端补齐 CORS_ORIGIN",
+      "gate": "HTTP smoke 需在最终域名或最终代理路径上复跑"
+    }
+  ],
+  "execution": [
+    {
+      "id": "preflight",
+      "command": "bash infra/deployment/live-acceptance-commands.sh --mode external --output-dir ${VALIDATION_OUTPUT_DIR:-/tmp/mag7-live-acceptance-full18}",
+      "success": [
+        "preflight.json.packageSnapshotId = snapshot:2026-06-15.full.18",
+        "preflight.json.packageCounts.relations = 332",
+        "preflight.json.packageCounts.evidence = 444"
+      ]
+    },
+    {
+      "id": "import",
+      "artifact": "import-summary.json",
+      "success": [
+        "source = neo4j",
+        "relationCount > 0",
+        "evidenceCount > 0",
+        "snapshotCount > 0"
+      ]
+    },
+    {
+      "id": "http_smoke",
+      "artifacts": [
+        "http/health.json",
+        "http/detail.json",
+        "http/overview.json",
+        "http/search.json",
+        "http/suggest.json",
+        "http/subgraph.json",
+        "http/path.json",
+        "http/stats.json",
+        "http/evidence.json"
+      ],
+      "success": [
+        "health.status = ok",
+        "runtimeMode = live",
+        "repositoryMode = neo4j",
+        "dependencies.neo4j.status = up",
+        "dependencies.redis.status = up",
+        "所有带 source 的业务响应都等于 neo4j"
+      ]
+    }
+  ],
+  "rollback_policy": {
+    "allowed_only_on_isolated_resources": true,
+    "required": [
+      "保留完整输出目录作为证据",
+      "停止临时 backend 进程",
+      "销毁或清理隔离 Neo4j 验收库",
+      "清理隔离 Redis 实例或独立 DB index",
+      "若已创建 Cloudflare 预备记录，仅在未切正式流量前回滚"
+    ],
+    "forbidden": [
+      "切回 prototype",
+      "切回 mock",
+      "把 degraded 或 503 当成通过",
+      "在共享生产图数据库上做首次验收"
+    ]
+  },
+  "post_approval_24h_plan": [
+    "0-2 小时：确认 Cloudflare zone、域名策略、托管 Neo4j/Redis/backend 运行器已就绪，但不切正式流量",
+    "2-6 小时：填充 env，执行 live-acceptance-commands.sh，收集 result/import/http 证据",
+    "6-12 小时：仅在 result.json.passed=true 后接入 Cloudflare DNS、证书、/api 代理或 api 子域，并在最终路由重跑 smoke",
+    "12-24 小时：复查 /api/v1/health、detail、search、path、evidence 样本；若 products.json 仍未正式接入，则继续维持 unknown:no_product_inventory"
+  ],
+  "formal_post_audit_entry": "v3",
+  "handoff_files": [
+    "infra/deployment/live-acceptance-runbook.md",
+    "infra/deployment/live-acceptance-commands.sh",
+    "infra/deployment/live-acceptance.env.example",
+    "infra/deployment/live-acceptance-evidence-template.md",
+    "infra/deployment/full18-live-acceptance-final-checklist.json",
+    "infra/deployment/full18-live-acceptance-superseded-map.json"
+  ]
+}
