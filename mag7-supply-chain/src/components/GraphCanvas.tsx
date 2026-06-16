@@ -1,5 +1,5 @@
 import { ArrowsOutSimple, Minus, Plus, X } from "@phosphor-icons/react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { GraphNodeViewModel, GraphRelationViewModel, GraphViewModel } from "../types/viewModels";
 import { getRelationshipTypeLabel } from "../utils/relationSemantics.js";
 
@@ -32,10 +32,20 @@ export function GraphCanvas(props: GraphCanvasProps) {
     zoom,
   } = props;
   const instructionsId = useId();
+  const keyboardPanelId = useId();
   const visibleNodes = graph.nodes.length;
   const visibleRelations = graph.relations.length;
   const expansionHint = graph.relations.find((relation) => relation.confidence === "strong_evidence") ?? graph.relations[0] ?? null;
   const [keyboardExplorerOpen, setKeyboardExplorerOpen] = useState(false);
+  const assistCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!keyboardExplorerOpen) {
+      return;
+    }
+
+    assistCloseButtonRef.current?.focus();
+  }, [keyboardExplorerOpen]);
 
   return (
     <section className="graphWorkspace">
@@ -55,6 +65,7 @@ export function GraphCanvas(props: GraphCanvasProps) {
 
         <div className="graphCanvasControls">
           <button
+            aria-controls={keyboardPanelId}
             aria-expanded={keyboardExplorerOpen}
             aria-label={keyboardExplorerOpen ? "关闭键盘探索面板" : "打开键盘探索面板"}
             className="graphControlButton graphControlLabel"
@@ -95,9 +106,6 @@ export function GraphCanvas(props: GraphCanvasProps) {
         <p className="srOnly" id={instructionsId}>
           使用图谱控制按钮或键盘探索面板进行探索。选择节点可刷新概览，选择关系可打开证据与审计信息。
         </p>
-        <div aria-hidden="true" className="legacyCompatibilityCopy">
-          group anchors, brand/legal naming, and facility operators
-        </div>
 
         <svg aria-hidden="true" focusable="false" viewBox="0 0 100 100">
           <defs>
@@ -176,13 +184,30 @@ export function GraphCanvas(props: GraphCanvasProps) {
         </div>
 
         {keyboardExplorerOpen ? (
-          <div className="graphExplorerAssist" role="dialog" aria-label="完整键盘探索面板">
+          <div
+            aria-label="完整键盘探索面板"
+            className="graphExplorerAssist"
+            id={keyboardPanelId}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setKeyboardExplorerOpen(false);
+              }
+            }}
+            role="dialog"
+          >
             <div className="graphExplorerAssistHeader">
               <div>
                 <strong>键盘探索路径</strong>
                 <span>完整暴露全部 {graph.nodes.length} 个节点与 {graph.relations.length} 条关系，不截断样本。</span>
               </div>
-              <button aria-label="关闭键盘探索面板" className="graphAssistClose" onClick={() => setKeyboardExplorerOpen(false)} type="button">
+              <button
+                aria-label="关闭键盘探索面板"
+                className="graphAssistClose"
+                onClick={() => setKeyboardExplorerOpen(false)}
+                ref={assistCloseButtonRef}
+                type="button"
+              >
                 <X size={16} />
               </button>
             </div>

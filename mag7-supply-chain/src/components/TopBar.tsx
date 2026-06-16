@@ -165,7 +165,7 @@ export function TopBar(props: TopBarProps) {
           <div className="focusLiveSummary">
             <strong>{activeCompany.displayName}</strong>
             <span>顶部搜索可直接定位公司、别名命中与设施节点，不依赖左侧列表。</span>
-            {graph.focusCompany.aliasHitExplanation ? <small>{graph.focusCompany.aliasHitExplanation}</small> : null}
+            {activeCompany.aliasHitExplanation ? <small>{activeCompany.aliasHitExplanation}</small> : null}
           </div>
           <div aria-hidden="true" className="legacyCompatibilityCopy">
             {activeCompany.displayName} live focus Search resolves canonical groups, brands, legal entities, and facility aliases
@@ -186,7 +186,7 @@ export function TopBar(props: TopBarProps) {
 
       {companies.length > 0 ? (
         <section className="topCompanyMatches" aria-label="顶部搜索匹配结果">
-          {companies.slice(0, 4).map((company) => (
+          {companies.slice(0, search ? 6 : 4).map((company) => (
             <button
               className={company.id === activeCompany.id ? "topCompanyMatch active" : "topCompanyMatch"}
               key={company.id}
