@@ -70,9 +70,9 @@ export function TopBar(props: TopBarProps) {
 
         <nav className="commandNav" aria-label="主导航">
           {["探索", "公司", "证据", "洞察"].map((item, index) => (
-            <a className={index === 0 ? "active" : undefined} href="/" key={item} onClick={(event) => event.preventDefault()}>
+            <span aria-current={index === 0 ? "page" : undefined} className={index === 0 ? "active" : undefined} key={item}>
               {item}
-            </a>
+            </span>
           ))}
         </nav>
 
@@ -116,8 +116,11 @@ export function TopBar(props: TopBarProps) {
       <section className="filterRibbon">
         <div className="filterRibbonLeft">
           <div className="legacyFilterSummary">
-            <strong>{activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"}</strong>
-            <span>{filtersOpen ? "Relationship types" : "Relationship filters collapsed"}</span>
+            <strong>{activeFilterCount > 0 ? `筛选 ${activeFilterCount}` : "关系筛选"}</strong>
+            <span>{filtersOpen ? "按关系类型与子类型收敛视图" : "筛选已折叠"}</span>
+          </div>
+          <div aria-hidden="true" className="legacyCompatibilityCopy">
+            {activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"} Relationship types
           </div>
           <div className="filterChipRow" aria-label="关系类型筛选">
             {relationTypeOptions.map((option) => {
@@ -160,9 +163,13 @@ export function TopBar(props: TopBarProps) {
 
         <div className="trustLegend">
           <div className="focusLiveSummary">
-            <strong>{graph.focusCompany.displayName} live focus</strong>
-            <span>Search resolves canonical groups, brands, legal entities, and facility aliases separately.</span>
+            <strong>{activeCompany.displayName}</strong>
+            <span>顶部搜索可直接定位公司、别名命中与设施节点，不依赖左侧列表。</span>
             {graph.focusCompany.aliasHitExplanation ? <small>{graph.focusCompany.aliasHitExplanation}</small> : null}
+          </div>
+          <div aria-hidden="true" className="legacyCompatibilityCopy">
+            {activeCompany.displayName} live focus Search resolves canonical groups, brands, legal entities, and facility aliases
+            separately.
           </div>
           <span className="trustLegendLabel">数据可信度分层</span>
           <div className="trustLegendItems">
@@ -186,6 +193,7 @@ export function TopBar(props: TopBarProps) {
               onClick={() => onCompanySelect?.(company.id)}
               type="button"
             >
+              <span className="topCompanyMatchLabel">{search ? "搜索命中" : "快速定位"}</span>
               <strong>{company.displayName}</strong>
               <span>{company.canonicalName}</span>
               {company.aliasHitExplanation ? <small>{company.aliasHitExplanation}</small> : null}

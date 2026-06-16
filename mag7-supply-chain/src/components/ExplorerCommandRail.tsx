@@ -6,13 +6,14 @@ interface ExplorerCommandRailProps {
   coveredRegions: number;
   focusCompany: CompanyProfileViewModel;
   onCompanySelect: (companyId: string) => void;
+  onSearchChange: (value: string) => void;
   search: string;
   searchResults: CompanyOptionViewModel[];
   tier1SupplierCount: number;
 }
 
 export function ExplorerCommandRail(props: ExplorerCommandRailProps) {
-  const { activeCompanyId, coveredRegions, focusCompany, onCompanySelect, search, searchResults, tier1SupplierCount } = props;
+  const { activeCompanyId, coveredRegions, focusCompany, onCompanySelect, onSearchChange, search, searchResults, tier1SupplierCount } = props;
 
   return (
     <aside className="commandRail">
@@ -44,7 +45,12 @@ export function ExplorerCommandRail(props: ExplorerCommandRailProps) {
       <section className="railPanel">
         <label className="railSearchField">
           <MagnifyingGlass size={16} />
-          <input readOnly value={search} aria-label="左侧搜索结果同步" placeholder="搜索公司或供应商" />
+          <input
+            aria-label="左侧搜索结果同步"
+            onChange={(event) => onSearchChange(event.target.value)}
+            value={search}
+            placeholder="搜索公司或供应商"
+          />
         </label>
       </section>
 
@@ -74,9 +80,7 @@ export function ExplorerCommandRail(props: ExplorerCommandRailProps) {
             );
           })}
         </div>
-        <button className="viewAllButton" type="button">
-          查看全部结果
-        </button>
+        <p className="viewAllHint">显示前 8 项；完整定位入口请使用顶部搜索结果条。</p>
       </section>
     </aside>
   );

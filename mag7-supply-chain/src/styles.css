@@ -78,6 +78,10 @@ a {
   border: 0;
 }
 
+.legacyCompatibilityCopy {
+  display: none;
+}
+
 .explorerPage {
   width: min(1560px, calc(100vw - 32px));
   margin: 0 auto;
@@ -231,7 +235,14 @@ a {
   font-size: 14px;
 }
 
-.commandNav a.active {
+.commandNav span {
+  padding-bottom: 8px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+}
+
+.commandNav span.active {
   color: var(--text-primary);
   border-color: var(--accent-cyan);
 }
@@ -250,10 +261,14 @@ a {
 .graphListButton,
 .searchResultRow,
 .tabButton,
-.closeSidebar,
-.inlineActionButton,
-.viewAllButton,
-.mobileTab {
+  .closeSidebar,
+  .inlineActionButton,
+  .viewAllButton,
+  .mobileSheetPeek,
+  .mobileSheetHandleButton,
+  .mobileSheetClose,
+  .graphAssistClose,
+  .mobileTab {
   border: 1px solid rgba(146, 170, 191, 0.18);
   transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
@@ -288,10 +303,12 @@ a {
 .depthChip,
 .commandFullscreenButton,
 .clearFiltersButton,
-.graphControlButton,
-.viewAllButton,
-.mobileTab,
-.inlineActionButton {
+  .graphControlButton,
+  .viewAllButton,
+  .mobileSheetPeek,
+  .mobileSheetClose,
+  .mobileTab,
+  .inlineActionButton {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
 }
@@ -538,6 +555,12 @@ a {
   color: var(--text-muted);
 }
 
+.topCompanyMatchLabel {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .topCompanyMatch.active {
   border-color: rgba(103, 232, 249, 0.38);
 }
@@ -644,7 +667,7 @@ a {
 }
 
 .railSearchField input {
-  cursor: default;
+  cursor: text;
 }
 
 .railSectionHeader {
@@ -703,11 +726,11 @@ a {
   color: var(--text-primary);
 }
 
-.viewAllButton {
-  width: 100%;
-  margin-top: 12px;
-  min-height: 44px;
-  border-radius: 14px;
+.viewAllHint {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .graphStage {
@@ -754,7 +777,7 @@ a {
 .graphCanvasControls,
 .graphExpansionHint,
 .miniMapCard,
-.graphKeyboardDock,
+.graphExplorerAssist,
 .focusBreadcrumb,
 .collapsedClusterBadge {
   position: absolute;
@@ -785,11 +808,19 @@ a {
 }
 
 .graphControlButton {
-  width: 40px;
-  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 10px;
   border-radius: 10px;
   display: grid;
   place-items: center;
+}
+
+.graphControlLabel {
+  width: auto;
+  justify-self: end;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .graphExpansionHint {
@@ -801,17 +832,6 @@ a {
   border: 1px solid rgba(146, 170, 191, 0.16);
   color: var(--text-secondary);
   font-size: 12px;
-}
-
-.graphLegendCopy {
-  position: absolute;
-  left: 16px;
-  top: 96px;
-  z-index: 2;
-  max-width: 340px;
-  color: rgba(168, 183, 200, 0.88);
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .graphViewport svg {
@@ -929,10 +949,46 @@ a {
   transform: translate(-50%, -50%);
 }
 
-.graphKeyboardDock {
+.graphExplorerAssist {
   left: 16px;
   right: 16px;
   bottom: 76px;
+  z-index: 4;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  background: rgba(6, 16, 25, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.graphExplorerAssistHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.graphExplorerAssistHeader strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.graphExplorerAssistHeader span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.graphAssistClose {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.graphExplorerAssistGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -957,12 +1013,14 @@ a {
 
 .graphKeyboardList {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  max-height: 228px;
+  overflow: auto;
 }
 
 .relationPanel .graphKeyboardList {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .graphListButton {
@@ -993,6 +1051,12 @@ a {
   color: var(--text-primary);
   font-size: 13px;
   text-align: center;
+}
+
+.systemStripBoard {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 18px 42px rgba(54, 79, 103, 0.1);
 }
 
 .evidenceSidebar {
@@ -1371,59 +1435,69 @@ a {
 
 .mobileEvidenceShell {
   display: none;
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  z-index: 6;
+  pointer-events: none;
 }
 
-.mobilePhoneFrame {
-  width: 290px;
-  margin-left: auto;
-  border-radius: 34px;
-  border: 5px solid rgba(12, 24, 36, 0.94);
-  background: linear-gradient(180deg, #09121b 0%, #07111b 100%);
-  color: var(--text-primary);
-  box-shadow: 0 24px 50px rgba(5, 12, 24, 0.24);
-  overflow: hidden;
+.mobileEvidenceShell.isOpen {
+  pointer-events: auto;
 }
 
-.mobilePhoneBar {
-  justify-content: space-between;
-  padding: 14px 16px 10px;
-  font-size: 12px;
+.mobileSheetPeek,
+.mobileBottomSheet,
+.mobileSheetSurface {
+  pointer-events: auto;
 }
 
-.mobileExplorerPreview {
-  padding: 0 14px 14px;
-}
-
-.mobileQuickChips {
-  margin-bottom: 12px;
-}
-
-.mobileQuickChips span {
-  padding: 6px 10px;
+.mobileSheetPeek {
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 12px;
+  box-shadow: 0 12px 30px rgba(3, 10, 18, 0.26);
 }
 
-.mobileMiniGraph {
-  min-height: 136px;
-  border-radius: 16px;
-  padding: 14px;
-  background:
-    radial-gradient(circle at 50% 46%, rgba(255, 107, 87, 0.24), transparent 22%),
-    radial-gradient(circle at 28% 24%, rgba(103, 232, 249, 0.22), transparent 18%),
-    rgba(255, 255, 255, 0.03);
-  display: grid;
-  align-content: end;
-  gap: 4px;
+.mobileSheetPeek.isHidden {
+  display: none;
 }
 
 .mobileBottomSheet {
-  min-height: 286px;
-  padding: 10px 14px 14px;
+  transform: translateY(calc(100% - 84px));
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
   background: rgba(10, 20, 31, 0.98);
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  box-shadow: 0 -18px 40px rgba(4, 9, 18, 0.34);
+}
+
+.mobileEvidenceShell.isOpen .mobileBottomSheet {
+  transform: translateY(0);
+}
+
+.mobileBottomSheet.isExpanded {
+  transform: translateY(-108px);
+}
+
+.mobileSheetControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 0;
+}
+
+.mobileSheetHandleButton,
+.mobileSheetClose {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+}
+
+.mobileSheetHandleButton {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
 }
 
 .mobileSheetHandle {
@@ -1431,7 +1505,14 @@ a {
   height: 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
-  margin: 0 auto 10px;
+  display: block;
+  margin: 0 auto;
+}
+
+.mobileSheetSurface {
+  padding: 10px 14px 14px;
+  max-height: min(72vh, 560px);
+  overflow: auto;
 }
 
 .mobileSheetHeader {
@@ -1529,7 +1610,7 @@ a {
     grid-template-columns: 228px minmax(0, 1fr);
   }
 
-  .graphKeyboardDock {
+  .graphExplorerAssistGrid {
     grid-template-columns: 1fr;
   }
 
@@ -1571,7 +1652,7 @@ a {
     height: calc(100% - 114px);
   }
 
-  .graphKeyboardDock {
+  .graphExplorerAssist {
     left: 12px;
     right: 12px;
     bottom: 68px;
@@ -1612,8 +1693,7 @@ a {
 
   .graphStatsCluster,
   .miniMapCard,
-  .collapsedClusterBadge,
-  .graphKeyboardDock {
+  .collapsedClusterBadge {
     display: none;
   }
 
@@ -1635,5 +1715,13 @@ a {
 
   .systemStrip {
     grid-template-columns: 1fr;
+  }
+
+  .mobileEvidenceShell {
+    inset: auto 8px 8px 8px;
+  }
+
+  .mobileBottomSheet.isExpanded {
+    transform: translateY(-48px);
   }
 }

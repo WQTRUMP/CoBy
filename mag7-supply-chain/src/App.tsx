@@ -18,6 +18,7 @@ export function App() {
   const [zoom, setZoom] = useState(1);
   const [activeTab, setActiveTab] = useState<"overview" | "evidence" | "financials">("evidence");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSheetExpanded, setMobileSheetExpanded] = useState(false);
   const [relationshipTypes, setRelationshipTypes] = useState<GraphRelationViewModel["relationshipType"][]>([]);
   const [relationshipSubtype, setRelationshipSubtype] = useState<string | null>(null);
   const [isExplorerFullscreen, setIsExplorerFullscreen] = useState(false);
@@ -148,6 +149,7 @@ export function App() {
       setActiveRelationId(null);
       setActiveTab("evidence");
       setSidebarOpen(true);
+      setMobileSheetExpanded(false);
       setZoom(1);
     });
   }
@@ -159,6 +161,7 @@ export function App() {
     setActiveRelationId(relation?.id ?? null);
     setActiveTab(relation ? "evidence" : "overview");
     setSidebarOpen(true);
+    setMobileSheetExpanded(false);
   }
 
   function handleRelationSelect(relation: GraphRelationViewModel) {
@@ -167,6 +170,7 @@ export function App() {
     setActiveNodeId(relation.targetId);
     setActiveTab("evidence");
     setSidebarOpen(true);
+    setMobileSheetExpanded(true);
   }
 
   function handleRelationshipTypeToggle(value: GraphRelationViewModel["relationshipType"]) {
@@ -180,7 +184,13 @@ export function App() {
 
   function handleSidebarClose() {
     setSidebarOpen(false);
+    setMobileSheetExpanded(false);
     lastTriggerRef.current?.focus();
+  }
+
+  function handleSidebarOpen() {
+    captureFocusTrigger();
+    setSidebarOpen(true);
   }
 
   function handleRetry() {
@@ -252,28 +262,28 @@ export function App() {
           <span className="annotationIndex">1</span>
           <div>
             <strong>节点展开 / 收缩</strong>
-            <p>点击图谱节点或关系入口，保持图谱为主视图并在右侧刷新证据层。</p>
+            <p>节点、关系与证据保持在同一探索器里联动，不让辅助面板打断主舞台。</p>
           </div>
         </article>
         <article className="annotationCard">
           <span className="annotationIndex">2</span>
           <div>
             <strong>搜索定位</strong>
-            <p>顶部搜索与左侧结果联动，选择公司后重置焦点、层级与证据上下文。</p>
+            <p>顶部搜索直接显示结果并完成定位，桌面与移动端都不依赖隐藏侧栏。</p>
           </div>
         </article>
         <article className="annotationCard">
           <span className="annotationIndex">3</span>
           <div>
             <strong>证据审计侧栏</strong>
-            <p>桌面端以覆盖层滑入，不挤压图谱；移动端降级为底部证据抽屉。</p>
+            <p>桌面端以覆盖层滑入；移动端收敛为同一图谱里的真实 bottom sheet。</p>
           </div>
         </article>
         <article className="annotationCard">
           <span className="annotationIndex">4</span>
           <div>
-            <strong>响应式证据流</strong>
-            <p>保留概览 / 证据 / 财务三标签与审计信息区，确保一套数据契约多端复用。</p>
+            <strong>键盘等效路径</strong>
+            <p>提供完整节点与关系清单，键盘用户可不依赖鼠标完成选择、查看与返回。</p>
           </div>
         </article>
       </section>
@@ -289,14 +299,17 @@ export function App() {
           onFullscreenToggle={() => {
             void handleFullscreenToggle();
           }}
+          onCompanySelect={handleCompanySelect}
           onRelationshipSubtypeChange={setRelationshipSubtype}
           onRelationshipTypeToggle={handleRelationshipTypeToggle}
           onSearchChange={setSearch}
+          companies={explorer.companies}
           relationshipSubtype={relationshipSubtype}
           relationshipSubtypeOptions={graph.relationshipSubtypeOptions}
           relationshipTypes={relationshipTypes}
           relationTypeOptions={graph.relationTypeOptions}
           search={search}
+          selectedCompanyId={selectedCompanyOption.id}
         />
 
         <div className="explorerWorkspace">
@@ -305,6 +318,7 @@ export function App() {
             coveredRegions={visibleRegions}
             focusCompany={graph.focusCompany}
             onCompanySelect={handleCompanySelect}
+            onSearchChange={setSearch}
             search={search}
             searchResults={explorer.companies}
             tier1SupplierCount={graph.focusCompany.overview.tier1SupplierCount}
@@ -346,24 +360,32 @@ export function App() {
                 relations={graph.relations}
               />
             ) : null}
+
+            <MobileEvidenceSheet
+              activeNode={activeNode}
+              activeRelation={activeRelation}
+              activeTab={activeTab}
+              company={graph.focusCompany}
+              depth={depth}
+              evidence={activeEvidence}
+              evidenceError={evidenceError}
+              evidenceLoading={evidenceLoading}
+              evidenceSummary={graph.evidenceOverview}
+              isExpanded={mobileSheetExpanded}
+              isOpen={sidebarOpen}
+              onClose={handleSidebarClose}
+              onExpandToggle={() => setMobileSheetExpanded((current) => !current)}
+              onOpen={handleSidebarOpen}
+              onRetryEvidence={handleRetryEvidence}
+              onTabChange={setActiveTab}
+            />
           </div>
         </div>
-
-        <StatusStrip graph={graph} />
       </section>
 
-      <MobileEvidenceSheet
-        activeRelation={activeRelation}
-        activeTab={activeTab}
-        company={graph.focusCompany}
-        depth={depth}
-        evidence={activeEvidence}
-        evidenceError={evidenceError}
-        evidenceLoading={evidenceLoading}
-        evidenceSummary={graph.evidenceOverview}
-        onRetryEvidence={handleRetryEvidence}
-        onTabChange={setActiveTab}
-      />
+      <div className="systemStripBoard">
+        <StatusStrip graph={graph} />
+      </div>
 
       {explorer.loading ? (
         <div className="loadingToast" role="status" aria-live="polite">

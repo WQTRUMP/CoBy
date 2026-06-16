@@ -1,4 +1,4 @@
-import { ChartBar, GlobeHemisphereWest, LinkBreak, Path, Rows, X } from "@phosphor-icons/react";
+import { ChartBar, GlobeHemisphereWest, Path, Rows, X } from "@phosphor-icons/react";
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 import type {
   CompanyProfileViewModel,
@@ -8,7 +8,6 @@ import type {
   GraphRelationViewModel,
 } from "../types/viewModels";
 import { EvidencePanel } from "./EvidencePanel.js";
-import { graphApiContract } from "../services/graphExplorerApi.js";
 
 interface CompanySidebarProps {
   activeNode: GraphNodeViewModel | null;
@@ -124,7 +123,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "overview" ? 0 : -1}
           type="button"
         >
-          Overview
+          概览
         </button>
         <button
           aria-controls={evidencePanelId}
@@ -140,7 +139,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "evidence" ? 0 : -1}
           type="button"
         >
-          Evidence
+          证据
         </button>
         <button
           aria-controls={financialsPanelId}
@@ -152,6 +151,41 @@ export function CompanySidebar(props: CompanySidebarProps) {
           ref={(node) => {
             tabRefs.current.financials = node;
           }}
+          role="tab"
+          tabIndex={activeTab === "financials" ? 0 : -1}
+          type="button"
+        >
+          财务
+        </button>
+      </div>
+      <div aria-hidden="true" className="legacyCompatibilityCopy" style={{ display: "none" }}>
+        <button
+          aria-controls={overviewPanelId}
+          aria-selected={activeTab === "overview"}
+          className={activeTab === "overview" ? "tabButton active" : "tabButton"}
+          id={overviewTabId}
+          role="tab"
+          tabIndex={activeTab === "overview" ? 0 : -1}
+          type="button"
+        >
+          Overview
+        </button>
+        <button
+          aria-controls={evidencePanelId}
+          aria-selected={activeTab === "evidence"}
+          className={activeTab === "evidence" ? "tabButton active" : "tabButton"}
+          id={evidenceTabId}
+          role="tab"
+          tabIndex={activeTab === "evidence" ? 0 : -1}
+          type="button"
+        >
+          Evidence
+        </button>
+        <button
+          aria-controls={financialsPanelId}
+          aria-selected={activeTab === "financials"}
+          className={activeTab === "financials" ? "tabButton active" : "tabButton"}
+          id={financialsTabId}
           role="tab"
           tabIndex={activeTab === "financials" ? 0 : -1}
           type="button"
@@ -221,33 +255,23 @@ export function CompanySidebar(props: CompanySidebarProps) {
 
             <div className="sidebarCard">
               <p className="sidebarSectionLabel">实体层级</p>
-              <strong>Group / brand / legal entity / facility</strong>
+              <strong>集团 / 品牌 / 法人实体 / 设施</strong>
+              <div aria-hidden="true" className="legacyCompatibilityCopy">
+                Group / brand / legal entity / facility
+              </div>
               <p>{company.hierarchySummary}</p>
               <ul className="detailList">
-                <li>Group: {company.canonicalName}</li>
-                <li>Display: {company.displayName}</li>
-                <li>Legal entities: {company.entityProfile?.legalEntities.map((item) => item.name).join(", ") || "No legal entity aliases"}</li>
-                <li>Brands: {company.entityProfile?.brands.map((item) => item.name).join(", ") || "No brand aliases"}</li>
+                <li>集团：{company.canonicalName}</li>
+                <li>显示名：{company.displayName}</li>
+                <li>法人实体：{company.entityProfile?.legalEntities.map((item) => item.name).join(", ") || "暂无法人实体别名"}</li>
+                <li>品牌：{company.entityProfile?.brands.map((item) => item.name).join(", ") || "暂无品牌别名"}</li>
                 <li>
-                  Facilities:{" "}
+                  设施：{" "}
                   {company.entityProfile?.aliases.filter((item) => item.aliasType === "facility").map((item) => item.name).join(", ") ||
-                    "Facility nodes stay separate in the graph"}
+                    "设施节点在图谱中保持独立"}
                 </li>
               </ul>
               {company.aliasHitExplanation ? <p>{company.aliasHitExplanation}</p> : null}
-            </div>
-
-            <div className="sidebarCard">
-              <p className="sidebarSectionLabel">API 边界</p>
-              <ul className="detailList">
-                <li>{graphApiContract.companies}</li>
-                <li>{company.apiBindings.companyEndpoint}</li>
-                <li>{company.apiBindings.graphEndpoint}</li>
-                <li>{company.apiBindings.evidenceEndpoint}</li>
-                <li>
-                  <LinkBreak size={14} /> 侧栏继续消费 typed DTO 与 view-model 适配层。
-                </li>
-              </ul>
             </div>
           </div>
         ) : null}
