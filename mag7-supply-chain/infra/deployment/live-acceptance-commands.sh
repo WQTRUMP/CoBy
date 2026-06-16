@@ -202,8 +202,7 @@ write_minimal_prerequisites() {
         "Node.js v22.22.3 + npm + curl + jq",
         "可达的 Neo4j 5.26 兼容实例",
         "可达的 Redis 7.4 兼容实例",
-        "若需要对外 smoke 或同源 `/api` 联调，准备一个可临时托管 Node API 的运行器和待接入的 Cloudflare Zone",
-        "live 模式环境变量：NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL",
+        "live 模式环境变量：GRAPH_RUNTIME_MODE=live、NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL",
         "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、published=332/444 与 candidate shell=3/4 隔离同时成立"
       ],
       external_env_template: {

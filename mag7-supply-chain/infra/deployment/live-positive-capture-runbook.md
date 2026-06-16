@@ -73,6 +73,8 @@ bash infra/deployment/live-positive-capture.sh \
 3. `GRAPH_RUNTIME_MODE`、`NEO4J_URI`、`NEO4J_USERNAME`、`NEO4J_PASSWORD`、`NEO4J_DATABASE`、`REDIS_URL` 是否已注入
 4. 可选变量 `VITE_GRAPH_API_BASE_URL`、`CORS_ORIGIN`、`API_BASE`、`HOST`、`PORT` 是否已注入
 
+这里的最小外部前置只包括 `Node.js v22.22.3 + npm + curl + jq`、可达的 Neo4j `5.26`、可达的 Redis `7.4`，以及 `GRAPH_RUNTIME_MODE=live / NEO4J_* / REDIS_URL`。Cloudflare、域名、同源 `/api` 代理或对外临时托管 Node API 运行器都不是本次闭环必需项。
+
 预检明确禁止：
 
 1. 把 provider secret 明文写入 JSON、日志、报告

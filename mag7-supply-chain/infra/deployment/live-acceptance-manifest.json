@@ -59,7 +59,9 @@
       "NEO4J_USERNAME",
       "NEO4J_PASSWORD",
       "NEO4J_DATABASE",
-      "REDIS_URL",
+      "REDIS_URL"
+    ],
+    "optional_env": [
       "HOST",
       "PORT",
       "API_BASE"
@@ -103,7 +105,7 @@
   "rollback_rules": [
     "停止 backend 进程并保留 output 目录",
     "清理隔离的 Neo4j database 与 Redis keyspace",
-    "若已创建临时 Cloudflare 或反向代理预备记录，先撤回预备记录",
+    "若你在闭环通过后额外做过可选的 Cloudflare、域名或反向代理预备记录，先撤回这些可选预备记录",
     "不得把 candidate shell 误写成 published，也不得把失败回退写成 prototype/mock 成功"
   ]
 }

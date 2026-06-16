@@ -34,10 +34,11 @@
 1. `Node.js v22.22.3`、`npm`、`curl`、`jq`
 2. 可达的 Neo4j `5.26` 兼容实例
 3. 可达的 Redis `7.4` 兼容实例
-4. 一个可临时托管 backend 的 Node 运行器
+4. `GRAPH_RUNTIME_MODE=live`、`NEO4J_*`、`REDIS_URL` 这组 live 环境变量
 5. `/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json`
 
-如果凭据、白名单、TLS、账单、临时主机或域名由 human/控制面掌管，先由 human 完成准备。代理不得直接保存或传播这些明文凭据。
+Cloudflare、域名、同源 `/api` 代理或对外临时托管 Node API 运行器都不是本次 `source=neo4j` 正向闭环的必需前置；它们只能作为闭环通过后的部署或同源联调可选后续步骤。
+如果凭据、白名单或 TLS 参数由 human/控制面掌管，先由 human 完成准备。代理不得直接保存或传播这些明文凭据。
 
 ## 4. 外部凭据注入规则
 
@@ -180,7 +181,7 @@ npm --prefix backend run import:full-package:live -- \
 2. 保留整个 `output-dir`
 3. 清理隔离的 Neo4j database
 4. 清理隔离的 Redis keyspace
-5. 如果已创建临时域名或 Cloudflare 预备记录，撤回预备记录
+5. 如果你在闭环通过后额外做过可选的同源代理、临时域名或 Cloudflare 预备记录，撤回这些可选预备记录
 6. 不得把失败结论写成“切回 prototype/mock 即恢复”
 
 ## 10. 交付物

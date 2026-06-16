@@ -24,12 +24,12 @@
 - npm 版本：
 - curl 版本：
 - jq 版本：
-- Docker/Compose 版本：
+- Docker/Compose 版本（仅在走 `docker` 模式时填写）：
 - package shell snapshot：
-- Cloudflare/域名阶段：
-  - `未接入`
-  - `仅预备记录`
-  - `已接入最终路由`
+- 可选部署后续动作（非本次正向闭环前置）：
+  - `未涉及`
+  - `闭环通过后计划接入 Cloudflare/域名`
+  - `闭环通过后已做同源联调或域名 smoke`
 
 ## 3. 执行命令
 
@@ -181,12 +181,12 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 - candidate shell relation 只在显式 candidate snapshot 或 direct relation evidence 校验中出现
 - 未把 `335/448` 或 `3/4` 写成 published
 
-## 9. Cloudflare / 域名状态
+## 9. 可选的 Cloudflare / 域名后续状态
 
-- 使用同源 `/api` 代理，还是 `api.<domain>` 分域：
-- 若已切 Cloudflare 路由，切换时间：
-- 最终域名 smoke 是否复跑：
-- 若未复跑，原因：
+- 本次是否完全不依赖 Cloudflare/域名即可完成 `source=neo4j` 闭环：
+- 若闭环通过后额外做了同源 `/api` 代理或 `api.<domain>` 分域联调，请记录方式：
+- 若闭环通过后额外复跑了最终域名 smoke，请记录时间：
+- 若未做这些可选后续动作，直接写“未涉及”：
 
 ## 10. 失败时必交文件
 
@@ -205,6 +205,6 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 - `result.json.passed`：
 - 是否满足 `source=neo4j` 正向闭环门槛：
 - 若未通过，唯一阻塞原因：
-- 是否已接入 Cloudflare 最终路由：
+- 是否存在闭环通过后的可选 Cloudflare/域名后续动作：
 - `/opt/wanman/products.json` 状态（为空数组时只能写 `unknown:no_product_inventory`）：
 - 下一步动作：
