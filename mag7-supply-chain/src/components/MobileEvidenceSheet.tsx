@@ -51,6 +51,9 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
     triggerRef,
   } = props;
   const titleId = useId();
+  const overviewTabId = useId();
+  const evidenceTabId = useId();
+  const financialsTabId = useId();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const panelTabOrder = ["overview", "evidence", "financials"] as const;
 
@@ -144,6 +147,7 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
               aria-controls="mobile-panel-overview"
               aria-selected={activeTab === "overview"}
               className={activeTab === "overview" ? "mobileTab active" : "mobileTab"}
+              id={overviewTabId}
               onClick={() => onTabChange("overview")}
               onKeyDown={(event) => handleTabKeyDown(event, "overview")}
               role="tab"
@@ -156,6 +160,7 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
               aria-controls="mobile-panel-evidence"
               aria-selected={activeTab === "evidence"}
               className={activeTab === "evidence" ? "mobileTab active" : "mobileTab"}
+              id={evidenceTabId}
               onClick={() => onTabChange("evidence")}
               onKeyDown={(event) => handleTabKeyDown(event, "evidence")}
               role="tab"
@@ -168,6 +173,7 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
               aria-controls="mobile-panel-financials"
               aria-selected={activeTab === "financials"}
               className={activeTab === "financials" ? "mobileTab active" : "mobileTab"}
+              id={financialsTabId}
               onClick={() => onTabChange("financials")}
               onKeyDown={(event) => handleTabKeyDown(event, "financials")}
               role="tab"
@@ -186,7 +192,7 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
 
           <div className="mobileEvidenceBody">
             {activeTab === "evidence" ? (
-              <div aria-labelledby={titleId} id="mobile-panel-evidence" role="tabpanel">
+              <div aria-labelledby={evidenceTabId} id="mobile-panel-evidence" role="tabpanel">
                 <EvidencePanel
                   evidence={evidence}
                   error={evidenceError}
@@ -197,7 +203,7 @@ export function MobileEvidenceSheet(props: MobileEvidenceSheetProps) {
               </div>
             ) : (
               <article
-                aria-labelledby={titleId}
+                aria-labelledby={activeTab === "overview" ? overviewTabId : financialsTabId}
                 className="mobileSummaryCard"
                 id={activeTab === "overview" ? "mobile-panel-overview" : "mobile-panel-financials"}
                 role="tabpanel"

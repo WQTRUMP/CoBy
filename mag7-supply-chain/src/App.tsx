@@ -83,6 +83,11 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    setMobileSheetExpanded(false);
+    setSidebarOpen((current) => (isMobileViewport ? false : current || true));
+  }, [isMobileViewport]);
+
+  useEffect(() => {
     let alive = true;
 
     async function hydrateRelationEvidence() {

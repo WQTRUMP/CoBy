@@ -106,6 +106,9 @@ export function GraphCanvas(props: GraphCanvasProps) {
         <p className="srOnly" id={instructionsId}>
           使用图谱控制按钮或键盘探索面板进行探索。选择节点可刷新概览，选择关系可打开证据与审计信息。
         </p>
+        <div aria-hidden="true" className="legacyCompatibilityCopy">
+          group anchors, brand/legal naming, and facility operators
+        </div>
 
         <svg aria-hidden="true" focusable="false" viewBox="0 0 100 100">
           <defs>
