@@ -11,7 +11,7 @@ usage() {
   bash infra/deployment/live-positive-capture.sh [--mode auto|docker|external] [--env-file <path>] [--output-dir <dir>] [--keep-services]
 
 说明：
-  - 这是 full.21 source=neo4j 正向闭环的中文预检/取证入口。
+  - 这是 full22 source=neo4j 正向闭环的中文预检/取证入口。
   - 它会先生成不含密钥明文的环境预检摘要，再调用底层 live-acceptance-commands.sh。
   - 无论成功或失败，都会在输出目录落盘中文摘要、结构化索引、底层 result/import/http/log 证据。
   - authoritative snapshot 固定为 snapshot:2026-06-15.full.18。
@@ -368,7 +368,7 @@ if [[ "$RESULT_PASSED" = "true" ]]; then
 fi
 
 cat >"$ENTRY_REPORT_MD" <<EOF
-# Mag7 full.21 正向闭环预检/取证摘要
+# Mag7 full22 正向闭环预检/取证摘要
 
 ## 1. 结论
 

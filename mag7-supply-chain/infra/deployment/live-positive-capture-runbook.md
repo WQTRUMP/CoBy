@@ -1,4 +1,4 @@
-# Mag7 full.21 正向闭环中文预检/取证入口
+# Mag7 full22 正向闭环中文预检/取证入口
 
 > 推荐入口：[`live-positive-capture.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-positive-capture.sh)
 >
@@ -15,7 +15,7 @@
 `live-positive-capture.sh` 只做四件事：
 
 1. 先落盘不含密钥明文的环境变量预检摘要
-2. 调用现有 full.21 live 执行包完成真实导入与 HTTP 样本采集
+2. 调用现有 full22 live 执行包完成真实导入与 HTTP 样本采集
 3. 无论成功失败，都输出中文摘要、结构化索引与日志文件
 4. 保证 candidate shell 仍只写 `334/447`、`2/3`，绝不误写成 published
 
@@ -119,13 +119,17 @@ bash infra/deployment/live-positive-capture.sh \
 1. `result.json.passed = true`
 2. `import-summary.json.source = "neo4j"`
 3. `import-summary.json.liveImport.authoritativeSnapshotId = "snapshot:2026-06-15.full.18"`
-4. `import-summary.json.liveImport.expectedRelationCount = 335`
-5. `import-summary.json.liveImport.expectedEvidenceCount = 448`
-6. `import-summary.json.liveImport.candidateOnlyRelationCount = 3`
-7. `import-summary.json.liveImport.candidateOnlyEvidenceCount = 4`
-8. `health/detail/overview/search/suggest/subgraph/path/stats/evidence` 全部采集成功，且业务样本都来自 `source=neo4j`
-9. published `subgraph/path` 不得混入 candidate-only relation
-10. candidate shell relation 只能在显式 candidate snapshot 或 direct relation evidence 中出现
+4. 默认 `all-candidates` 模式下必须同时满足：
+   - `import-summary.json.liveImport.expectedRelationCount = 334`
+   - `import-summary.json.liveImport.expectedEvidenceCount = 447`
+   - `import-summary.json.liveImport.candidateOnlyRelationCount = 2`
+   - `import-summary.json.liveImport.candidateOnlyEvidenceCount = 3`
+5. 若显式切到 `published` 模式，则只允许：
+   - `import-summary.json.liveImport.expectedRelationCount = 332`
+   - `import-summary.json.liveImport.expectedEvidenceCount = 444`
+6. `health/detail/overview/search/suggest/subgraph/path/stats/evidence` 全部采集成功，且业务样本都来自 `source=neo4j`
+7. published `subgraph/path` 不得混入 candidate-only relation
+8. candidate shell relation 只能在显式 candidate snapshot 或 direct relation evidence 中出现
 
 ## 6. 失败回退
 

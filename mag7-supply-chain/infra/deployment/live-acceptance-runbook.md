@@ -1,4 +1,4 @@
-# Mag7 full.21 live 验收执行手册
+# Mag7 full22 live 验收执行手册
 
 > 推荐先走 [`live-positive-capture.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-positive-capture.sh) 与 [`live-positive-capture-runbook.md`](/workspace/project/mag7-supply-chain/infra/deployment/live-positive-capture-runbook.md)。
 > 本文档保留为底层执行器 [`live-acceptance-commands.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-commands.sh) 的详细说明。
@@ -136,10 +136,14 @@ npm --prefix backend run import:full-package:live -- \
 2. `import-summary.json`
    - `source = "neo4j"`
    - `liveImport.authoritativeSnapshotId = "snapshot:2026-06-15.full.18"`
-   - `liveImport.expectedRelationCount = 335`
-   - `liveImport.expectedEvidenceCount = 448`
-   - `liveImport.candidateOnlyRelationCount = 3`
-   - `liveImport.candidateOnlyEvidenceCount = 4`
+   - `liveImport.mode = "all-candidates"`，且：
+     - `liveImport.expectedRelationCount = 334`
+     - `liveImport.expectedEvidenceCount = 447`
+     - `liveImport.candidateOnlyRelationCount = 2`
+     - `liveImport.candidateOnlyEvidenceCount = 3`
+   - 若显式改为 `published` 模式，则只允许：
+     - `liveImport.expectedRelationCount = 332`
+     - `liveImport.expectedEvidenceCount = 444`
 3. `http/health.json`
    - `status = "ok"`
    - `runtimeMode = "live"`
