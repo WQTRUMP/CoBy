@@ -2,7 +2,7 @@
   "schema": "wanman.live-acceptance-checklist",
   "version": 1,
   "status": "superseded_for_release_entry",
-  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口、current release 或 human 决策口径；当前正式口径已统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=335/448、candidate-only=3/4，且 real_data_launch 当前仍等待基于外部 Neo4j/Redis 的 source=neo4j 正向闭环。historical full19 live、341/459、9/15 与 ready_for_human_decision 只保留 historical/superseded/audit-only 语义。",
+  "usage_note": "本清单仅保留 full.18 live 外部验收审计用途，不再代表当前最终发布入口、current release 或 human 决策口径；当前正式口径已统一为 snapshot:2026-06-15.full.18、published=332/444、all-candidates=334/447、candidate-only=2/3，且 real_data_launch 当前仍等待基于外部 Neo4j/Redis 的 source=neo4j 正向闭环。historical full19 live、341/459、9/15 与 ready_for_human_decision 只保留 historical/superseded/audit-only 语义。",
   "superseded_by": [
     "/workspace/project/mag7-supply-chain/infra/deployment/deployment-manifest.json",
     "/workspace/project/mag7-supply-chain/infra/deployment/products-candidate.json",
@@ -11,18 +11,18 @@
   ],
   "referenced_current_authoritative_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "formal_post_audit_entry": "full21-live-closure-formal-review-v2",
+    "formal_post_audit_entry": "full22-top-level-tail-formal-review + full21-live-closure-formal-review-v2",
     "published": {
       "relations": 332,
       "evidence": 444
     },
     "all_candidates": {
-      "relations": 335,
-      "evidence": 448
+      "relations": 334,
+      "evidence": 447
     },
     "candidate_only": {
-      "relations": 3,
-      "evidence": 4
+      "relations": 2,
+      "evidence": 3
     }
   },
   "historical_audit_only_release_references": [
@@ -73,12 +73,12 @@
     "evidence": 444
   },
   "all_candidates_counts": {
-    "relations": 335,
-    "evidence": 448
+    "relations": 334,
+    "evidence": 447
   },
   "candidate_only_counts": {
-    "relations": 3,
-    "evidence": 4
+    "relations": 2,
+    "evidence": 3
   },
   "historical_audit_only_counts": {
     "superseded_full18_live_acceptance_package": {
