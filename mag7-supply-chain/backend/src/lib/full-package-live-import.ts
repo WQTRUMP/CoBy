@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 
+import { loadVersionManifestFromLegacyRootManifest } from "./version-manifest.js";
+
 export type FullPackageImportMode = "published" | "all-candidates";
 
 export interface FullPackageLiveImportSpec {
@@ -13,36 +15,6 @@ export interface FullPackageLiveImportSpec {
   authoritativeSnapshotId: string;
   candidateOnlyRelationCount: number;
   candidateOnlyEvidenceCount: number;
-}
-
-interface ManifestRecordCounts {
-  relations?: number;
-  evidence?: number;
-}
-
-interface FullPackageManifest {
-  package_snapshot_id?: string;
-  authoritative_snapshot?: string;
-  import_modes?: {
-    published_view?: {
-      relation_file?: string;
-      evidence_file?: string;
-      record_counts?: ManifestRecordCounts;
-    };
-    lossless_import?: {
-      relation_file?: string;
-      evidence_file?: string;
-      record_counts?: ManifestRecordCounts;
-    };
-  };
-  formal_boundary_reconciliation?: {
-    resolved_counts?: {
-      candidate_only_delta?: ManifestRecordCounts;
-    };
-  };
-  coverage_summary?: {
-    candidate_only_totals?: ManifestRecordCounts;
-  };
 }
 
 function assertString(value: unknown, field: string): string {
@@ -72,44 +44,20 @@ export async function resolveFullPackageLiveImportSpec(
   manifestPath: string,
   mode: FullPackageImportMode,
 ): Promise<FullPackageLiveImportSpec> {
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as FullPackageManifest;
-  const packageSnapshotId = assertString(manifest.package_snapshot_id, "package_snapshot_id");
-  const authoritativeSnapshotId = assertString(manifest.authoritative_snapshot, "authoritative_snapshot");
-  const modeConfig =
-    mode === "published" ? manifest.import_modes?.published_view : manifest.import_modes?.lossless_import;
-
-  if (!modeConfig) {
-    throw new Error(`Invalid full package manifest: missing import_modes.${mode === "published" ? "published_view" : "lossless_import"}`);
-  }
-
-  const relationFile = assertString(modeConfig.relation_file, `${mode}.relation_file`);
-  const evidenceFile = assertString(modeConfig.evidence_file, `${mode}.evidence_file`);
-  const expectedRelationCount = assertCount(modeConfig.record_counts?.relations, `${mode}.record_counts.relations`);
-  const expectedEvidenceCount = assertCount(modeConfig.record_counts?.evidence, `${mode}.record_counts.evidence`);
-  const candidateOnlyRelationCount =
-    manifest.formal_boundary_reconciliation?.resolved_counts?.candidate_only_delta?.relations ??
-    manifest.coverage_summary?.candidate_only_totals?.relations;
-  const candidateOnlyEvidenceCount =
-    manifest.formal_boundary_reconciliation?.resolved_counts?.candidate_only_delta?.evidence ??
-    manifest.coverage_summary?.candidate_only_totals?.evidence;
+  const manifest = await loadVersionManifestFromLegacyRootManifest(manifestPath);
+  const modeConfig = mode === "published" ? manifest.published : manifest.allCandidates;
 
   return {
     manifestPath,
     mode,
-    relationFile,
-    evidenceFile,
-    expectedRelationCount,
-    expectedEvidenceCount,
-    packageSnapshotId,
-    authoritativeSnapshotId,
-    candidateOnlyRelationCount: assertCount(
-      candidateOnlyRelationCount,
-      "formal_boundary_reconciliation.resolved_counts.candidate_only_delta.relations",
-    ),
-    candidateOnlyEvidenceCount: assertCount(
-      candidateOnlyEvidenceCount,
-      "formal_boundary_reconciliation.resolved_counts.candidate_only_delta.evidence",
-    ),
+    relationFile: assertString(modeConfig.relationFile, `${mode}.relation_file`),
+    evidenceFile: assertString(modeConfig.evidenceFile, `${mode}.evidence_file`),
+    expectedRelationCount: assertCount(modeConfig.relationCount, `${mode}.record_counts.relations`),
+    expectedEvidenceCount: assertCount(modeConfig.evidenceCount, `${mode}.record_counts.evidence`),
+    packageSnapshotId: manifest.packageSnapshotId,
+    authoritativeSnapshotId: manifest.authoritativeRootSnapshot,
+    candidateOnlyRelationCount: assertCount(manifest.candidateOnly.relations, "candidate_only.relations"),
+    candidateOnlyEvidenceCount: assertCount(manifest.candidateOnly.evidence, "candidate_only.evidence"),
   };
 }
 

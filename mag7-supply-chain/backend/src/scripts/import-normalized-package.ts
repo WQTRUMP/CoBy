@@ -8,6 +8,7 @@ import {
   loadNormalizedImportPackage,
   prepareNormalizedImport,
 } from "../lib/normalized-package.js";
+import { validateNormalizedPackageManifest } from "../lib/normalized-package-validator.js";
 
 function readFlag(name: string) {
   const index = process.argv.indexOf(name);
@@ -36,6 +37,7 @@ try {
 
   if (liveSpec) {
     await validateFullPackageLiveImportSpec(liveSpec);
+    await validateNormalizedPackageManifest(liveSpec.manifestPath);
   }
 
   const resolvedRelationFile = liveSpec?.relationFile ?? relationFile;

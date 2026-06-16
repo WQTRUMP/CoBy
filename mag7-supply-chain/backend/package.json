@@ -14,7 +14,8 @@
     "start": "node dist/backend/src/server.js",
     "test": "vitest run",
     "import:normalized": "tsx src/scripts/import-normalized-package.ts",
-    "import:full-package:live": "tsx src/scripts/import-normalized-package.ts"
+    "import:full-package:live": "tsx src/scripts/import-normalized-package.ts",
+    "validate:normalized-package": "tsx src/scripts/validate-normalized-package.ts"
   },
   "dependencies": {
     "@mag7/contracts": "file:../packages/contracts",
