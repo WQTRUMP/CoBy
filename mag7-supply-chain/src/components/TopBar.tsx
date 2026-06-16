@@ -7,13 +7,16 @@ import type {
 } from "../types/viewModels";
 
 interface TopBarProps {
+  companies?: Array<{ id: string; displayName: string; canonicalName: string; aliasHitExplanation: string | null }>;
   depth: number;
-  evidenceSummary: EvidenceSummaryViewModel;
+  evidenceSummary?: EvidenceSummaryViewModel;
+  filtersOpen?: boolean;
   graph: GraphViewModel;
   isFullscreen: boolean;
   onDepthChange: (depth: number) => void;
   onFiltersClear: () => void;
   onFullscreenToggle: () => void;
+  onCompanySelect?: (companyId: string) => void;
   onRelationshipSubtypeChange: (value: string | null) => void;
   onRelationshipTypeToggle: (value: GraphRelationViewModel["relationshipType"]) => void;
   onSearchChange: (value: string) => void;
@@ -22,14 +25,18 @@ interface TopBarProps {
   relationshipTypes: GraphRelationViewModel["relationshipType"][];
   relationTypeOptions: RelationFilterOptionViewModel[];
   search: string;
+  selectedCompanyId?: string | null;
 }
 
 export function TopBar(props: TopBarProps) {
   const {
+    companies = [],
     depth,
-    evidenceSummary,
     graph,
+    evidenceSummary = graph.evidenceOverview,
+    filtersOpen = true,
     isFullscreen,
+    onCompanySelect,
     onDepthChange,
     onFiltersClear,
     onFullscreenToggle,
@@ -41,7 +48,10 @@ export function TopBar(props: TopBarProps) {
     relationshipTypes,
     relationTypeOptions,
     search,
+    selectedCompanyId,
   } = props;
+  const activeFilterCount = relationshipTypes.length + (relationshipSubtype ? 1 : 0);
+  const activeCompany = companies.find((company) => company.id === selectedCompanyId) ?? graph.focusCompany;
 
   return (
     <>
@@ -105,6 +115,10 @@ export function TopBar(props: TopBarProps) {
 
       <section className="filterRibbon">
         <div className="filterRibbonLeft">
+          <div className="legacyFilterSummary">
+            <strong>{activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : "Filters"}</strong>
+            <span>{filtersOpen ? "Relationship types" : "Relationship filters collapsed"}</span>
+          </div>
           <div className="filterChipRow" aria-label="关系类型筛选">
             {relationTypeOptions.map((option) => {
               const active = relationshipTypes.includes(option.value as GraphRelationViewModel["relationshipType"]);
@@ -145,6 +159,11 @@ export function TopBar(props: TopBarProps) {
         </div>
 
         <div className="trustLegend">
+          <div className="focusLiveSummary">
+            <strong>{graph.focusCompany.displayName} live focus</strong>
+            <span>Search resolves canonical groups, brands, legal entities, and facility aliases separately.</span>
+            {graph.focusCompany.aliasHitExplanation ? <small>{graph.focusCompany.aliasHitExplanation}</small> : null}
+          </div>
           <span className="trustLegendLabel">数据可信度分层</span>
           <div className="trustLegendItems">
             <TrustItem label="已确认" tone="confirmed" value={evidenceSummary.confirmed} />
@@ -157,6 +176,23 @@ export function TopBar(props: TopBarProps) {
           </div>
         </div>
       </section>
+
+      {companies.length > 0 ? (
+        <section className="topCompanyMatches" aria-label="顶部搜索匹配结果">
+          {companies.slice(0, 4).map((company) => (
+            <button
+              className={company.id === activeCompany.id ? "topCompanyMatch active" : "topCompanyMatch"}
+              key={company.id}
+              onClick={() => onCompanySelect?.(company.id)}
+              type="button"
+            >
+              <strong>{company.displayName}</strong>
+              <span>{company.canonicalName}</span>
+              {company.aliasHitExplanation ? <small>{company.aliasHitExplanation}</small> : null}
+            </button>
+          ))}
+        </section>
+      ) : null}
     </>
   );
 }

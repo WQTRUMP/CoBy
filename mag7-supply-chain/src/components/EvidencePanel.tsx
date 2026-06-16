@@ -19,6 +19,18 @@ export function EvidencePanel({ evidence, error, loading, onRetry, relation }: E
           <p className="sidebarSectionLabel">来源证据</p>
           <strong>{relation.summary}</strong>
           <p>{relation.relationshipSemanticLabel}</p>
+          <div className="evidenceMetaGrid">
+            <span>Relationship</span>
+            <strong>{relation.relationshipSemanticLabel}</strong>
+            <span>Type</span>
+            <strong>{relation.relationshipTypeLabel}</strong>
+            <span>Evidence precision</span>
+            <strong>{relation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
+            <span>Validity note</span>
+            <strong>{relation.validityNote ?? "No additional note"}</strong>
+            <span>Validity</span>
+            <strong>{relation.validityLabel}</strong>
+          </div>
         </article>
       ) : null}
 
@@ -70,13 +82,22 @@ export function EvidencePanel({ evidence, error, loading, onRetry, relation }: E
             <div className="evidenceMetaGrid">
               <span>发布日期</span>
               <strong>{item.publishedAt}</strong>
+              <span>Primary date semantic</span>
+              <strong>{item.publishedAtSemantic}</strong>
               <span>报告期</span>
               <strong>{item.reportedPeriodEnd ?? "未提供"}</strong>
+              <span>reported_period_end</span>
+              <strong>{item.reportedPeriodEnd ?? "Not provided"}</strong>
               <span>SKU 粒度</span>
               <strong>{item.skuGranularityLabel}</strong>
+              <span>旧注释值</span>
+              <strong>{item.skuGranularityRaw ?? "无"}</strong>
+              <span>month-normalized compatibility</span>
+              <strong>{item.compatibilityNote ?? "No compatibility mapping note"}</strong>
             </div>
 
             {item.skuGranularityBoundaryHint ? <p className="boundaryHint">{item.skuGranularityBoundaryHint}</p> : null}
+            {item.skuGranularityNote ? <p className="boundaryHint">{item.skuGranularityNote}</p> : null}
 
             <a href={item.url} rel="noreferrer" target="_blank">
               <ArrowSquareOut size={14} />

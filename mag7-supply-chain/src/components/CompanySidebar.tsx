@@ -15,15 +15,15 @@ interface CompanySidebarProps {
   activeRelation: GraphRelationViewModel | null;
   activeTab: "overview" | "evidence" | "financials";
   company: CompanyProfileViewModel;
-  depth: number;
+  depth?: number;
   evidence: EvidenceViewModel[];
   evidenceError: string | null;
   evidenceLoading: boolean;
   evidenceSummary: EvidenceSummaryViewModel;
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   onRelationSelect: (relation: GraphRelationViewModel) => void;
-  onRetryEvidence: () => void;
+  onRetryEvidence?: () => void;
   onTabChange: (tab: "overview" | "evidence" | "financials") => void;
   relations: GraphRelationViewModel[];
 }
@@ -48,15 +48,15 @@ export function CompanySidebar(props: CompanySidebarProps) {
     activeRelation,
     activeTab,
     company,
-    depth,
+    depth = 3,
     evidence,
     evidenceError,
     evidenceLoading,
     evidenceSummary,
-    isOpen,
-    onClose,
+    isOpen = true,
+    onClose = () => undefined,
     onRelationSelect,
-    onRetryEvidence,
+    onRetryEvidence = () => undefined,
     onTabChange,
     relations,
   } = props;
@@ -123,7 +123,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "overview" ? 0 : -1}
           type="button"
         >
-          概览
+          Overview
         </button>
         <button
           aria-controls={evidencePanelId}
@@ -139,7 +139,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "evidence" ? 0 : -1}
           type="button"
         >
-          证据
+          Evidence
         </button>
         <button
           aria-controls={financialsPanelId}
@@ -155,7 +155,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "financials" ? 0 : -1}
           type="button"
         >
-          财务
+          Financials
         </button>
       </div>
 
@@ -216,6 +216,24 @@ export function CompanySidebar(props: CompanySidebarProps) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">实体层级</p>
+              <strong>Group / brand / legal entity / facility</strong>
+              <p>{company.hierarchySummary}</p>
+              <ul className="detailList">
+                <li>Group: {company.canonicalName}</li>
+                <li>Display: {company.displayName}</li>
+                <li>Legal entities: {company.entityProfile?.legalEntities.map((item) => item.name).join(", ") || "No legal entity aliases"}</li>
+                <li>Brands: {company.entityProfile?.brands.map((item) => item.name).join(", ") || "No brand aliases"}</li>
+                <li>
+                  Facilities:{" "}
+                  {company.entityProfile?.aliases.filter((item) => item.aliasType === "facility").map((item) => item.name).join(", ") ||
+                    "Facility nodes stay separate in the graph"}
+                </li>
+              </ul>
+              {company.aliasHitExplanation ? <p>{company.aliasHitExplanation}</p> : null}
             </div>
 
             <div className="sidebarCard">

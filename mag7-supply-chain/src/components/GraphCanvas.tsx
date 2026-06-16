@@ -6,11 +6,11 @@ import { getRelationshipTypeLabel } from "../utils/relationSemantics.js";
 interface GraphCanvasProps {
   activeNodeId: string | null;
   activeRelationId: string | null;
-  depth: number;
+  depth?: number;
   focusNode: GraphNodeViewModel;
   graph: GraphViewModel;
-  isFullscreen: boolean;
-  onFullscreenToggle: () => void;
+  isFullscreen?: boolean;
+  onFullscreenToggle?: () => void;
   onNodeSelect: (node: GraphNodeViewModel) => void;
   onRelationSelect: (relation: GraphRelationViewModel) => void;
   onZoomChange: (zoom: number) => void;
@@ -18,8 +18,19 @@ interface GraphCanvasProps {
 }
 
 export function GraphCanvas(props: GraphCanvasProps) {
-  const { activeNodeId, activeRelationId, depth, focusNode, graph, isFullscreen, onFullscreenToggle, onNodeSelect, onRelationSelect, onZoomChange, zoom } =
-    props;
+  const {
+    activeNodeId,
+    activeRelationId,
+    depth = 3,
+    focusNode,
+    graph,
+    isFullscreen = false,
+    onFullscreenToggle = () => undefined,
+    onNodeSelect,
+    onRelationSelect,
+    onZoomChange,
+    zoom,
+  } = props;
   const instructionsId = useId();
   const visibleNodes = graph.nodes.length;
   const visibleRelations = graph.relations.length;
@@ -73,6 +84,10 @@ export function GraphCanvas(props: GraphCanvasProps) {
         </div>
 
         <div className="graphExpansionHint">{expansionHint ? `展开中... ${expansionHint.summary}` : "展开中..."}</div>
+        <div className="graphLegendCopy">
+          Nodes distinguish group anchors, brand/legal naming, and facility operators instead of flattening all aliases into one
+          surface.
+        </div>
 
         <p className="srOnly" id={instructionsId}>
           使用图谱内的节点与关系按钮进行探索。选择节点可刷新概览，选择关系可打开证据与审计信息。
