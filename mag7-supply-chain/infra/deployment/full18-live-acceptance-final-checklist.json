@@ -109,8 +109,8 @@
     "jq",
     "可达的 Neo4j 5.26 兼容实例",
     "可达的 Redis 7.4 兼容实例",
-    "可临时托管 backend 的 Node 运行器",
-    "待接入的 Cloudflare zone 与域名决策，但不得在验收前切换正式流量"
+    "historical_audit_only：可临时托管 backend 的 Node 运行器只属于闭环通过后的可选部署/同源联调步骤，不是执行 source=neo4j 正向闭环的最小前置",
+    "historical_audit_only：Cloudflare zone 与域名决策只属于闭环通过后的可选部署步骤，不得继续视为执行 source=neo4j 正向闭环的必需项"
   ],
   "required_env": [
     "GRAPH_RUNTIME_MODE=live",
