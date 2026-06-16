@@ -1,4 +1,4 @@
-import { FileText, LinkSimple, ShieldCheck } from "@phosphor-icons/react";
+import { ArrowSquareOut, FileText, ShieldCheck } from "@phosphor-icons/react";
 import type { EvidenceViewModel, GraphRelationViewModel } from "../types/viewModels";
 
 interface EvidencePanelProps {
@@ -10,45 +10,21 @@ interface EvidencePanelProps {
 }
 
 export function EvidencePanel({ evidence, error, loading, onRetry, relation }: EvidencePanelProps) {
+  const primaryEvidence = evidence[0] ?? null;
+
   return (
     <div className="evidenceTabPanel">
-      <div className="detailCard">
-        <div>
-          <p className="sectionEyebrow compact">Evidence</p>
-          <strong>{relation ? "Relation-scoped source cards" : "Evidence placeholder"}</strong>
-        </div>
-        <p>{relation ? relation.summary : "Select a relation to inspect citations and confidence labels."}</p>
-        {relation ? (
-          <div className="metaGrid compact">
-            <span>Relationship</span>
-            <strong>{relation.relationshipSemanticLabel}</strong>
-            <span>Type</span>
-            <strong>{relation.relationshipTypeLabel}</strong>
-            <span>Subtype</span>
-            <strong>{relation.relationshipSubtypeLabel ?? "Not specified"}</strong>
-            <span>Source method</span>
-            <strong>{relation.sourceMethodLabel ?? "Not specified"}</strong>
-            <span>Evidence precision</span>
-            <strong>{relation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
-            <span>SKU 粒度</span>
-            <strong>{relation.skuGranularityLabel}</strong>
-            <span>粒度来源</span>
-            <strong>{relation.skuGranularitySourceLabel ?? "未标注"}</strong>
-            <span>是否回填</span>
-            <strong>{relation.skuGranularityIsBackfilled ? "是" : "否"}</strong>
-            <span>Validity note</span>
-            <strong>{relation.validityNote ?? "No additional note"}</strong>
-            <span>Validity</span>
-            <strong>{relation.validityLabel}</strong>
-          </div>
-        ) : null}
-        {relation?.skuGranularityBoundaryHint ? <p className="boundaryHint">{relation.skuGranularityBoundaryHint}</p> : null}
-        {relation?.skuGranularityNote ? <p className="supportingText">{relation.skuGranularityNote}</p> : null}
-      </div>
+      {relation ? (
+        <article className="sidebarCard evidenceContextCard">
+          <p className="sidebarSectionLabel">来源证据</p>
+          <strong>{relation.summary}</strong>
+          <p>{relation.relationshipSemanticLabel}</p>
+        </article>
+      ) : null}
 
       {loading ? (
         <div className="inlineStatusCard" role="status" aria-live="polite">
-          Loading evidence details…
+          正在加载证据详情...
         </div>
       ) : null}
 
@@ -56,100 +32,81 @@ export function EvidencePanel({ evidence, error, loading, onRetry, relation }: E
         <div className="inlineStatusCard error" role="alert">
           <p>{error}</p>
           <button className="inlineActionButton" onClick={onRetry} type="button">
-            Retry evidence load
+            重试证据加载
           </button>
         </div>
       ) : null}
 
       {!loading && !error && evidence.length === 0 ? (
         <div className="inlineStatusCard" role="status" aria-live="polite">
-          Select a relation to inspect source cards.
+          选择一条关系以查看引用来源、可信度与审计元数据。
         </div>
       ) : null}
 
-      <div className="evidenceList">
+      <div className="evidenceCardStack">
         {evidence.map((item) => (
           <article className="evidenceCard" key={item.id}>
-            <div className="relationMeta">
-              <span className="miniBadge">
-                <FileText size={12} /> {item.sourceTypeLabel}
-              </span>
-              <span className={`confidenceBadge ${item.confidence}`}>
-                <ShieldCheck size={12} /> {formatConfidence(item.confidence)}
-              </span>
-              <span className={`miniBadge skuGranularityBadge ${getSkuGranularityClassName(item.skuGranularityValue)}`}>
-                {item.skuGranularityLabel}
-              </span>
+            <div className="evidenceCardHeader">
+              <div className="evidenceThumb">
+                <FileText size={20} />
+              </div>
+              <div className="evidenceHeaderCopy">
+                <div className="evidenceLabelRow">
+                  <span className="miniBadge">{item.sourceTypeLabel}</span>
+                  <span className={`confidenceBadge ${item.confidence}`}>
+                    <ShieldCheck size={12} />
+                    {formatConfidence(item.confidence)}
+                  </span>
+                </div>
+                <strong>{item.title}</strong>
+                <span>
+                  {item.publisher} · {item.publishedAt}
+                </span>
+              </div>
             </div>
-            <strong>{item.title}</strong>
-            <p>{item.citation}</p>
-            <div className="metaGrid compact">
-              <span>Primary date semantic</span>
-              <strong>{item.publishedAtSemantic}</strong>
-              <span>Primary date</span>
-              <strong>
-                {item.publishedAt} ({item.publishedAtResolutionLabel})
-              </strong>
-              <span>Reported period end</span>
-              <strong>
-                {item.reportedPeriodEnd
-                  ? `${item.reportedPeriodEnd} (${item.reportedPeriodEndResolutionLabel ?? "Unspecified resolution"})`
-                  : "Not provided"}
-              </strong>
-              <span>Retrieved surrogate</span>
-              <strong>{item.retrievedAt}</strong>
+
+            <p className="evidenceExcerpt">{item.excerpt || item.citation}</p>
+
+            <div className="evidenceMetaGrid">
+              <span>发布日期</span>
+              <strong>{item.publishedAt}</strong>
+              <span>报告期</span>
+              <strong>{item.reportedPeriodEnd ?? "未提供"}</strong>
               <span>SKU 粒度</span>
               <strong>{item.skuGranularityLabel}</strong>
-              <span>粒度来源</span>
-              <strong>{item.skuGranularitySourceLabel ?? "未标注"}</strong>
-              <span>旧注释值</span>
-              <strong>{item.skuGranularityRaw ?? "无"}</strong>
-              <span>是否回填</span>
-              <strong>{item.skuGranularityIsBackfilled ? "是" : "否"}</strong>
             </div>
+
             {item.skuGranularityBoundaryHint ? <p className="boundaryHint">{item.skuGranularityBoundaryHint}</p> : null}
-            {item.skuGranularityNote ? <p className="supportingText">{item.skuGranularityNote}</p> : null}
-            {item.compatibilityNote ? <p>{item.compatibilityNote}</p> : null}
-            <div className="evidenceFooter">
-              <span>{item.publisher}</span>
-              <span>{item.publishedAtSemantic}</span>
-            </div>
-            <a href={item.url} target="_blank" rel="noreferrer">
-              <LinkSimple size={14} />
-              Open source
+
+            <a href={item.url} rel="noreferrer" target="_blank">
+              <ArrowSquareOut size={14} />
+              打开来源
             </a>
           </article>
         ))}
       </div>
 
-      <div className="detailCard provenanceCard">
-        <p className="sectionEyebrow compact">Evidence provenance</p>
-        <div className="provenanceGrid">
-          <span>Document</span>
-          <strong>{evidence[0]?.sourceTypeLabel ?? "10-K / Report"}</strong>
-          <span>published_at</span>
-          <strong>{evidence[0]?.publishedAt ?? "Pending source binding"}</strong>
-          <span>reported_period_end</span>
-          <strong>{evidence[0]?.reportedPeriodEnd ?? "Not provided"}</strong>
-          <span>retrieved_at_surrogate</span>
-          <strong>{evidence[0]?.retrievedAt ?? "Pending source binding"}</strong>
-          <span>month-normalized compatibility</span>
-          <strong>{evidence[0]?.compatibilityNote ?? "No compatibility mapping note"}</strong>
-          <span>Issuer</span>
-          <strong>{evidence[0]?.publisher ?? "Company / publisher"}</strong>
-          <span>Access</span>
-          <strong>{evidence[0]?.url ? "External source ready" : "Connector pending"}</strong>
-        </div>
-      </div>
+      <article className="sidebarCard auditInfoCard">
+        <p className="sidebarSectionLabel">证据审计信息</p>
+        <dl className="auditGrid">
+          <dt>发布时间</dt>
+          <dd>{primaryEvidence?.publishedAt ?? "待绑定"}</dd>
+          <dt>报告期</dt>
+          <dd>{primaryEvidence?.reportedPeriodEnd ?? "待绑定"}</dd>
+          <dt>抓取时间</dt>
+          <dd>{primaryEvidence?.retrievedAt ?? "待绑定"}</dd>
+          <dt>可信度</dt>
+          <dd>{primaryEvidence ? formatConfidence(primaryEvidence.confidence) : relation ? formatConfidence(relation.confidence) : "待判定"}</dd>
+          <dt>来源链接</dt>
+          <dd className="auditLinkCell">{primaryEvidence?.url ?? "待绑定"}</dd>
+        </dl>
+      </article>
     </div>
   );
 }
 
-function getSkuGranularityClassName(value: GraphRelationViewModel["skuGranularityValue"] | EvidenceViewModel["skuGranularityValue"]) {
-  return value ? `skuGranularity-${value}` : "skuGranularity-unknown";
-}
-
-function formatConfidence(value: EvidenceViewModel["confidence"]) {
-  if (value === "strong_evidence") return "Strong evidence";
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function formatConfidence(value: EvidenceViewModel["confidence"] | GraphRelationViewModel["confidence"]) {
+  if (value === "strong_evidence") return "强证据";
+  if (value === "confirmed") return "已确认";
+  return "推断";
 }

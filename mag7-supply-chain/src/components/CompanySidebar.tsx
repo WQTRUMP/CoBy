@@ -1,6 +1,5 @@
+import { ChartBar, GlobeHemisphereWest, LinkBreak, Path, Rows, X } from "@phosphor-icons/react";
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
-import { Buildings, ChartBar, Database, LinkBreak, Path, Stack } from "@phosphor-icons/react";
-import { EvidencePanel } from "./EvidencePanel.js";
 import type {
   CompanyProfileViewModel,
   EvidenceSummaryViewModel,
@@ -8,6 +7,7 @@ import type {
   GraphNodeViewModel,
   GraphRelationViewModel,
 } from "../types/viewModels";
+import { EvidencePanel } from "./EvidencePanel.js";
 import { graphApiContract } from "../services/graphExplorerApi.js";
 
 interface CompanySidebarProps {
@@ -15,6 +15,7 @@ interface CompanySidebarProps {
   activeRelation: GraphRelationViewModel | null;
   activeTab: "overview" | "evidence" | "financials";
   company: CompanyProfileViewModel;
+  depth: number;
   evidence: EvidenceViewModel[];
   evidenceError: string | null;
   evidenceLoading: boolean;
@@ -47,6 +48,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
     activeRelation,
     activeTab,
     company,
+    depth,
     evidence,
     evidenceError,
     evidenceLoading,
@@ -92,24 +94,21 @@ export function CompanySidebar(props: CompanySidebarProps) {
   }
 
   return (
-    <aside className="detailSidebar" aria-hidden={!isOpen}>
-      <div className="detailSidebarHeader">
-        <div className="detailCompany">
-          <div className="detailLogo">{company.ticker.slice(0, 2)}</div>
+    <aside className={isOpen ? "evidenceSidebar isOpen" : "evidenceSidebar"} aria-hidden={!isOpen}>
+      <div className="evidenceSidebarHeader">
+        <div className="evidenceSidebarCompany">
+          <div className="evidenceSidebarLogo">{company.ticker.slice(0, 1)}</div>
           <div>
-            <p className="sectionEyebrow compact">{company.ticker || company.canonicalName}</p>
             <h3>{company.displayName}</h3>
-            <p>{company.canonicalName}</p>
-            {company.aliasHitExplanation ? <p>{company.aliasHitExplanation}</p> : null}
-            <span className="tierBadge">Tier 1 suppliers</span>
+            <p>焦点公司</p>
           </div>
         </div>
-        <button className="closeSidebar" type="button" aria-label="Close details panel" onClick={onClose}>
-          ×
+        <button aria-label="关闭证据侧栏" className="closeSidebar" onClick={onClose} type="button">
+          <X size={16} />
         </button>
       </div>
 
-      <div className="detailTabs" role="tablist" aria-label="Company detail tabs">
+      <div className="detailTabs" role="tablist" aria-label="公司详情标签">
         <button
           aria-controls={overviewPanelId}
           aria-selected={activeTab === "overview"}
@@ -124,7 +123,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "overview" ? 0 : -1}
           type="button"
         >
-          Overview
+          概览
         </button>
         <button
           aria-controls={evidencePanelId}
@@ -140,7 +139,7 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "evidence" ? 0 : -1}
           type="button"
         >
-          Evidence
+          证据
         </button>
         <button
           aria-controls={financialsPanelId}
@@ -156,118 +155,78 @@ export function CompanySidebar(props: CompanySidebarProps) {
           tabIndex={activeTab === "financials" ? 0 : -1}
           type="button"
         >
-          Financials
+          财务
         </button>
       </div>
 
       <div className="evidenceKpis">
-        <Metric label="Confirmed" value={`${evidenceSummary.confirmed}`} />
-        <Metric label="Strong evidence" value={`${evidenceSummary.strongEvidence}`} />
-        <Metric label="Inferred" value={`${evidenceSummary.inferred}`} />
+        <Metric label="已确认" value={`${evidenceSummary.confirmed}`} tone="confirmed" />
+        <Metric label="强证据" value={`${evidenceSummary.strongEvidence}`} tone="strong" />
+        <Metric label="推断" value={`${evidenceSummary.inferred}`} tone="inferred" />
       </div>
 
-      <div className="detailPanelBody">
+      <div className="evidenceSidebarBody">
         {activeTab === "overview" ? (
           <div aria-labelledby={overviewTabId} id={overviewPanelId} role="tabpanel">
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">Current focus</p>
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">公司锚点</p>
               <strong>{activeNode?.displayName ?? company.displayName}</strong>
-              <p>{activeNode ? `${activeNode.kindLabel} in ${activeNode.region}` : company.summary}</p>
-              <p>{activeNode?.hierarchySummary ?? company.hierarchySummary}</p>
+              <p>{company.summary}</p>
+            </div>
+
+            <div className="sidebarMetricsGrid">
+              <MetricCard icon={<ChartBar size={16} />} label="市值" value={formatCurrency(company.marketCapUsd)} />
+              <MetricCard icon={<Rows size={16} />} label="关系数" value={`${company.overview.relationCount}`} />
+              <MetricCard icon={<GlobeHemisphereWest size={16} />} label="区域" value={company.primaryRegion} />
+              <MetricCard icon={<Path size={16} />} label="穿透层级" value={`${depth}级`} />
             </div>
 
             {activeRelation ? (
-              <div className="detailCard relationContextCard">
-                <p className="sectionEyebrow compact">Selected relationship</p>
+              <div className="sidebarCard">
+                <p className="sidebarSectionLabel">当前关系</p>
                 <strong>{activeRelation.relationshipSemanticLabel}</strong>
-                <div className="metaGrid">
-                  <span>Type</span>
-                  <strong>{activeRelation.relationshipTypeLabel}</strong>
-                  <span>Subtype</span>
-                  <strong>{activeRelation.relationshipSubtypeLabel ?? "Not specified"}</strong>
-                  <span>Source method</span>
-                  <strong>{activeRelation.sourceMethodLabel ?? "Not specified"}</strong>
-                  <span>Evidence precision</span>
-                  <strong>{activeRelation.evidenceDateResolutionLabel ?? "Not specified"}</strong>
-                  <span>Valid from</span>
-                  <strong>
-                    {activeRelation.validFrom
-                      ? `${activeRelation.validFrom} (${activeRelation.validFromResolutionLabel ?? "Unspecified resolution"})`
-                      : "Not specified"}
-                  </strong>
-                  <span>Valid to</span>
-                  <strong>
-                    {activeRelation.validTo
-                      ? `${activeRelation.validTo} (${activeRelation.validToResolutionLabel ?? "Unspecified resolution"})`
-                      : "Open"}
-                  </strong>
-                  <span>Validity</span>
-                  <strong>{activeRelation.validityLabel}</strong>
-                  <span>Validity note</span>
-                  <strong>{activeRelation.validityNote ?? "No additional note"}</strong>
-                </div>
+                <dl className="auditGrid compact">
+                  <dt>关系类型</dt>
+                  <dd>{activeRelation.relationshipTypeLabel}</dd>
+                  <dt>子类型</dt>
+                  <dd>{activeRelation.relationshipSubtypeLabel ?? "未标注"}</dd>
+                  <dt>来源方法</dt>
+                  <dd>{activeRelation.sourceMethodLabel ?? "未标注"}</dd>
+                  <dt>时间粒度</dt>
+                  <dd>{activeRelation.evidenceDateResolutionLabel ?? "未标注"}</dd>
+                  <dt>有效期</dt>
+                  <dd>{activeRelation.validityLabel}</dd>
+                </dl>
               </div>
             ) : null}
 
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">Entity layers</p>
-              <strong>Group / brand / legal entity / facility</strong>
-              <p>{company.hierarchySummary}</p>
-              <ul className="detailList">
-                <li>Group: {company.canonicalName}</li>
-                <li>Display: {company.displayName}</li>
-                <li>
-                  Legal entities: {company.entityProfile?.legalEntities.map((item) => item.name).join(", ") || "No legal entity aliases in payload"}
-                </li>
-                <li>Brands: {company.entityProfile?.brands.map((item) => item.name).join(", ") || "No brand aliases in payload"}</li>
-                <li>
-                  Facilities:{" "}
-                  {company.entityProfile?.aliases.filter((item) => item.aliasType === "facility").map((item) => item.name).join(", ") ||
-                    "Facility nodes stay separate in the graph when available"}
-                </li>
-              </ul>
-            </div>
-
-            <div className="detailMetricGrid">
-              <MetricCard icon={<Buildings size={18} />} label="Primary region" value={company.primaryRegion} />
-              <MetricCard icon={<ChartBar size={18} />} label="Market cap" value={formatCurrency(company.marketCapUsd)} />
-              <MetricCard icon={<Stack size={18} />} label="Relations" value={`${company.overview.relationCount}`} />
-              <MetricCard icon={<Database size={18} />} label="Critical deps" value={`${company.overview.criticalDependencyCount}`} />
-            </div>
-
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">Relationship picks</p>
-              <div className="relationList">
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">重点关系</p>
+              <div className="sidebarRelationList">
                 {relations.slice(0, 4).map((relation) => (
                   <button
-                    key={relation.id}
                     className={relation.id === activeRelation?.id ? "sidebarRelation active" : "sidebarRelation"}
+                    key={relation.id}
                     onClick={() => onRelationSelect(relation)}
                     type="button"
                   >
-                    <span className="miniBadge">
-                      <Path size={12} />
-                      Tier {relation.tier}
-                    </span>
-                    <span className="miniBadge semantic">{relation.relationshipTypeLabel}</span>
+                    <span>{relation.relationshipTypeLabel}</span>
                     <strong>{relation.summary}</strong>
-                    <p>{relation.relationshipSemanticLabel}</p>
-                    <p>{relation.relationshipSubtypeLabel ?? "Subtype not specified"}</p>
+                    <small>{relation.relationshipSubtypeLabel ?? relation.relationshipSemanticLabel}</small>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">API boundary</p>
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">API 边界</p>
               <ul className="detailList">
                 <li>{graphApiContract.companies}</li>
                 <li>{company.apiBindings.companyEndpoint}</li>
-                <li>{company.apiBindings.overviewEndpoint}</li>
                 <li>{company.apiBindings.graphEndpoint}</li>
-                <li>{graphApiContract.evidence}</li>
+                <li>{company.apiBindings.evidenceEndpoint}</li>
                 <li>
-                  <LinkBreak size={14} /> Graph container and detail tabs consume typed DTOs only.
+                  <LinkBreak size={14} /> 侧栏继续消费 typed DTO 与 view-model 适配层。
                 </li>
               </ul>
             </div>
@@ -276,31 +235,30 @@ export function CompanySidebar(props: CompanySidebarProps) {
 
         {activeTab === "evidence" ? (
           <div aria-labelledby={evidenceTabId} id={evidencePanelId} role="tabpanel">
-            <EvidencePanel
-              evidence={evidence}
-              error={evidenceError}
-              loading={evidenceLoading}
-              onRetry={onRetryEvidence}
-              relation={activeRelation}
-            />
+            <EvidencePanel evidence={evidence} error={evidenceError} loading={evidenceLoading} onRetry={onRetryEvidence} relation={activeRelation} />
           </div>
         ) : null}
 
         {activeTab === "financials" ? (
           <div aria-labelledby={financialsTabId} id={financialsPanelId} role="tabpanel">
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">Financials</p>
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">财务摘要</p>
               <strong>{formatCurrency(company.marketCapUsd)}</strong>
-              <p>Node sizing is prepared to reflect market capitalization and relative ecosystem importance.</p>
+              <p>节点大小持续绑定市值与生态重要性，后续可接入采购暴露度与集中度指标。</p>
             </div>
 
-            <div className="detailCard">
-              <p className="sectionEyebrow compact">Data contract</p>
-              <ul className="detailList">
-                <li>Overview: {company.apiBindings.overviewEndpoint}</li>
-                <li>Graph: {company.apiBindings.graphEndpoint}</li>
-                <li>Evidence: {company.apiBindings.evidenceEndpoint}</li>
-              </ul>
+            <div className="sidebarCard">
+              <p className="sidebarSectionLabel">预留指标</p>
+              <dl className="auditGrid compact">
+                <dt>供应商总量</dt>
+                <dd>{company.overview.supplierCount}</dd>
+                <dt>一级供应商</dt>
+                <dd>{company.overview.tier1SupplierCount}</dd>
+                <dt>证据覆盖</dt>
+                <dd>{Math.round(company.overview.evidenceCoverage * 100)}%</dd>
+                <dt>高风险依赖</dt>
+                <dd>{company.overview.criticalDependencyCount}</dd>
+              </dl>
             </div>
           </div>
         ) : null}
@@ -309,9 +267,9 @@ export function CompanySidebar(props: CompanySidebarProps) {
   );
 }
 
-function Metric(props: { label: string; value: string }) {
+function Metric(props: { label: string; tone: "confirmed" | "strong" | "inferred"; value: string }) {
   return (
-    <div className="evidenceMetric">
+    <div className={`evidenceMetric ${props.tone}`}>
       <span>{props.label}</span>
       <strong>{props.value}</strong>
     </div>
@@ -320,25 +278,26 @@ function Metric(props: { label: string; value: string }) {
 
 function MetricCard(props: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="metricCard overlay">
-      <div className="metricIcon">{props.icon}</div>
-      <div>
-        <span>{props.label}</span>
-        <strong>{props.value}</strong>
-      </div>
+    <div className="sidebarMetricCard">
+      <div className="sidebarMetricIcon">{props.icon}</div>
+      <span>{props.label}</span>
+      <strong>{props.value}</strong>
     </div>
   );
 }
 
 function formatCurrency(value: number | null) {
-  if (value === null) {
-    return "N/A";
+  if (!value || value <= 0) {
+    return "待补充";
   }
 
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: 1,
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  if (value >= 1_000_000_000_000) {
+    return `${(value / 1_000_000_000_000).toFixed(3)} 万亿`;
+  }
+
+  if (value >= 100_000_000) {
+    return `${(value / 100_000_000).toFixed(1)} 亿`;
+  }
+
+  return value.toLocaleString("zh-CN");
 }

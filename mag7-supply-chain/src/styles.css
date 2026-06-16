@@ -3,27 +3,24 @@
 :root {
   color-scheme: light;
   font-family: "IBM Plex Sans", sans-serif;
-  --bg-page: #f5f7fa;
-  --bg-page-alt: #e8eef5;
-  --bg-canvas: #0b1320;
-  --bg-panel: #121c2b;
-  --bg-panel-raised: #1a2333;
-  --bg-card-soft: #223047;
-  --line-subtle: rgba(143, 161, 179, 0.28);
-  --line-strong: rgba(143, 161, 179, 0.52);
-  --text-primary: #f8fbff;
-  --text-secondary: #b7c4d4;
-  --text-muted: #7f92a6;
-  --text-dark: #09111c;
-  --accent-cyan: #40e0d0;
-  --accent-cyan-soft: rgba(64, 224, 208, 0.18);
-  --accent-amber: #f5b700;
-  --accent-amber-soft: rgba(245, 183, 0, 0.18);
+  --shell-bg-top: #f4f1ea;
+  --shell-bg-bottom: #dce5ec;
+  --workspace-bg: #07111b;
+  --panel-bg: #0c1824;
+  --panel-bg-raised: #122234;
+  --panel-border: rgba(146, 170, 191, 0.22);
+  --text-primary: #f4f8fb;
+  --text-secondary: #a8b7c8;
+  --text-muted: #7f91a4;
+  --text-shell: #1a2430;
+  --accent-cyan: #67e8f9;
+  --accent-amber: #f4b740;
   --accent-coral: #ff6b57;
-  --accent-coral-soft: rgba(255, 107, 87, 0.18);
-  --accent-bluegray: #7d90a5;
-  --shadow-shell: 0 24px 60px rgba(34, 55, 83, 0.12);
-  --shadow-workspace: 0 28px 70px rgba(8, 15, 28, 0.28);
+  --accent-lime: #8ad66e;
+  --accent-blue: #77b2ff;
+  --accent-slate: #8ba3b8;
+  --shadow-shell: 0 28px 70px rgba(5, 12, 24, 0.28);
+  --shell-radius: 22px;
 }
 
 * {
@@ -39,17 +36,18 @@ body,
 body {
   margin: 0;
   min-width: 320px;
-  color: var(--text-dark);
+  color: var(--text-shell);
   background:
-    linear-gradient(180deg, var(--bg-page) 0%, var(--bg-page-alt) 100%),
-    linear-gradient(rgba(125, 144, 165, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(125, 144, 165, 0.08) 1px, transparent 1px);
-  background-size: auto, 24px 24px, 24px 24px;
+    linear-gradient(180deg, rgba(244, 241, 234, 0.98), rgba(220, 229, 236, 0.98)),
+    linear-gradient(rgba(139, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: auto, 26px 26px, 26px 26px;
   -webkit-font-smoothing: antialiased;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -58,1448 +56,1524 @@ button {
   cursor: pointer;
 }
 
-:where(button, a, input, select):focus-visible {
-  outline: 3px solid var(--accent-cyan);
-  outline-offset: 3px;
-}
-
-:where(.graphListButton, .closeSidebar, .tabButton, .filterChip, .ticker, .sidebarRelation):focus-visible {
-  outline: 3px solid var(--accent-cyan);
-  outline-offset: 3px;
-}
-
 a {
   color: inherit;
   text-decoration: none;
 }
 
-.atlasPage {
-  width: min(1440px, calc(100vw - 32px));
-  margin: 0 auto;
-  padding: 24px 0 40px;
-  display: grid;
-  gap: 24px;
+:where(button, a, input, select):focus-visible {
+  outline: 3px solid var(--accent-cyan);
+  outline-offset: 3px;
 }
 
-.globalHeader,
-.heroPanel,
-.heroCanvasCard,
-.quickAccessSection,
-.statusStrip,
-.capabilityCard,
-.workspaceBoard {
-  border: 1px solid var(--line-subtle);
-  box-shadow: var(--shadow-shell);
-}
-
-.globalHeader {
-  min-height: 72px;
-  padding: 0 24px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.74);
-  backdrop-filter: blur(18px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.brandLockup,
-.globalNav,
-.heroControls,
-.workspaceTopline,
-.inlineLegend,
-.relationMeta,
-.evidenceFooter {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.relationMeta,
-.evidenceFooter {
-  flex-wrap: wrap;
-}
-
-.brandLockup {
-  gap: 14px;
-}
-
-.brandMark {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  position: relative;
-  background: radial-gradient(circle at center, rgba(64, 224, 208, 0.22), rgba(11, 19, 32, 0.96));
-}
-
-.brandMark span {
+.srOnly {
   position: absolute;
-  width: 18px;
+  width: 1px;
   height: 1px;
-  background: rgba(248, 251, 255, 0.72);
-}
-
-.brandMark span:nth-child(2) {
-  transform: rotate(60deg);
-}
-
-.brandMark span:nth-child(3) {
-  transform: rotate(-60deg);
-}
-
-.brandKicker,
-.sectionEyebrow {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.brandKicker {
-  color: var(--accent-cyan);
-}
-
-.brandLockup strong,
-.heroPanel h1,
-.workspaceIntro h2,
-.detailSidebar h3,
-.workspaceHeader h3 {
-  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
-}
-
-.brandLockup strong {
-  font-size: 18px;
-}
-
-.globalNav {
-  flex: 1 1 auto;
-  justify-content: center;
-  gap: 28px;
-}
-
-.globalNav a {
-  font-size: 14px;
-  color: rgba(9, 17, 28, 0.74);
-  padding-bottom: 6px;
-  border-bottom: 2px solid transparent;
-}
-
-.globalNav a.active {
-  color: var(--text-dark);
-  border-color: var(--accent-cyan);
-}
-
-.headerAction,
-.depthButton,
-.iconButton,
-.tabButton,
-.ticker,
-.sidebarRelation,
-.searchField {
-  border: 1px solid var(--line-subtle);
-  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
-}
-
-.headerAction,
-.depthButton {
-  min-height: 44px;
-  border-radius: 999px;
-  padding: 0 14px;
-  background: #fff;
-}
-
-.headerAction.secondary {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-.headerAction:hover,
-.depthButton:hover,
-.iconButton:hover,
-.ticker:hover,
-.sidebarRelation:hover,
-.tabButton:hover {
-  transform: translateY(-1px);
-  border-color: var(--line-strong);
-}
-
-.heroGrid {
-  display: grid;
-  grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
-  gap: 24px;
-}
-
-.heroPanel,
-.heroCanvasCard {
-  border-radius: 24px;
-  overflow: hidden;
-}
-
-.heroPanel {
-  padding: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 247, 250, 0.94));
-}
-
-.sectionEyebrow {
-  color: #557289;
-}
-
-.sectionEyebrow.compact {
-  margin-bottom: 8px;
-  color: var(--text-muted);
-}
-
-.heroPanel h1 {
-  margin: 12px 0;
-  font-size: clamp(40px, 5vw, 56px);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
-}
-
-.heroCopy,
-.workspaceIntro p,
-.detailCard p {
-  margin: 0;
-  color: rgba(9, 17, 28, 0.72);
-  line-height: 1.6;
-  font-size: 14px;
-}
-
-.heroControls {
-  margin-top: 28px;
-  align-items: stretch;
-  flex-direction: column;
-}
-
-.searchField {
-  min-height: 56px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(12, 19, 33, 0.08);
-}
-
-.searchField input {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: var(--text-dark);
-}
-
-.depthSwitcher {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.depthButton.active {
-  background: var(--accent-cyan-soft);
-  border-color: rgba(64, 224, 208, 0.42);
-}
-
-.heroCanvasCard {
-  padding: 24px;
-  color: var(--text-primary);
-  background:
-    radial-gradient(circle at top left, rgba(64, 224, 208, 0.2), transparent 24rem),
-    radial-gradient(circle at right, rgba(245, 183, 0, 0.14), transparent 22rem),
-    linear-gradient(180deg, rgba(11, 19, 32, 0.98), rgba(18, 28, 43, 0.94));
-}
-
-.heroCanvasCopy {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--text-secondary);
-}
-
-.filterPanel,
-.filterPanelSection,
-.filterChipGrid,
-.filterPanelHeader,
-.filterSelectField,
-.metaGrid {
-  display: grid;
-}
-
-.filterPanel {
-  gap: 14px;
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(8, 15, 28, 0.64);
-  backdrop-filter: blur(14px);
-}
-
-.filterPanelSection {
-  gap: 10px;
-}
-
-.filterPanelHeader {
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-}
-
-.filterPanelHeader span {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.filterChipGrid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.filterChip,
-.textButton {
-  border: 0;
-  color: inherit;
-}
-
-.filterChip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
-  text-align: left;
-}
-
-.filterChip span,
-.filterSelectField span,
-.textButton {
-  color: var(--text-secondary);
-}
-
-.filterChip strong {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 12px;
-}
-
-.filterChip.active {
-  border-color: rgba(64, 224, 208, 0.24);
-  background: rgba(64, 224, 208, 0.14);
-}
-
-.textButton {
   padding: 0;
-  background: transparent;
-  font-size: 12px;
-}
-
-.filterSelectField {
-  gap: 8px;
-}
-
-.filterSelectField select {
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
-
-.heroCanvasGlow {
-  min-height: 250px;
-  margin-top: 24px;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  position: relative;
+  margin: -1px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at center, rgba(64, 224, 208, 0.16), transparent 20rem),
-    linear-gradient(180deg, rgba(10, 17, 30, 0.24), rgba(10, 17, 30, 0.78));
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.heroOrbit {
-  position: absolute;
-  inset: 14% 20%;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.heroOrbitSecondary {
-  inset: 24% 12%;
-}
-
-.heroFocusBadge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  translate: -50% -50%;
-  width: 108px;
-  height: 108px;
-  border-radius: 999px;
+.explorerPage {
+  width: min(1560px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
   display: grid;
-  place-items: center;
-  color: var(--text-primary);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 24px;
-  border: 2px solid rgba(64, 224, 208, 0.72);
-  box-shadow: 0 0 0 10px rgba(64, 224, 208, 0.12), 0 0 38px rgba(64, 224, 208, 0.28);
-  background: radial-gradient(circle at center, rgba(64, 224, 208, 0.22), rgba(26, 35, 51, 0.94));
-}
-
-.quickAccessSection,
-.statusStrip,
-.capabilitySection,
-.workspaceBoard {
-  border-radius: 24px;
-}
-
-.quickAccessSection {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.ticker {
-  min-height: 84px;
-  padding: 14px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 244, 248, 0.92));
-  text-align: left;
-}
-
-.ticker strong {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.ticker span {
-  display: block;
-  color: rgba(9, 17, 28, 0.58);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.ticker.active {
-  background: linear-gradient(180deg, rgba(64, 224, 208, 0.16), rgba(255, 255, 255, 0.98));
-  border-color: rgba(64, 224, 208, 0.42);
-}
-
-.statusStrip {
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.82);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.statusCard.light,
-.capabilityCard,
-.metricCard.overlay,
-.detailCard,
-.evidenceMetric,
-.evidenceCard,
-.sidebarRelation,
-.miniMapPlaceholder,
-.marketLegend {
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.statusCard.light {
-  min-width: 0;
-  padding: 16px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.statusCard strong,
-.evidenceMetric strong,
-.marketLegend span,
-.detailCard strong,
-.provenanceGrid strong {
-  font-family: "IBM Plex Mono", monospace;
-}
-
-.statusCard span,
-.evidenceMetric span {
-  display: block;
-  color: rgba(9, 17, 28, 0.6);
-  font-size: 12px;
-}
-
-.statusCard strong {
-  display: block;
-  font-size: 22px;
-  color: var(--text-dark);
-}
-
-.capabilitySection {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.capabilityCard {
-  min-height: 176px;
-  padding: 20px;
-  border-radius: 20px;
-}
-
-.capabilityIcon {
-  display: inline-flex;
-  margin-bottom: 18px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--accent-cyan-soft);
-  color: #206b62;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 12px;
-}
-
-.capabilityCard h2 {
-  margin: 0 0 10px;
-  font-size: 18px;
-}
-
-.capabilityCard p {
-  margin: 0;
-  color: rgba(9, 17, 28, 0.68);
-  line-height: 1.65;
-  font-size: 14px;
-}
-
-.workspaceBoard {
-  position: relative;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.workspaceIntro {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
-}
-
-.workspaceIntro h2,
-.workspaceHeader h3 {
-  margin: 8px 0 0;
-}
-
-.workspaceIntro h2 {
-  font-size: 30px;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
-}
-
-.workspaceIntro p {
-  max-width: 470px;
-}
-
-.graphWorkspace {
-  min-height: 720px;
-  border-radius: 24px;
-  padding: 18px;
-  position: relative;
-  background:
-    linear-gradient(180deg, rgba(11, 19, 32, 0.98), rgba(18, 28, 43, 0.96)),
-    radial-gradient(circle at center, rgba(64, 224, 208, 0.12), transparent 20rem);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-workspace);
-}
-
-.workspaceHeader {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.workspaceHeader h3 {
-  font-size: 24px;
-}
-
-.workspaceHeader p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.workspaceTopline {
-  flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 18px;
 }
 
-.inlineLegend {
-  color: var(--text-secondary);
-  font-size: 11px;
-  flex-wrap: wrap;
+.annotationRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.inlineLegend strong {
-  padding: 4px 8px;
+.annotationCard {
+  min-height: 102px;
+  border: 1px solid rgba(32, 94, 121, 0.16);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.56);
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 12px;
+  box-shadow: 0 16px 34px rgba(54, 79, 103, 0.08);
+}
+
+.annotationIndex {
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.graphViewport {
-  position: relative;
-  min-height: 640px;
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(2, 10, 18, 0.25), rgba(2, 10, 18, 0.72)),
-    url("/assets/dark-world-map.png") center/cover no-repeat;
-}
-
-.graphAssistivePanel {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 3;
-  width: min(340px, calc(100% - 36px));
-  max-height: calc(100% - 36px);
-  overflow: auto;
+  border: 2px solid rgba(24, 102, 138, 0.38);
+  color: #0f5f88;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 24px;
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 15, 28, 0.82);
-  backdrop-filter: blur(12px);
+  place-items: center;
 }
 
-.graphAssistiveHeader p,
-.graphAssistiveSectionHeader span,
-.graphListButton small,
-.graphListMeta {
-  color: var(--text-secondary);
-}
-
-.graphAssistiveHeader p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.graphAssistiveSection {
-  display: grid;
-  gap: 10px;
-}
-
-.graphAssistiveSectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.graphAssistiveSectionHeader strong,
-.graphAssistiveHeader strong {
-  font-size: 13px;
-}
-
-.graphAssistiveSectionHeader span {
-  font-size: 11px;
-}
-
-.graphAssistiveList {
-  display: grid;
-  gap: 8px;
-}
-
-.graphListButton {
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  display: grid;
-  gap: 4px;
-  text-align: left;
-}
-
-.graphListButton.active {
-  border-color: rgba(64, 224, 208, 0.42);
-  background: rgba(64, 224, 208, 0.14);
-}
-
-.graphListButton strong,
-.graphListButton small,
-.graphListMeta {
+.annotationCard strong {
   display: block;
+  margin-bottom: 6px;
+  font-size: 17px;
 }
 
-.graphListMeta {
-  font-size: 11px;
+.annotationCard p {
+  margin: 0;
+  color: rgba(26, 36, 48, 0.74);
+  line-height: 1.55;
 }
 
-.graphViewportOverlay,
-.graphDust {
-  position: absolute;
-  inset: 0;
+.explorerShell {
+  border-radius: 24px;
+  background: linear-gradient(180deg, #08131d 0%, #09131e 100%);
+  border: 1px solid rgba(116, 153, 183, 0.24);
+  box-shadow: var(--shadow-shell);
+  overflow: hidden;
 }
 
-.graphViewportOverlay {
-  background:
-    radial-gradient(circle at center, transparent 0, rgba(8, 18, 25, 0.04) 52%, rgba(8, 18, 25, 0.54) 100%),
-    linear-gradient(180deg, rgba(64, 224, 208, 0.05), transparent 24%, transparent 80%, rgba(245, 183, 0, 0.06));
-}
-
-.graphDust {
-  background-image:
-    radial-gradient(circle at 16% 24%, rgba(255, 255, 255, 0.55) 0, transparent 2px),
-    radial-gradient(circle at 72% 31%, rgba(255, 255, 255, 0.4) 0, transparent 1.8px),
-    radial-gradient(circle at 42% 70%, rgba(255, 255, 255, 0.32) 0, transparent 1.8px);
-  opacity: 0.8;
-}
-
-.graphViewport svg {
-  position: relative;
-  z-index: 1;
+.explorerShell:fullscreen {
   width: 100%;
   height: 100%;
 }
 
+.commandBar {
+  min-height: 72px;
+  padding: 12px 18px;
+  background: rgba(3, 11, 18, 0.92);
+  border-bottom: 1px solid rgba(125, 152, 176, 0.14);
+  display: grid;
+  grid-template-columns: 284px minmax(200px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+}
+
+.commandBrand,
+.commandControls,
+.commandSearchField,
+.depthControl,
+.trustLegendItems,
+.mobileQuickChips,
+.evidenceLabelRow,
+.semanticLegend,
+.tierLegend,
+.motionChips,
+.marketLegendDots {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.commandBrandMark {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(103, 232, 249, 0.16), rgba(12, 24, 36, 0.94));
+  border: 1px solid rgba(103, 232, 249, 0.24);
+}
+
+.commandBrandMark span {
+  position: absolute;
+  width: 20px;
+  height: 1px;
+  background: rgba(103, 232, 249, 0.88);
+}
+
+.commandBrandMark span:nth-child(2) {
+  transform: rotate(60deg);
+}
+
+.commandBrandMark span:nth-child(3) {
+  transform: rotate(-60deg);
+}
+
+.commandBrand strong,
+.graphStatCard strong,
+.focusCompanyCard strong,
+.sidebarCard strong,
+.evidenceCard strong,
+.mobileSummaryCard strong,
+.annotationIndex,
+.focusBreadcrumb,
+.mobilePhoneBar strong {
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+}
+
+.commandBrand {
+  gap: 14px;
+  color: var(--text-primary);
+}
+
+.commandBrand span,
+.commandBrand p {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.commandNav {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+}
+
+.commandNav a {
+  padding-bottom: 8px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+}
+
+.commandNav a.active {
+  color: var(--text-primary);
+  border-color: var(--accent-cyan);
+}
+
+.commandControls {
+  justify-content: flex-end;
+}
+
+.commandSearchField,
+.subtypeSelectWrap,
+.depthChip,
+.commandFullscreenButton,
+.clearFiltersButton,
+.filterRibbonChip,
+.graphControlButton,
+.graphListButton,
+.searchResultRow,
+.tabButton,
+.closeSidebar,
+.inlineActionButton,
+.viewAllButton,
+.mobileTab {
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.commandSearchField {
+  min-width: 320px;
+  padding: 0 14px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+
+.commandSearchField input,
+.railSearchField input {
+  flex: 1 1 auto;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.commandSearchField input::placeholder,
+.railSearchField input::placeholder {
+  color: rgba(168, 183, 200, 0.62);
+}
+
+.depthControl {
+  gap: 6px;
+}
+
+.depthChip,
+.commandFullscreenButton,
+.clearFiltersButton,
+.graphControlButton,
+.viewAllButton,
+.mobileTab,
+.inlineActionButton {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.depthChip,
+.commandFullscreenButton {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+}
+
+.depthChip.active {
+  border-color: rgba(103, 232, 249, 0.72);
+  color: var(--accent-cyan);
+  background: rgba(103, 232, 249, 0.14);
+}
+
+.commandFullscreenButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterRibbon {
+  min-height: 56px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(125, 152, 176, 0.14);
+  background: rgba(5, 15, 25, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.filterRibbonLeft,
+.filterChipRow,
+.trustLegend,
+.evidenceCardHeader,
+.railSectionHeader,
+.focusCompanyHeader,
+.evidenceSidebarHeader,
+.evidenceSidebarCompany,
+.miniMapCardHeader,
+.graphKeyboardHeader,
+.mobileSheetHeader,
+.mobileEvidenceKpis,
+.mobilePhoneBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filterRibbonLeft {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.filterChipRow {
+  flex-wrap: wrap;
+}
+
+.filterRibbonChip {
+  height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterRibbonChip strong {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+
+.filterRibbonChip.active,
+.filterRibbonChip:hover,
+.graphControlButton:hover,
+.searchResultRow:hover,
+.graphListButton:hover,
+.tabButton:hover,
+.closeSidebar:hover,
+.viewAllButton:hover,
+.mobileTab:hover,
+.inlineActionButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(103, 232, 249, 0.34);
+}
+
+.filterRibbonChip.active {
+  background: rgba(18, 34, 52, 0.98);
+  color: var(--text-primary);
+}
+
+.filterDot,
+.semanticLegend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+[data-type="component_supply"] {
+  background: var(--accent-cyan);
+}
+
+[data-type="manufacturing"] {
+  background: var(--accent-amber);
+}
+
+[data-type="raw_material_supply"] {
+  background: #ffd46a;
+}
+
+[data-type="cloud_service"] {
+  background: var(--accent-lime);
+}
+
+[data-type="logistics"] {
+  background: var(--accent-blue);
+}
+
+[data-type="professional_service"] {
+  background: var(--accent-slate);
+}
+
+.subtypeSelectWrap {
+  height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+
+.subtypeSelectWrap select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.clearFiltersButton {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+}
+
+.trustLegend {
+  justify-content: flex-end;
+  color: var(--text-secondary);
+}
+
+.trustLegendLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.trustLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.trustLegendItem i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.trustLegendItem.confirmed i,
+.evidenceMetric.confirmed strong {
+  background: var(--accent-lime);
+  color: var(--accent-lime);
+}
+
+.trustLegendItem.strong i,
+.evidenceMetric.strong strong {
+  background: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+.trustLegendItem.inferred i,
+.evidenceMetric.inferred strong {
+  background: var(--accent-coral);
+  color: var(--accent-coral);
+}
+
+.trustSnapshot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(146, 170, 191, 0.16);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+
+.explorerWorkspace {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.commandRail,
+.graphStage {
+  min-width: 0;
+}
+
+.commandRail {
+  display: grid;
+  gap: 12px;
+}
+
+.railPanel,
+.sidebarCard,
+.graphKeyboardPanel,
+.mobileSummaryCard {
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: rgba(12, 24, 36, 0.88);
+}
+
+.railPanel {
+  padding: 14px;
+  color: var(--text-primary);
+}
+
+.railLabel,
+.sidebarSectionLabel {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.focusCompanyLogo,
+.searchResultAvatar,
+.evidenceSidebarLogo {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(255, 107, 87, 0.88), rgba(100, 10, 9, 0.4));
+  color: white;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.focusCompanyHeader {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.focusCompanyHeader span,
+.searchResultContent span,
+.searchResultContent small,
+.graphListButton span,
+.graphListButton small,
+.evidenceHeaderCopy span,
+.auditGrid dt,
+.mobileSheetHeader span,
+.mobileMetric span {
+  color: var(--text-muted);
+}
+
+.focusCompanyStats {
+  display: grid;
+  gap: 12px;
+}
+
+.focusCompanyStats div,
+.sidebarMetricCard {
+  display: grid;
+  gap: 4px;
+}
+
+.focusCompanyStats span,
+.sidebarMetricCard span,
+.graphStatCard span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.railSearchField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+}
+
+.railSearchField input {
+  cursor: default;
+}
+
+.railSectionHeader {
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.railSectionHeader span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.searchResultsList,
+.sidebarRelationList,
+.evidenceCardStack {
+  display: grid;
+  gap: 10px;
+}
+
+.searchResultRow {
+  min-height: 60px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.searchResultRow.active {
+  background: rgba(103, 232, 249, 0.12);
+  border-color: rgba(103, 232, 249, 0.42);
+}
+
+.searchResultAvatar {
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+}
+
+.searchResultContent {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.searchResultContent strong,
+.graphListButton strong,
+.evidenceHeaderCopy strong,
+.sidebarRelation strong,
+.mobileSummaryCard strong {
+  color: var(--text-primary);
+}
+
+.viewAllButton {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.graphStage {
+  position: relative;
+}
+
+.graphWorkspace {
+  min-height: 700px;
+}
+
+.graphViewport {
+  min-height: 700px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(146, 170, 191, 0.14);
+  background:
+    radial-gradient(circle at 38% 50%, rgba(255, 107, 87, 0.18), transparent 24%),
+    radial-gradient(circle at 58% 42%, rgba(103, 232, 249, 0.14), transparent 28%),
+    linear-gradient(180deg, #07111b 0%, #061019 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.graphViewportTextures,
+.graphViewport::before,
+.graphViewport::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.graphViewportTextures {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px),
+    radial-gradient(circle at 20% 25%, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px),
+    radial-gradient(circle at 78% 22%, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px),
+    radial-gradient(circle at 25% 80%, rgba(255, 255, 255, 0.14) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 74%, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px);
+  background-size: 100% 100%, 90px 90px, 90px 90px, 72px 72px, 72px 72px;
+  opacity: 0.62;
+}
+
+.graphStatsCluster,
+.graphCanvasControls,
+.graphExpansionHint,
+.miniMapCard,
+.graphKeyboardDock,
+.focusBreadcrumb,
+.collapsedClusterBadge {
+  position: absolute;
+  z-index: 2;
+}
+
+.graphStatsCluster {
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.graphStatCard {
+  min-width: 88px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(146, 170, 191, 0.16);
+  background: rgba(5, 13, 22, 0.72);
+  color: var(--text-primary);
+}
+
+.graphCanvasControls {
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.graphControlButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+
+.graphExpansionHint {
+  right: 18px;
+  top: 140px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(10, 20, 31, 0.9);
+  border: 1px solid rgba(146, 170, 191, 0.16);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.graphViewport svg {
+  position: absolute;
+  inset: 24px 24px 110px 24px;
+  width: calc(100% - 48px);
+  height: calc(100% - 134px);
+  z-index: 1;
+}
+
 .graphEdge {
   fill: none;
-  stroke: rgba(125, 144, 165, 0.42);
-  stroke-width: 0.55;
+  stroke: var(--edge-color);
+  stroke-width: 0.26;
+  opacity: 0.66;
   cursor: pointer;
-  transition: stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease;
 }
 
 .graphEdge.active {
-  stroke: var(--accent-amber);
-  stroke-width: 0.95;
+  stroke-width: 0.42;
+  opacity: 0.95;
+}
+
+.graphEdge.dimmed {
+  opacity: 0.12;
 }
 
 .graphEdgeLabel {
-  fill: rgba(248, 251, 255, 0.76);
-  font-size: 2px;
+  fill: rgba(168, 183, 200, 0.72);
+  font-size: 1.5px;
   text-anchor: middle;
-  pointer-events: none;
 }
 
 .graphNode {
   cursor: pointer;
 }
 
-.graphNode circle {
-  fill: rgba(125, 144, 165, 0.8);
-  stroke: rgba(248, 251, 255, 0.14);
-  stroke-width: 0.42;
-  transition: fill 180ms ease, stroke 180ms ease, filter 180ms ease;
+.graphNodeGlow {
+  fill: rgba(255, 107, 87, 0.22);
+}
+
+.graphNodeRing {
+  fill: transparent;
+  stroke: var(--ring-color);
+  stroke-width: 0.6;
+}
+
+.graphNodeCore {
+  fill: var(--node-fill);
+  stroke: rgba(244, 248, 251, 0.2);
+  stroke-width: 0.3;
+}
+
+.graphNode.active .graphNodeRing {
+  stroke-width: 0.92;
 }
 
 .graphNode text {
-  fill: var(--text-primary);
-  font-size: 2.5px;
+  fill: rgba(244, 248, 251, 0.92);
+  font-size: 2.4px;
   text-anchor: middle;
-  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(7, 17, 27, 0.72);
+  stroke-width: 0.24;
 }
 
-.graphNode.active circle {
-  fill: var(--accent-cyan);
-  stroke: #d8fffb;
-  filter: drop-shadow(0 0 8px rgba(64, 224, 208, 0.65));
+.collapsedClusterBadge {
+  right: 28px;
+  bottom: 150px;
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  border: 2px dashed rgba(244, 248, 251, 0.52);
+  color: var(--text-primary);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background: rgba(7, 17, 27, 0.42);
 }
 
-.focusPill,
-.miniMapPlaceholder,
-.zoomCluster,
-.marketLegend,
-.detailSidebar {
-  position: absolute;
-  z-index: 2;
-}
-
-.focusPill {
-  top: 18px;
-  left: 18px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(18, 28, 43, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.focusPill strong,
-.focusPill span {
-  display: block;
-}
-
-.focusPill span {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.miniMapPlaceholder {
-  left: 18px;
-  bottom: 18px;
-  width: 112px;
+.miniMapCard {
+  left: 16px;
+  bottom: 44px;
+  width: 152px;
   padding: 10px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 28, 43, 0.84);
+  border: 1px solid rgba(146, 170, 191, 0.16);
+  background: rgba(5, 13, 22, 0.84);
+  color: var(--text-primary);
 }
 
-.miniMapHeader {
-  margin-bottom: 8px;
-  color: var(--text-secondary);
+.miniMapCardHeader {
+  justify-content: space-between;
+  margin-bottom: 10px;
   font-size: 11px;
 }
 
 .miniMapFrame {
-  aspect-ratio: 1;
+  position: relative;
+  height: 102px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(circle at center, rgba(64, 224, 208, 0.2), transparent 70%),
-    linear-gradient(180deg, rgba(26, 35, 51, 0.92), rgba(11, 19, 32, 0.96));
+    radial-gradient(circle at 30% 20%, rgba(103, 232, 249, 0.8) 0 2px, transparent 3px),
+    radial-gradient(circle at 65% 38%, rgba(255, 107, 87, 0.72) 0 2px, transparent 3px),
+    rgba(255, 255, 255, 0.03);
+  overflow: hidden;
 }
 
-.zoomCluster {
-  right: 18px;
-  bottom: 88px;
-  display: grid;
-  gap: 10px;
-}
-
-.iconButton {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: rgba(18, 28, 43, 0.92);
-  color: var(--text-primary);
-}
-
-.marketLegend {
-  left: 50%;
-  bottom: 18px;
-  translate: -50% 0;
-  min-width: 280px;
-  padding: 10px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 28, 43, 0.9);
-  color: var(--text-secondary);
-}
-
-.marketLegendDots {
-  margin-top: 8px;
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-}
-
-.marketLegendDots i {
-  display: inline-block;
+.miniMapFrame i {
+  position: absolute;
+  width: 4px;
+  height: 4px;
   border-radius: 999px;
-  border: 1px solid rgba(248, 251, 255, 0.38);
+  background: rgba(244, 248, 251, 0.62);
+  transform: translate(-50%, -50%);
 }
 
-.marketLegendDots i:nth-child(1) {
-  width: 8px;
-  height: 8px;
-}
-
-.marketLegendDots i:nth-child(2) {
-  width: 12px;
-  height: 12px;
-}
-
-.marketLegendDots i:nth-child(3) {
-  width: 18px;
-  height: 18px;
-}
-
-.marketLegendDots i:nth-child(4) {
-  width: 24px;
-  height: 24px;
-}
-
-.marketLegendDots i:nth-child(5) {
-  width: 30px;
-  height: 30px;
-}
-
-.detailSidebar {
-  top: 112px;
-  right: 32px;
-  width: min(360px, calc(100% - 64px));
-  max-height: calc(100% - 144px);
-  padding: 18px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(18, 28, 43, 0.96);
-  color: var(--text-primary);
-  box-shadow: 0 28px 50px rgba(4, 10, 21, 0.34);
-  overflow: auto;
-}
-
-.detailSidebarHeader,
-.detailCompany,
-.detailTabs,
-.evidenceKpis,
-.detailMetricGrid,
-.provenanceGrid {
+.graphKeyboardDock {
+  left: 16px;
+  right: 16px;
+  bottom: 76px;
   display: grid;
-}
-
-.detailSidebarHeader {
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
-}
-
-.detailCompany {
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-}
-
-.detailLogo {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(180deg, rgba(64, 224, 208, 0.16), rgba(255, 107, 87, 0.16));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: "IBM Plex Mono", monospace;
-}
-
-.detailSidebar h3 {
-  margin: 2px 0 6px;
-  font-size: 28px;
-}
-
-.tierBadge,
-.miniBadge,
-.confidenceBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.tierBadge,
-.miniBadge {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-secondary);
-}
-
-.closeSidebar {
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.detailTabs {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.tabButton {
-  min-height: 44px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text-secondary);
-}
-
-.tabButton.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent-cyan);
-}
-
-.evidenceKpis {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.evidenceMetric {
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.evidenceMetric strong {
-  display: block;
-  margin-top: 6px;
-  color: var(--text-primary);
-  font-size: 20px;
-}
-
-.detailPanelBody {
-  display: grid;
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.detailCard {
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.detailCard strong {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.detailCard p,
-.detailList {
-  color: var(--text-secondary);
-}
-
-.supportingText,
-.boundaryHint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-.boundaryHint {
-  color: #ffe0a6;
-}
-
-.metaGrid {
-  grid-template-columns: auto 1fr;
-  gap: 8px 12px;
-  margin-top: 12px;
-}
-
-.metaGrid.compact {
-  margin-top: 14px;
-}
-
-.metaGrid span {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.metaGrid strong {
-  margin-bottom: 0;
-  font-size: 12px;
-}
-
-.detailMetricGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.metricCard.overlay {
-  padding: 14px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+.graphKeyboardPanel {
+  min-height: 116px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
 }
 
-.metricIcon {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  color: var(--accent-cyan);
-  background: rgba(64, 224, 208, 0.08);
+.graphKeyboardHeader {
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--text-primary);
 }
 
-.metricCard.overlay span {
-  display: block;
-  color: var(--text-secondary);
+.graphKeyboardHeader span {
+  color: var(--text-muted);
   font-size: 12px;
 }
 
-.metricCard.overlay strong {
-  margin-top: 4px;
-  margin-bottom: 0;
-  font-size: 13px;
+.graphKeyboardList {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.relationList,
-.detailList,
-.evidenceList {
+.relationPanel .graphKeyboardList {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.graphListButton {
+  min-height: 74px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+  text-align: left;
   display: grid;
+  gap: 4px;
+}
+
+.graphListButton.active {
+  background: rgba(103, 232, 249, 0.12);
+  border-color: rgba(103, 232, 249, 0.32);
+}
+
+.focusBreadcrumb {
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  min-width: 420px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(146, 170, 191, 0.16);
+  background: rgba(5, 13, 22, 0.88);
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.evidenceSidebar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 336px;
+  border-radius: 16px;
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  background: rgba(6, 16, 25, 0.95);
+  color: var(--text-primary);
+  backdrop-filter: blur(14px);
+  box-shadow: -18px 0 40px rgba(4, 9, 18, 0.28);
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+}
+
+.evidenceSidebarHeader {
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(146, 170, 191, 0.14);
+}
+
+.evidenceSidebarCompany h3 {
+  margin: 0 0 4px;
+  font-size: 30px;
+}
+
+.evidenceSidebarCompany p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.closeSidebar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+
+.detailTabs {
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tabButton,
+.mobileTab {
+  min-height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+}
+
+.tabButton.active,
+.mobileTab.active {
+  background: rgba(103, 232, 249, 0.12);
+  color: var(--text-primary);
+  border-color: rgba(103, 232, 249, 0.36);
+}
+
+.evidenceKpis {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.detailList {
+.evidenceMetric,
+.mobileMetric {
+  min-height: 72px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(146, 170, 191, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  display: grid;
+  gap: 6px;
+}
+
+.evidenceMetric strong,
+.mobileMetric strong {
+  font-size: 30px;
+}
+
+.evidenceSidebarBody {
+  flex: 1 1 auto;
+  padding: 0 16px 16px;
+  overflow: auto;
+}
+
+.sidebarCard {
+  padding: 14px;
+  color: var(--text-primary);
+}
+
+.sidebarCard + .sidebarCard,
+.sidebarMetricsGrid,
+.inlineStatusCard,
+.auditInfoCard,
+.mobileEvidenceBody {
+  margin-top: 12px;
+}
+
+.sidebarCard p,
+.evidenceExcerpt,
+.inlineStatusCard p,
+.mobileSummaryCard p {
   margin: 0;
-  padding-left: 18px;
-  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.sidebarMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sidebarMetricCard {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(146, 170, 191, 0.12);
+}
+
+.sidebarMetricIcon {
+  color: var(--accent-cyan);
 }
 
 .sidebarRelation {
+  width: 100%;
   padding: 12px;
   border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
   text-align: left;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.sidebarRelation strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.sidebarRelation p {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
+  display: grid;
+  gap: 5px;
 }
 
 .sidebarRelation.active {
-  background: rgba(64, 224, 208, 0.12);
-  border-color: rgba(64, 224, 208, 0.24);
+  border-color: rgba(103, 232, 249, 0.36);
+  background: rgba(103, 232, 249, 0.1);
 }
 
-.miniBadge.semantic {
-  margin-top: 8px;
-}
-
-.skuGranularityBadge {
-  white-space: normal;
-}
-
-.skuGranularity-target_sku {
-  color: #b8fff8;
-  background: rgba(64, 224, 208, 0.16);
-  border-color: rgba(64, 224, 208, 0.3);
-}
-
-.skuGranularity-platform_component_sku {
-  color: #dbf4ff;
-  background: rgba(118, 187, 255, 0.14);
-  border-color: rgba(118, 187, 255, 0.28);
-}
-
-.skuGranularity-family_only {
-  color: #f4ead2;
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 224, 166, 0.4);
-}
-
-.skuGranularity-documented_legacy_only {
-  color: #ffd7c4;
-  background: rgba(255, 107, 87, 0.12);
-  border-color: rgba(255, 107, 87, 0.26);
-}
-
-.skuGranularity-out_of_scope_sku,
-.skuGranularity-unknown {
+.detailList {
+  display: grid;
+  gap: 8px;
+  padding-left: 18px;
+  margin: 0;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
 }
 
-.confidenceBadge.confirmed {
-  color: #b8fff8;
-  background: var(--accent-cyan-soft);
+.evidenceTabPanel {
+  display: grid;
+  gap: 12px;
 }
 
-.confidenceBadge.strong_evidence {
-  color: #ffe9b6;
-  background: var(--accent-amber-soft);
+.inlineStatusCard {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(146, 170, 191, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
 }
 
-.confidenceBadge.inferred {
-  color: #ffd1ca;
-  background: var(--accent-coral-soft);
+.inlineStatusCard.error {
+  border-color: rgba(255, 107, 87, 0.4);
+}
+
+.inlineActionButton {
+  margin-top: 10px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
 }
 
 .evidenceCard {
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.evidenceCard strong {
-  display: block;
-  margin-top: 10px;
-  margin-bottom: 8px;
+  border: 1px solid rgba(146, 170, 191, 0.16);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-primary);
-  line-height: 1.45;
 }
 
-.evidenceCard p {
-  margin: 0 0 12px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  line-height: 1.55;
+.evidenceHeaderCopy {
+  display: grid;
+  gap: 4px;
 }
 
-.evidenceFooter {
-  justify-content: space-between;
-  color: var(--text-muted);
+.evidenceThumb {
+  width: 52px;
+  height: 72px;
+  border-radius: 10px;
+  border: 1px solid rgba(146, 170, 191, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+  display: grid;
+  place-items: center;
+}
+
+.miniBadge,
+.confidenceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
   font-size: 11px;
+}
+
+.miniBadge {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+.confidenceBadge.confirmed {
+  background: rgba(138, 214, 110, 0.16);
+  color: var(--accent-lime);
+}
+
+.confidenceBadge.strong_evidence {
+  background: rgba(244, 183, 64, 0.16);
+  color: var(--accent-amber);
+}
+
+.confidenceBadge.inferred {
+  background: rgba(255, 107, 87, 0.16);
+  color: var(--accent-coral);
+}
+
+.evidenceExcerpt {
+  margin-top: 12px;
+}
+
+.evidenceMetaGrid,
+.auditGrid {
+  display: grid;
+  grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+  gap: 8px 12px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.auditGrid {
+  margin-top: 0;
+}
+
+.auditGrid dd,
+.auditGrid dt {
+  margin: 0;
+}
+
+.auditGrid dd,
+.evidenceMetaGrid strong {
+  color: var(--text-primary);
+}
+
+.auditLinkCell {
+  word-break: break-all;
 }
 
 .evidenceCard a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
   color: var(--accent-cyan);
-  font-size: 13px;
 }
 
-.provenanceGrid {
-  grid-template-columns: auto 1fr;
-  gap: 8px 12px;
+.boundaryHint {
+  margin: 10px 0 0;
+  color: var(--accent-amber);
   font-size: 12px;
 }
 
-.provenanceGrid span {
-  color: var(--text-muted);
+.systemStrip {
+  padding: 16px 18px 18px;
+  border-top: 1px solid rgba(146, 170, 191, 0.14);
+  background: rgba(244, 246, 248, 0.96);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.loadingShell,
-.loadingToast {
-  font-family: "IBM Plex Mono", monospace;
+.systemStripBlock {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(100, 131, 157, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 12px;
+}
+
+.systemStripBlock strong {
+  font-size: 14px;
+}
+
+.marketLegendDots,
+.semanticLegend,
+.tierLegend,
+.motionChips {
+  flex-wrap: wrap;
+}
+
+.marketLegendDots span,
+.semanticLegend span,
+.tierLegend span,
+.motionChips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(26, 36, 48, 0.78);
+}
+
+.dot {
+  border-radius: 999px;
+  background: rgba(46, 77, 103, 0.7);
+  display: inline-block;
+}
+
+.dot.xs {
+  width: 8px;
+  height: 8px;
+}
+
+.dot.sm {
+  width: 12px;
+  height: 12px;
+}
+
+.dot.md {
+  width: 18px;
+  height: 18px;
+}
+
+.dot.lg {
+  width: 24px;
+  height: 24px;
+}
+
+.dot.xl {
+  width: 34px;
+  height: 34px;
+}
+
+.tier {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-block;
+  border: 2px solid;
+}
+
+.tier1 {
+  border-color: var(--accent-cyan);
+}
+
+.tier2 {
+  border-color: var(--accent-blue);
+}
+
+.tier3 {
+  border-color: var(--accent-amber);
+}
+
+.tier4 {
+  border-color: var(--accent-slate);
+  border-style: dashed;
+}
+
+.mobileEvidenceShell {
+  display: none;
+}
+
+.mobilePhoneFrame {
+  width: 290px;
+  margin-left: auto;
+  border-radius: 34px;
+  border: 5px solid rgba(12, 24, 36, 0.94);
+  background: linear-gradient(180deg, #09121b 0%, #07111b 100%);
+  color: var(--text-primary);
+  box-shadow: 0 24px 50px rgba(5, 12, 24, 0.24);
+  overflow: hidden;
+}
+
+.mobilePhoneBar {
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  font-size: 12px;
+}
+
+.mobileExplorerPreview {
+  padding: 0 14px 14px;
+}
+
+.mobileQuickChips {
+  margin-bottom: 12px;
+}
+
+.mobileQuickChips span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+}
+
+.mobileMiniGraph {
+  min-height: 136px;
+  border-radius: 16px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 107, 87, 0.24), transparent 22%),
+    radial-gradient(circle at 28% 24%, rgba(103, 232, 249, 0.22), transparent 18%),
+    rgba(255, 255, 255, 0.03);
+  display: grid;
+  align-content: end;
+  gap: 4px;
+}
+
+.mobileBottomSheet {
+  min-height: 286px;
+  padding: 10px 14px 14px;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  background: rgba(10, 20, 31, 0.98);
+}
+
+.mobileSheetHandle {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 auto 10px;
+}
+
+.mobileSheetHeader {
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mobileTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mobileEvidenceKpis {
+  justify-content: stretch;
+}
+
+.mobileMetric {
+  min-height: 56px;
+  flex: 1 1 0;
+}
+
+.mobileEvidenceBody .evidenceCard:nth-child(n + 3),
+.mobileEvidenceBody .auditInfoCard,
+.mobileEvidenceBody .evidenceContextCard {
+  display: none;
+}
+
+.mobileSummaryCard {
+  padding: 14px;
 }
 
 .loadingShell {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
-}
-
-.loadingStateCard,
-.inlineStatusCard {
-  border: 1px solid var(--line-subtle);
-  border-radius: 20px;
-  box-shadow: var(--shadow-shell);
 }
 
 .loadingStateCard {
-  max-width: 520px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.loadingStateCard strong,
-.inlineStatusCard p {
-  display: block;
-  margin: 0;
-}
-
-.loadingStateCard p {
-  margin: 10px 0 0;
-  line-height: 1.6;
-}
-
-.inlineStatusCard {
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
-}
-
-.inlineStatusCard.error {
-  border-color: rgba(255, 107, 87, 0.36);
-  background: rgba(255, 107, 87, 0.12);
-}
-
-.inlineStatusCard.error p {
-  margin-bottom: 12px;
-}
-
-.inlineActionButton {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(64, 224, 208, 0.28);
-  background: rgba(64, 224, 208, 0.12);
-  color: inherit;
-}
-
-.inlineActionButton.toast {
-  background: transparent;
-  color: var(--text-primary);
+  width: min(460px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 20px;
+  background: white;
+  border: 1px solid rgba(100, 131, 157, 0.18);
+  box-shadow: 0 24px 50px rgba(54, 79, 103, 0.12);
 }
 
 .loadingToast {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  display: flex;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(7, 17, 27, 0.94);
+  color: var(--text-primary);
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(64, 224, 208, 0.28);
-  background: rgba(18, 28, 43, 0.94);
-  color: var(--text-primary);
+  z-index: 20;
 }
 
 .loadingToast.error {
-  border-color: rgba(255, 107, 87, 0.36);
+  border: 1px solid rgba(255, 107, 87, 0.38);
 }
 
-@media (max-width: 1220px) {
-  .quickAccessSection {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.toast {
+  margin-top: 0;
+}
+
+@media (max-width: 1260px) {
+  .annotationRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .capabilitySection {
+  .commandBar {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .commandNav {
+    justify-content: flex-start;
+  }
+
+  .filterRibbon,
+  .trustLegend {
+    align-items: flex-start;
+  }
+
+  .filterRibbon {
+    flex-direction: column;
+  }
+
+  .explorerWorkspace {
+    grid-template-columns: 228px minmax(0, 1fr);
+  }
+
+  .graphKeyboardDock {
+    grid-template-columns: 1fr;
+  }
+
+  .systemStrip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 980px) {
-  .atlasPage {
-    width: min(100vw - 24px, 100%);
+  .explorerPage {
+    width: min(100vw, calc(100vw - 16px));
     padding-top: 16px;
   }
 
-  .globalHeader,
-  .workspaceIntro,
-  .heroGrid {
+  .annotationRow {
     grid-template-columns: 1fr;
-    display: grid;
   }
 
-  .globalHeader {
-    height: auto;
-    padding: 18px;
+  .explorerWorkspace {
+    grid-template-columns: 1fr;
   }
 
-  .globalNav {
-    justify-content: start;
-    flex-wrap: wrap;
+  .commandRail {
+    display: none;
   }
 
-  .statusStrip {
+  .graphWorkspace,
+  .graphViewport {
+    min-height: 620px;
+  }
+
+  .evidenceSidebar {
+    display: none;
+  }
+
+  .graphViewport svg {
+    inset: 24px 18px 90px 18px;
+    width: calc(100% - 36px);
+    height: calc(100% - 114px);
+  }
+
+  .graphKeyboardDock {
+    left: 12px;
+    right: 12px;
+    bottom: 68px;
+  }
+
+  .graphKeyboardList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .graphWorkspace {
-    min-height: auto;
-    padding-bottom: 480px;
+  .relationPanel .graphKeyboardList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .detailSidebar {
-    left: 20px;
-    right: 20px;
-    top: auto;
-    bottom: 20px;
-    width: auto;
-    max-height: 340px;
+  .focusBreadcrumb {
+    min-width: 0;
+    width: calc(100% - 24px);
+  }
+
+  .mobileEvidenceShell {
+    display: block;
   }
 }
 
 @media (max-width: 720px) {
-  .atlasPage {
-    width: min(100vw - 16px, 100%);
-    gap: 16px;
+  .commandControls {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
-  .globalHeader,
-  .heroPanel,
-  .heroCanvasCard,
-  .quickAccessSection,
-  .statusStrip,
-  .workspaceBoard,
-  .graphWorkspace {
-    border-radius: 20px;
+  .commandSearchField {
+    min-width: 0;
+    width: 100%;
   }
 
-  .quickAccessSection,
-  .statusStrip,
-  .capabilitySection,
-  .detailMetricGrid,
-  .evidenceKpis {
-    grid-template-columns: 1fr;
+  .trustLegendItems {
+    flex-wrap: wrap;
   }
 
-  .filterChipGrid,
-  .metaGrid {
-    grid-template-columns: 1fr;
+  .graphStatsCluster,
+  .miniMapCard,
+  .collapsedClusterBadge,
+  .graphKeyboardDock {
+    display: none;
   }
 
-  .graphWorkspace {
-    padding: 14px;
-  }
-
-  .workspaceHeader {
-    flex-direction: column;
-  }
-
+  .graphWorkspace,
   .graphViewport {
-    min-height: 240px;
-    overflow: visible;
+    min-height: 500px;
   }
 
-  .graphAssistivePanel {
-    position: static;
-    width: 100%;
-    max-height: none;
-    margin-bottom: 12px;
+  .graphViewport svg {
+    inset: 64px 12px 64px 12px;
+    width: calc(100% - 24px);
+    height: calc(100% - 128px);
   }
 
-  .marketLegend,
-  .miniMapPlaceholder,
-  .zoomCluster {
-    position: static;
-    translate: none;
-    margin-top: 12px;
+  .focusBreadcrumb {
+    font-size: 12px;
+    bottom: 12px;
   }
 
-  .detailSidebar {
-    position: static;
-    width: 100%;
-    max-height: none;
-    margin-top: 16px;
-    box-shadow: none;
-  }
-
-  .graphWorkspace {
-    padding-bottom: 14px;
-  }
-
-  .heroPanel h1 {
-    font-size: 40px;
+  .systemStrip {
+    grid-template-columns: 1fr;
   }
 }
