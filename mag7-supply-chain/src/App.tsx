@@ -1,6 +1,8 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { CompanySidebar } from "./components/CompanySidebar";
+import { ExplorerCommandRail } from "./components/ExplorerCommandRail";
 import { GraphCanvas } from "./components/GraphCanvas";
+import { MobileEvidenceSheet } from "./components/MobileEvidenceSheet";
 import { StatusStrip } from "./components/StatusStrip";
 import { TopBar } from "./components/TopBar";
 import { useGraphExplorer } from "./hooks/useGraphExplorer";
@@ -11,15 +13,16 @@ const graphExplorerApi = createHttpGraphExplorerApi(import.meta.env.VITE_GRAPH_A
 
 export function App() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const [depth, setDepth] = useState(2);
+  const [depth, setDepth] = useState(3);
   const [search, setSearch] = useState("");
   const [zoom, setZoom] = useState(1);
-  const [activeTab, setActiveTab] = useState<"overview" | "evidence" | "financials">("overview");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "evidence" | "financials">("evidence");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [relationshipTypes, setRelationshipTypes] = useState<GraphRelationViewModel["relationshipType"][]>([]);
   const [relationshipSubtype, setRelationshipSubtype] = useState<string | null>(null);
+  const [isExplorerFullscreen, setIsExplorerFullscreen] = useState(false);
   const deferredSearch = useDeferredValue(search);
+  const explorerShellRef = useRef<HTMLDivElement | null>(null);
 
   const explorer = useGraphExplorer(
     graphExplorerApi,
@@ -45,6 +48,17 @@ export function App() {
 
   const activeNode = graph?.nodes.find((node) => node.id === activeNodeId) ?? null;
   const activeRelation = graph?.relations.find((relation) => relation.id === activeRelationId) ?? graph?.relations[0] ?? null;
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsExplorerFullscreen(document.fullscreenElement === explorerShellRef.current);
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -82,7 +96,7 @@ export function App() {
     return () => {
       alive = false;
     };
-  }, [activeRelation]);
+  }, [activeRelation, explorer]);
 
   useEffect(() => {
     if (!graph) {
@@ -113,13 +127,26 @@ export function App() {
     }
   }, [graph, relationshipSubtype]);
 
+  async function handleFullscreenToggle() {
+    if (!explorerShellRef.current) {
+      return;
+    }
+
+    if (document.fullscreenElement === explorerShellRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await explorerShellRef.current.requestFullscreen();
+  }
+
   function handleCompanySelect(companyId: string) {
     captureFocusTrigger();
     startTransition(() => {
       setSelectedCompanyId(companyId);
       setActiveNodeId(companyId);
       setActiveRelationId(null);
-      setActiveTab("overview");
+      setActiveTab("evidence");
       setSidebarOpen(true);
       setZoom(1);
     });
@@ -165,7 +192,8 @@ export function App() {
       return;
     }
 
-    void explorer.loadRelationEvidence(activeRelation)
+    void explorer
+      .loadRelationEvidence(activeRelation)
       .then((evidence) => {
         setActiveEvidence(evidence);
         setEvidenceError(null);
@@ -190,10 +218,10 @@ export function App() {
       return (
         <main className="loadingShell">
           <div className="loadingStateCard" role="alert">
-            <strong>Graph explorer unavailable</strong>
+            <strong>图谱探索器暂不可用</strong>
             <p>{explorer.error}</p>
             <button className="inlineActionButton" onClick={handleRetry} type="button">
-              Retry graph load
+              重试加载
             </button>
           </div>
         </main>
@@ -203,115 +231,150 @@ export function App() {
     return (
       <main className="loadingShell">
         <div className="loadingStateCard" role="status" aria-live="polite">
-          <strong>Loading graph shell…</strong>
-          <p>Preparing the published Mag7 graph view and company list.</p>
+          <strong>正在准备探索壳层...</strong>
+          <p>加载已发布 Mag7 图谱、公司列表与证据视图。</p>
         </div>
       </main>
     );
   }
 
   const focusNode = activeNode ?? graph.nodes[0];
+  const visibleRegions = new Set(graph.nodes.map((node) => node.region)).size;
+  const selectedCompanyOption =
+    explorer.companies.find((company) => company.id === selectedCompanyId) ??
+    explorer.companies.find((company) => company.id === graph.focusCompany.id) ??
+    graph.focusCompany;
 
   return (
-    <main className="atlasPage">
-      <TopBar
-        companies={explorer.companies}
-        depth={depth}
-        filtersOpen={filtersOpen}
-        graph={graph}
-        onCompanySelect={handleCompanySelect}
-        onDepthChange={setDepth}
-        onFiltersClear={handleFilterClear}
-        onFiltersToggle={() => setFiltersOpen((current) => !current)}
-        onSearchChange={setSearch}
-        onRelationshipSubtypeChange={setRelationshipSubtype}
-        onRelationshipTypeToggle={handleRelationshipTypeToggle}
-        relationshipSubtype={relationshipSubtype}
-        relationshipSubtypeOptions={graph.relationshipSubtypeOptions}
-        relationshipTypes={relationshipTypes}
-        relationTypeOptions={graph.relationTypeOptions}
-        search={search}
-        selectedCompanyId={selectedCompanyId}
-      />
-
-      <StatusStrip graph={graph} />
-
-      <section className="capabilitySection">
-        <article className="capabilityCard">
-          <span className="capabilityIcon">01</span>
-          <h2>Interactive Network</h2>
-          <p>Expand supplier layers from any Mag7 anchor without collapsing the graph container into a static list.</p>
+    <main className="explorerPage">
+      <section className="annotationRow" aria-label="核心交互说明">
+        <article className="annotationCard">
+          <span className="annotationIndex">1</span>
+          <div>
+            <strong>节点展开 / 收缩</strong>
+            <p>点击图谱节点或关系入口，保持图谱为主视图并在右侧刷新证据层。</p>
+          </div>
         </article>
-        <article className="capabilityCard">
-          <span className="capabilityIcon">02</span>
-          <h2>Evidence-backed</h2>
-          <p>Every relation keeps a source card path ready for filings, earnings calls, supplier reports, and media citations.</p>
+        <article className="annotationCard">
+          <span className="annotationIndex">2</span>
+          <div>
+            <strong>搜索定位</strong>
+            <p>顶部搜索与左侧结果联动，选择公司后重置焦点、层级与证据上下文。</p>
+          </div>
         </article>
-        <article className="capabilityCard">
-          <span className="capabilityIcon">03</span>
-          <h2>Financial Insights</h2>
-          <p>Market-cap sizing, relationship counts, and company-level risk summaries stay available beside the graph.</p>
+        <article className="annotationCard">
+          <span className="annotationIndex">3</span>
+          <div>
+            <strong>证据审计侧栏</strong>
+            <p>桌面端以覆盖层滑入，不挤压图谱；移动端降级为底部证据抽屉。</p>
+          </div>
         </article>
-        <article className="capabilityCard">
-          <span className="capabilityIcon">04</span>
-          <h2>Risk &amp; Resilience</h2>
-          <p>Confidence badges and tier encoding make single-point-of-failure analysis visible before live data wiring.</p>
+        <article className="annotationCard">
+          <span className="annotationIndex">4</span>
+          <div>
+            <strong>响应式证据流</strong>
+            <p>保留概览 / 证据 / 财务三标签与审计信息区，确保一套数据契约多端复用。</p>
+          </div>
         </article>
       </section>
 
-      <section className="workspaceBoard">
-        <div className="workspaceIntro">
-          <div>
-            <p className="sectionEyebrow">Global Supply Chain Map</p>
-            <h2>Fullscreen graph exploration with an overlay evidence rail</h2>
-          </div>
-          <p>
-            The graph canvas remains the primary surface. Company context, evidence, and financial placeholders slide over the
-            workspace on desktop and stack below on mobile.
-          </p>
-        </div>
-
-        <GraphCanvas
-          activeNodeId={activeNodeId}
-          activeRelationId={activeRelation?.id ?? null}
-          focusNode={focusNode}
+      <section className={isExplorerFullscreen ? "explorerShell fullscreen" : "explorerShell"} ref={explorerShellRef}>
+        <TopBar
+          depth={depth}
+          evidenceSummary={graph.evidenceOverview}
           graph={graph}
-          onNodeSelect={handleNodeSelect}
-          onRelationSelect={handleRelationSelect}
-          onZoomChange={setZoom}
-          zoom={zoom}
+          isFullscreen={isExplorerFullscreen}
+          onDepthChange={setDepth}
+          onFiltersClear={handleFilterClear}
+          onFullscreenToggle={() => {
+            void handleFullscreenToggle();
+          }}
+          onRelationshipSubtypeChange={setRelationshipSubtype}
+          onRelationshipTypeToggle={handleRelationshipTypeToggle}
+          onSearchChange={setSearch}
+          relationshipSubtype={relationshipSubtype}
+          relationshipSubtypeOptions={graph.relationshipSubtypeOptions}
+          relationshipTypes={relationshipTypes}
+          relationTypeOptions={graph.relationTypeOptions}
+          search={search}
         />
 
-        {sidebarOpen ? (
-          <CompanySidebar
-            activeNode={activeNode}
-            activeRelation={activeRelation}
-            activeTab={activeTab}
-            company={graph.focusCompany}
-            evidence={activeEvidence}
-            evidenceError={evidenceError}
-            evidenceLoading={evidenceLoading}
-            evidenceSummary={graph.evidenceOverview}
-            isOpen={sidebarOpen}
-            onClose={handleSidebarClose}
-            onRelationSelect={handleRelationSelect}
-            onRetryEvidence={handleRetryEvidence}
-            onTabChange={setActiveTab}
-            relations={graph.relations}
+        <div className="explorerWorkspace">
+          <ExplorerCommandRail
+            activeCompanyId={selectedCompanyOption.id}
+            coveredRegions={visibleRegions}
+            focusCompany={graph.focusCompany}
+            onCompanySelect={handleCompanySelect}
+            search={search}
+            searchResults={explorer.companies}
+            tier1SupplierCount={graph.focusCompany.overview.tier1SupplierCount}
           />
-        ) : null}
+
+          <div className="graphStage">
+            <GraphCanvas
+              activeNodeId={activeNodeId}
+              activeRelationId={activeRelation?.id ?? null}
+              depth={depth}
+              focusNode={focusNode}
+              graph={graph}
+              isFullscreen={isExplorerFullscreen}
+              onFullscreenToggle={() => {
+                void handleFullscreenToggle();
+              }}
+              onNodeSelect={handleNodeSelect}
+              onRelationSelect={handleRelationSelect}
+              onZoomChange={setZoom}
+              zoom={zoom}
+            />
+
+            {sidebarOpen ? (
+              <CompanySidebar
+                activeNode={activeNode}
+                activeRelation={activeRelation}
+                activeTab={activeTab}
+                company={graph.focusCompany}
+                depth={depth}
+                evidence={activeEvidence}
+                evidenceError={evidenceError}
+                evidenceLoading={evidenceLoading}
+                evidenceSummary={graph.evidenceOverview}
+                isOpen={sidebarOpen}
+                onClose={handleSidebarClose}
+                onRelationSelect={handleRelationSelect}
+                onRetryEvidence={handleRetryEvidence}
+                onTabChange={setActiveTab}
+                relations={graph.relations}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        <StatusStrip graph={graph} />
       </section>
+
+      <MobileEvidenceSheet
+        activeRelation={activeRelation}
+        activeTab={activeTab}
+        company={graph.focusCompany}
+        depth={depth}
+        evidence={activeEvidence}
+        evidenceError={evidenceError}
+        evidenceLoading={evidenceLoading}
+        evidenceSummary={graph.evidenceOverview}
+        onRetryEvidence={handleRetryEvidence}
+        onTabChange={setActiveTab}
+      />
 
       {explorer.loading ? (
         <div className="loadingToast" role="status" aria-live="polite">
-          Refreshing graph…
+          正在刷新图谱...
         </div>
       ) : null}
       {!explorer.loading && explorer.error ? (
         <div className="loadingToast error" role="alert">
           <span>{explorer.error}</span>
           <button className="inlineActionButton toast" onClick={handleRetry} type="button">
-            Retry
+            重试
           </button>
         </div>
       ) : null}
@@ -321,12 +384,12 @@ export function App() {
 
 function getEvidenceErrorMessage(error: unknown) {
   if (error instanceof ApiRequestError && error.status === 404) {
-    return "Evidence is not available for this relation in the published view yet. Candidate-only evidence remains outside the published release boundary.";
+    return "该关系尚未发布可展示证据。候选证据仍保留在当前发布边界之外。";
   }
 
   if (error instanceof Error) {
     return error.message;
   }
 
-  return "Failed to load relation evidence.";
+  return "加载关系证据失败。";
 }
