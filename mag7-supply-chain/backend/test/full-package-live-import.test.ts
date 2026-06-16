@@ -80,22 +80,22 @@ async function createBaselineDriftFixture() {
 }
 
 describe("full-package live import manifest", () => {
-  it("resolves the root full21 tail-closure published view while keeping authoritative snapshot pinned to full.18", async () => {
+  it("resolves the root full22 top-level candidate shell published view while keeping authoritative snapshot pinned to full.18", async () => {
     const spec = await resolveFullPackageLiveImportSpec(FULL_PACKAGE_MANIFEST, "published");
 
     expect(spec).toMatchObject({
       manifestPath: FULL_PACKAGE_MANIFEST,
       mode: "published",
-      packageSnapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      packageSnapshotId: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       authoritativeSnapshotId: "snapshot:2026-06-15.full.18",
       expectedRelationCount: 332,
       expectedEvidenceCount: 444,
-      candidateOnlyRelationCount: 3,
-      candidateOnlyEvidenceCount: 4,
+      candidateOnlyRelationCount: 2,
+      candidateOnlyEvidenceCount: 3,
     });
     expect(spec.governance).toMatchObject({
       authoritativeSnapshot: "snapshot:2026-06-15.full.18",
-      activeCandidateShell: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      activeCandidateShell: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       realDataLaunch: {
         status: "awaiting_source_neo4j_positive_closure",
         allowedToAdvance: false,
@@ -112,17 +112,17 @@ describe("full-package live import manifest", () => {
     });
   });
 
-  it("resolves the root full21 tail-closure all-candidates view with the 3/4 candidate-only delta intact", async () => {
+  it("resolves the root full22 top-level all-candidates view with the 2/3 candidate-only delta intact", async () => {
     const spec = await resolveFullPackageLiveImportSpec(FULL_PACKAGE_MANIFEST, "all-candidates");
 
     expect(spec).toMatchObject({
       mode: "all-candidates",
-      packageSnapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      packageSnapshotId: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       authoritativeSnapshotId: "snapshot:2026-06-15.full.18",
-      expectedRelationCount: 335,
-      expectedEvidenceCount: 448,
-      candidateOnlyRelationCount: 3,
-      candidateOnlyEvidenceCount: 4,
+      expectedRelationCount: 334,
+      expectedEvidenceCount: 447,
+      candidateOnlyRelationCount: 2,
+      candidateOnlyEvidenceCount: 3,
     });
     expect(spec.relationFile).toBe(
       "/workspace/agents/evidence-collector/output/mag7-full-package/relations-all-candidates.jsonl",
@@ -133,8 +133,8 @@ describe("full-package live import manifest", () => {
 
     const counts = await validateFullPackageLiveImportSpec(spec);
     expect(counts).toEqual({
-      actualRelationCount: 335,
-      actualEvidenceCount: 448,
+      actualRelationCount: 334,
+      actualEvidenceCount: 447,
     });
   });
 

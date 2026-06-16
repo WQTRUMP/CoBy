@@ -7,8 +7,8 @@
 
 出现以下任一情况时，必须执行治理回滚：
 
-1. 文档、manifest 或审批材料把 `full.21` shell 错写成新的 authoritative snapshot
-2. published 口径被错误写成 `335/448` 或把 `candidate-only=3/4` 混入 published
+1. 文档、manifest 或审批材料把 `full.22` shell 错写成新的 authoritative snapshot
+2. published 口径被错误写成 `334/447` 或把 `candidate-only=2/3` 混入 published
 3. `real_data_launch` 在未取得 `source=neo4j` 正向闭环前被提前上调
 4. historical full19/full20-wave5 口径被重新当作当前正式输入
 
@@ -18,8 +18,8 @@
 2. 恢复所有当前入口文件到：
    - `authoritative snapshot=snapshot:2026-06-15.full.18`
    - `published=332/444`
-   - `all-candidates=335/448`
-   - `candidate-only=3/4`
+   - `all-candidates=334/447`
+   - `candidate-only=2/3`
    - `real_data_launch=awaiting_source_neo4j_positive_closure`
 3. 明确标记错误口径为 `historical`、`superseded` 或 `audit-only`
 
@@ -40,7 +40,7 @@
 必须恢复以下结论：
 
 1. `full.18` 是唯一 authoritative snapshot
-2. `full.21` 只是 active candidate shell
+2. `full.22` 只是 active candidate shell
 3. `real_data_launch` 仍被 `source=neo4j` 正向闭环阻塞
 4. 未经 live 闭环，不得发起 Cloudflare 正式部署审批
 
@@ -60,8 +60,8 @@ jq '.authoritative_supply_chain_release.authoritative_snapshot, .authoritative_s
 
 1. authoritative snapshot 仍为 `snapshot:2026-06-15.full.18`
 2. published 仍为 `332/444`
-3. all-candidates 仍为 `335/448`
-4. candidate-only 仍为 `3/4`
+3. all-candidates 仍为 `334/447`
+4. candidate-only 仍为 `2/3`
 
 ## 4. 回滚后沟通要求
 
@@ -85,9 +85,9 @@ jq '.authoritative_supply_chain_release.authoritative_snapshot, .authoritative_s
 完成回滚后，仓库必须再次稳定在以下唯一状态：
 
 - `authoritative snapshot=snapshot:2026-06-15.full.18`
-- `active candidate shell=snapshot:2026-06-15.full.21-tail-closure-candidate`
+- `active candidate shell=snapshot:2026-06-16.full.22-amazon-tail-candidate`
 - `published=332/444`
-- `all-candidates=335/448`
-- `candidate-only=3/4`
+- `all-candidates=334/447`
+- `candidate-only=2/3`
 - `real_data_launch=awaiting_source_neo4j_positive_closure`
 - `source=neo4j` 正向闭环仍是前移门槛

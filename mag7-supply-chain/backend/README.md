@@ -151,13 +151,13 @@ npm run import:full-package:live -- \
   --mode published
 ```
 
-当前顶层正式包已经重建到 `full21-tail-closure` candidate shell，live 导入必须按 manifest 口径执行，而不是手写旧 JSONL 路径或沿用旧计数：
+当前顶层正式包已经重建到 `full22-amazon-tail` candidate shell，live 导入必须按 manifest 口径执行，而不是手写旧 JSONL 路径或沿用旧计数：
 
-- `package snapshot shell`：`snapshot:2026-06-15.full.21-tail-closure-candidate`
+- `package snapshot shell`：`snapshot:2026-06-16.full.22-amazon-tail-candidate`
 - `authoritative snapshot`：`snapshot:2026-06-15.full.18`
 - `published view`：`332 relations / 444 evidence`
-- `all-candidates view`：`335 relations / 448 evidence`
-- `candidate-only delta`：`3 relations / 4 evidence`
+- `all-candidates view`：`334 relations / 447 evidence`
+- `candidate-only delta`：`2 relations / 3 evidence`
 
 如果需要导入候选全集用于审计或离线对比，可显式切换：
 
@@ -179,12 +179,12 @@ curl -X POST http://127.0.0.1:4000/api/v1/imports/normalized-package \
   }'
 ```
 
-CLI 在 `--manifest` 与 `--package-dir` 两种模式下都会先读取同级 `version-manifest.json`，并显式比对 `/workspace/project/mag7-supply-chain/infra/data-governance/data-version-manifest.json` 里的正式基线；只有同时满足 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`，导入才允许继续。任何仅 package manifest 自洽、但仍停留在旧 `341/459`、`350/476`、`9/15`、`23/41` 或其他漂移 candidate shell 的包都会直接失败。
+CLI 在 `--manifest` 与 `--package-dir` 两种模式下都会先读取同级 `version-manifest.json`，并显式比对 `/workspace/project/mag7-supply-chain/infra/data-governance/data-version-manifest.json` 里的正式基线；只有同时满足 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=334/447`、`candidate-only=2/3`，导入才允许继续。任何仅 package manifest 自洽、但仍停留在旧 `335/448`、`341/459`、`350/476`、`3/4`、`9/15`、`23/41` 或其他漂移 candidate shell 的包都会直接失败。
 
 `--mode all-candidates` 现在会把 `candidate_only` 行归入独立的 draft candidate shell snapshot：
 
 - published 查询面继续只暴露 authoritative published `332 / 444`
-- candidate shell `3 / 4` 仅在显式传入 `snapshot=snapshot:2026-06-15.full.21-tail-closure-candidate` 时出现在 `graph/subgraph`、`graph/stats`、`graph/path`
+- candidate shell `2 / 3` 仅在显式传入 `snapshot=snapshot:2026-06-16.full.22-amazon-tail-candidate` 时出现在 `graph/subgraph`、`graph/stats`、`graph/path`
 - `relations/:id/evidence` 对保留的 candidate shell relation 仍可直接返回证据；被清出的 6 条 stop-investing / historical-audit-only relation 继续返回 `404`
 
 这样可以在 Neo4j/Redis live 模式下同时保留候选审计能力和 authoritative published 边界，而不会把 candidate shell 混入默认 published 探索流。

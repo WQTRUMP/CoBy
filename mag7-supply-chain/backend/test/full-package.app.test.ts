@@ -819,13 +819,13 @@ describe("full package app", () => {
     });
   });
 
-  it("distinguishes the full21 tail-closure candidate shell from the authoritative full.18 published snapshot", () => {
-    expect(rootPackageSnapshotId).toBe("snapshot:2026-06-15.full.21-tail-closure-candidate");
+  it("distinguishes the full22 top-level candidate shell from the authoritative full.18 published snapshot", () => {
+    expect(rootPackageSnapshotId).toBe("snapshot:2026-06-16.full.22-amazon-tail-candidate");
     expect(latestPublishedSnapshotId).toBe("snapshot:2026-06-15.full.18");
     expect(rootPackageSnapshotId).not.toBe(latestPublishedSnapshotId);
   });
 
-  it("keeps the 3/4 candidate shell out of published queries while exposing it through the package snapshot in all-candidates mode", async () => {
+  it("keeps the 2/3 candidate shell out of published queries while exposing it through the package snapshot in all-candidates mode", async () => {
     const [
       detail,
       overview,
@@ -884,7 +884,6 @@ describe("full package app", () => {
     });
     expect(candidateSubgraph.json().relations.map((relation: { id: string }) => relation.id).sort()).toEqual([
       "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
-      "rel:amazon:astera-labs:component_supply:amzn-r18-13-procurement_candidate-signal_conditioning",
       "rel:amazon:sk-hynix:component_supply:amzn-r18-16-memory_candidate-hbm3",
     ]);
 
@@ -895,8 +894,8 @@ describe("full package app", () => {
 
     expect(candidateStats.statusCode).toBe(200);
     expect(candidateStats.json()).toMatchObject({
-      relationCount: 3,
-      evidenceCount: 4,
+      relationCount: 2,
+      evidenceCount: 3,
       snapshot: {
         id: allCandidatesPackageSnapshotId,
         status: "draft",

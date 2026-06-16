@@ -119,7 +119,7 @@ async function createCandidateFixture() {
   await writeFile(
     legacyManifest,
     JSON.stringify({
-      package_snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      package_snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       authoritative_snapshot: "snapshot:2026-06-15.full.18",
       import_modes: {
         published_view: {
@@ -155,7 +155,7 @@ async function createCandidateFixture() {
     versionManifest,
     JSON.stringify({
       schema_version: "mag7-supply-chain.version-manifest.v1",
-      package_snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      package_snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       authoritative_root_snapshot: "snapshot:2026-06-15.full.18",
       published: {
         relation_file: relationsPublished,
@@ -193,7 +193,7 @@ async function createCandidateFixture() {
 }
 
 describe("normalized package validator", () => {
-  it("validates the current root package against the formal 332/444, 335/448, 3/4 boundary", async () => {
+  it("validates the current root package against the formal 332/444, 334/447, 2/3 boundary", async () => {
     const summary = await validateNormalizedPackageManifest(ROOT_MANIFEST);
 
     expect(summary).toMatchObject({
@@ -203,12 +203,12 @@ describe("normalized package validator", () => {
         evidence: 444,
       },
       allCandidates: {
-        relations: 335,
-        evidence: 448,
+        relations: 334,
+        evidence: 447,
       },
       candidateOnly: {
-        relations: 3,
-        evidence: 4,
+        relations: 2,
+        evidence: 3,
       },
     });
     expect(summary.manifest.authoritativeRootSnapshot).toBe("snapshot:2026-06-15.full.18");
@@ -269,7 +269,7 @@ describe("normalized package validator", () => {
         fixture.versionManifest,
         JSON.stringify({
           schema_version: "mag7-supply-chain.version-manifest.v1",
-          package_snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          package_snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
           authoritative_root_snapshot: "snapshot:2026-06-15.full.18",
           published: {
             relation_file: fixture.relationsPublished,

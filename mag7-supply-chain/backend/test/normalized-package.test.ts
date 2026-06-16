@@ -736,7 +736,7 @@ describe("prepareNormalizedImport", () => {
       relations: [
         {
           relation_id: "rel:amazon:astera-labs:component_supply:compat-sec-filing",
-          snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
           company: "Amazon",
           company_slug: "amazon",
           supplier: "Astera Labs",
@@ -811,7 +811,7 @@ describe("prepareNormalizedImport", () => {
   });
 
   it("remaps candidate-only all-candidates rows into a draft candidate shell snapshot while preserving authoritative metadata", async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), "full21-tail-closure-"));
+    const tempDir = await mkdtemp(join(tmpdir(), "full22-top-level-tail-"));
 
     try {
       const relationsPath = join(tempDir, "relations-all-candidates.jsonl");
@@ -821,7 +821,7 @@ describe("prepareNormalizedImport", () => {
       await writeFile(
         manifestPath,
         JSON.stringify({
-          package_snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          package_snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
           authoritative_snapshot: "snapshot:2026-06-15.full.18",
           formal_boundary_reconciliation: {
             resolved_counts: {
@@ -894,25 +894,25 @@ describe("prepareNormalizedImport", () => {
       const prepared = prepareNormalizedImport(pkg);
 
       expect(pkg.boundaryMetadata).toEqual({
-        packageSnapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        packageSnapshotId: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
         authoritativeSnapshotId: "snapshot:2026-06-15.full.18",
         candidateOnlyRelationCount: 1,
         candidateOnlyEvidenceCount: 1,
       });
       expect(pkg.relations[0]).toMatchObject({
-        snapshot_id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        snapshot_id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
         status: "draft",
       });
       expect(pkg.evidence[0]).toMatchObject({
         source_type: "official_filing",
       });
       expect(prepared.relations[0]).toMatchObject({
-        snapshotId: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+        snapshotId: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
         status: "draft",
       });
       expect(prepared.snapshots).toEqual([
         expect.objectContaining({
-          id: "snapshot:2026-06-15.full.21-tail-closure-candidate",
+          id: "snapshot:2026-06-16.full.22-amazon-tail-candidate",
           status: "draft",
           notes: expect.stringContaining("authoritative published snapshot remains snapshot:2026-06-15.full.18"),
         }),
