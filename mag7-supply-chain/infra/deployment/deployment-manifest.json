@@ -14,6 +14,12 @@
   "release_gate_status": {
     "post_audit_status": "awaiting_source_neo4j_positive_closure",
     "authoritative_post_audit_report": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "boundary_review_basis": {
+      "current_formal_review_task": "c576bb95-5777-4627-87ea-784346c64361",
+      "current_formal_review_report": "/workspace/agents/code-reviewer/output/full21-live-positive-capture-kit-boundary-review-v2/full21-live-positive-capture-kit-boundary-review-v2-report.md",
+      "historical_audit_only_task": "c4ffad54-5699-4ce4-9a4c-f44f899bd761",
+      "historical_audit_only_report": "/workspace/agents/code-reviewer/output/full21-live-positive-capture-kit-boundary-review/full21-live-positive-capture-kit-boundary-review-report.md"
+    },
     "supersedes": [
       "/workspace/agents/devops/output/final-release-index-post-audit-v3/final-release-index-post-audit-v3-report.md",
       "/workspace/agents/devops/output/final-release-index-post-audit-v2/final-release-index-post-audit-v2-report.md"
@@ -315,9 +321,9 @@
         "full21-live-closure-refresh-report.md：当前 sandbox 只验证到 live 缺依赖时的 degraded/503 语义正确，仍缺可达 Neo4j/Redis 的真实导入与 HTTP 正向样本。"
       ],
       "remaining_gates": [
-        "提供可达的外部 Neo4j/Redis 或可用的临时 live 验证环境",
+        "准备 Node.js v22.22.3 + npm + curl + jq，并确保可达 Neo4j 5.26、可达 Redis 7.4，以及 GRAPH_RUNTIME_MODE=live / NEO4J_* / REDIS_URL 这组 live 环境变量",
         "按 full.21 manifest 驱动完成 source=neo4j 的 import-summary 与 health/detail/overview/search/suggest/subgraph/path/stats/evidence 正向样本",
-        "在闭环补齐后，方可进入 human 连接 Cloudflare 与正式部署审批阶段"
+        "在闭环补齐后，Cloudflare 连接、临时托管和正式部署审批才可作为可选后续步骤进入 human 决策范围"
       ]
     }
   },
