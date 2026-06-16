@@ -14,8 +14,8 @@
   - `/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md`
 - `authoritative snapshot`：`snapshot:2026-06-15.full.18`
 - published：`332 relations / 444 evidence`
-- all-candidates：`335 relations / 448 evidence`
-- candidate-only：`3 relations / 4 evidence`
+- all-candidates：`334 relations / 447 evidence`
+- candidate-only：`2 relations / 3 evidence`
 - 证据目录：
 
 ## 2. 前置条件
@@ -55,7 +55,7 @@ EXPECTED_ALL_CANDIDATE_RELATION_COUNT=335
 EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT=448
 EXPECTED_CANDIDATE_ONLY_RELATION_COUNT=3
 EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT=4
-PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
+PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-16.full.22-amazon-tail-candidate
 ```
 
 ## 4. preflight / mode-selection
@@ -70,8 +70,8 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 
 - 是否命中 `snapshot:2026-06-15.full.18`
 - `published=332/444`
-- `all-candidates=335/448`
-- `candidate-only=3/4`
+- `all-candidates=334/447`
+- `candidate-only=2/3`
 - 自动选择结果是 `docker` 还是 `external`
 - 若失败，失败码是什么
 
@@ -163,7 +163,7 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 
 ## 8. candidate shell 隔离校验
 
-### `graph/subgraph?snapshot=snapshot:2026-06-15.full.21-tail-closure-candidate`
+### `graph/subgraph?snapshot=snapshot:2026-06-16.full.22-amazon-tail-candidate`
 
 ```json
 {}
@@ -179,7 +179,7 @@ PACKAGE_SHELL_SNAPSHOT=snapshot:2026-06-15.full.21-tail-closure-candidate
 
 - published `subgraph/path` 中未混入 candidate shell relation
 - candidate shell relation 只在显式 candidate snapshot 或 direct relation evidence 校验中出现
-- 未把 `335/448` 或 `3/4` 写成 published
+- 未把 `334/447` 或 `2/3` 写成 published
 
 ## 9. 可选的 Cloudflare / 域名后续状态
 

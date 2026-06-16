@@ -4,7 +4,7 @@
 > 本文档保留为底层执行器 [`live-acceptance-commands.sh`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-commands.sh) 的详细说明。
 
 > 当前 live 验收唯一机器输入是 [`live-acceptance-manifest.json`](/workspace/project/mag7-supply-chain/infra/deployment/live-acceptance-manifest.json)。
-> 正式边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=335/448`、`candidate-only=3/4`。
+> 正式边界固定为 `authoritative snapshot=snapshot:2026-06-15.full.18`、`published=332/444`、`all-candidates=334/447`、`candidate-only=2/3`。
 > `all-candidates` 与 `candidate-only` 只代表 candidate shell 审计边界，**不得写成 published**。
 > 旧 `312/410`、`327/435`、`341/459`、`350/476`、`9/15`、`23/41` 只保留历史审计语义，不能再作为默认值或执行口径。
 
@@ -13,7 +13,7 @@
 本手册只解决一件事：在可达 Neo4j/Redis 的前提下，复用仓库现有脚本拿到 **`source=neo4j` 的正向闭环证据**，并同时证明：
 
 1. published 查询面仍然固定在 `332/444`
-2. candidate shell 只保留在 `335/448` / `3/4` 审计边界
+2. candidate shell 只保留在 `334/447` / `2/3` 审计边界
 3. candidate shell 不会被误写成 published
 
 ## 2. 唯一正式输入
@@ -104,7 +104,7 @@ npm --prefix backend run import:full-package:live -- \
 
 理由：
 
-1. `all-candidates` 导入可以同时验证 published `332/444` 与 candidate shell `3/4`
+1. `all-candidates` 导入可以同时验证 published `332/444` 与 candidate shell `2/3`
 2. published 端点仍必须只暴露 `332/444`
 3. candidate shell relation 只能在显式 candidate snapshot 或 direct relation evidence 校验中出现
 
@@ -116,8 +116,8 @@ npm --prefix backend run import:full-package:live -- \
 2. 校验 `authoritative snapshot=full.18`
 3. 校验 package manifest 计数：
    - published `332/444`
-   - all-candidates `335/448`
-   - candidate-only `3/4`
+   - all-candidates `334/447`
+   - candidate-only `2/3`
 4. 根据 `--mode` 选择 external 或 docker
 5. 执行 `npm run build`
 6. 执行 manifest 驱动导入
@@ -155,7 +155,7 @@ npm --prefix backend run import:full-package:live -- \
 1. `source=mock`
 2. `status=degraded`
 3. `503 dependency_unavailable`
-4. 把 `335/448` 或 `3/4` 写成 published
+4. 把 `334/447` 或 `2/3` 写成 published
 5. 把 candidate shell relation 混进 published 查询面
 
 ## 8. 失败分流
@@ -163,7 +163,7 @@ npm --prefix backend run import:full-package:live -- \
 - `external_env_incomplete`
   - 外部环境变量未完整注入
 - `package_counts_mismatch`
-  - package manifest 计数不是 `332/444`、`335/448`、`3/4`
+  - package manifest 计数不是 `332/444`、`334/447`、`2/3`
 - `snapshot_mismatch`
   - authoritative snapshot 不是 `snapshot:2026-06-15.full.18`
 - `import_not_live_neo4j`

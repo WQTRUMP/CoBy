@@ -1,7 +1,7 @@
 {
   "schema": "wanman.deployment-manifest",
   "version": 1,
-  "generated_at": "2026-06-16T00:25:00Z",
+  "generated_at": "2026-06-16T04:29:28Z",
   "generated_by": "devops",
   "product": {
     "name": "mag7-supply-chain",
@@ -9,11 +9,11 @@
     "kind": "interactive_supply_chain_platform",
     "repository_root": "/workspace/project/mag7-supply-chain",
     "readiness": "prototype_passed_real_data_launch_awaiting_source_neo4j_positive_closure",
-    "summary": "当前唯一正式口径已切换到 full.21 工程闭环终审：authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 published 视图固定为 332 relations / 444 evidence，candidate shell 收敛为 all-candidates 335 relations / 448 evidence、candidate-only 3 / 4。full.21 只完成 published reconciliation 与 candidate shell 收敛，不构成新的 authoritative promotion。当前 sandbox 仅验证到 live 缺依赖时 health=degraded、业务接口返回结构化 503 dependency_unavailable，尚未取得基于外部 Neo4j/Redis 的 source=neo4j 正向闭环；historical full19 live 证据只能保留 audit-only 语义，不得写成 2026-06-15 当前本机已复放通过。"
+    "summary": "当前唯一正式口径已切换到 full22 顶层候选壳终审：authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18；当前 published 视图固定为 332 relations / 444 evidence，candidate shell 收敛为 all-candidates 334 relations / 447 evidence、candidate-only 2 / 3。full22 只完成顶层 candidate shell 收口，不构成新的 authoritative promotion。当前 sandbox 仅验证到 live 缺依赖时 health=degraded、业务接口返回结构化 503 dependency_unavailable，尚未取得基于外部 Neo4j/Redis 的 source=neo4j 正向闭环；historical full19 live 证据只能保留 audit-only 语义，不得写成 2026-06-15 当前本机已复放通过。"
   },
   "release_gate_status": {
     "post_audit_status": "awaiting_source_neo4j_positive_closure",
-    "authoritative_post_audit_report": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "authoritative_post_audit_report": "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
     "boundary_review_basis": {
       "current_formal_review_task": "c576bb95-5777-4627-87ea-784346c64361",
       "current_formal_review_report": "/workspace/agents/code-reviewer/output/full21-live-positive-capture-kit-boundary-review-v2/full21-live-positive-capture-kit-boundary-review-v2-report.md",
@@ -37,7 +37,7 @@
   },
   "authoritative_supply_chain_release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "formal_decision_source": "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
     "live_runtime_verification_source": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
     "counts": {
       "published": {
@@ -45,22 +45,23 @@
         "evidence": 444
       },
       "all_candidates": {
-        "relations": 335,
-        "evidence": 448
+        "relations": 334,
+        "evidence": 447
       },
       "candidate_only_delta": {
-        "relations": 3,
-        "evidence": 4
+        "relations": 2,
+        "evidence": 3
       }
     },
     "boundary_summary": {
       "published_view": "332/444 已由 root 与 canonical published JSONL SHA256 全量一致、且 full21 published reconciliation 对 published 视图零漂移复验共同锁定。",
-      "candidate_only_boundary": "335/448 是当前 candidate shell / contracts 边界；其中 3/4 尾项不得表述成已进入 published live 图。",
+      "candidate_only_boundary": "334/447 是当前 candidate shell / contracts 边界；其中 2/3 尾项不得表述成已进入 published live 图。",
       "authoritative_snapshot_rule": "root/canonical published 虽已在 full.21 收口中完成一致性修平，但 authoritative snapshot 仍严格维持 snapshot:2026-06-15.full.18，不得把 authoritative snapshot 前移到 full.21。"
     },
     "input_policy": {
       "formal_conclusion_source_only": true,
       "allowed_formal_source": [
+        "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
         "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
         "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
         "/workspace/agents/evidence-collector/output/mag7-full-package/full21-published-reconciliation/full21-published-reconciliation-report.md",
@@ -73,7 +74,7 @@
         "0cd6875d",
         "6e45bce1"
       ],
-      "notes": "本 manifest 的当前数据边界与 readiness 结论只接受 full.21 工程闭环终审、live closure refresh、published reconciliation 与 devops 正向闭环执行包作为最终来源。historical full19 live 与 full20-wave5 证据仅保留审计用途，不得再用来声明当前 sandbox 已完成 source=neo4j 正向闭环。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
+      "notes": "本 manifest 的当前数据边界只接受 full22 顶层候选壳终审；source=neo4j 正向闭环阻塞结论接受 full21 live closure formal review、live closure refresh 与 devops 正向闭环执行包。historical full19 live 与 full20-wave5 证据仅保留审计用途，不得再用来声明当前 sandbox 已完成 source=neo4j 正向闭环。仓库源码与 package.json 仅用于补充 runtime/entrypoint/command 事实。"
     }
   },
   "runtime": {
@@ -167,7 +168,7 @@
         }
       ],
       "live_verification_summary": [
-        "full.21 当前只正式证明：published 332/444 与 candidate shell 335/448、3/4 的边界在工程代码、README 与测试中已一致收口。",
+        "full22 当前只正式证明：published 332/444 与 candidate shell 334/447、2/3 的边界在工程代码、README 与测试中已一致收口。",
         "当前 sandbox 在 GRAPH_RUNTIME_MODE=live 下只观察到 health=degraded、repositoryMode=neo4j、dependencies.neo4j/redis=down，且业务接口统一返回结构化 503 dependency_unavailable。",
         "historical full19 live 与 full20-wave5 链只保留 audit-only 语义；当前仍需外部 Neo4j/Redis 才能补齐 source=neo4j 的 import-summary 与 HTTP 正向样本。"
       ]
@@ -302,7 +303,7 @@
     "contains_stateful_or_paid_resources": true,
     "prototype_deploy_allowed_without_real_data": true,
     "real_data_launch_allowed_after_approval": false,
-    "summary": "当前正式口径只允许先补齐外部 Neo4j/Redis 的 source=neo4j 正向闭环。full.21 把当前 root payload 与 candidate shell 锁定为 published 332/444、all-candidates 335/448、candidate-only 3/4，但这不等于 ready_for_human_decision。historical full19 live 证据不能再被写成 2026-06-15 当前本机已复放通过；因此 Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 live 正向闭环补齐后，再由 human 在 Wanman 中批准并交给受信部署流程执行。"
+    "summary": "当前正式口径只允许先补齐外部 Neo4j/Redis 的 source=neo4j 正向闭环。full22 把当前 root payload 与 candidate shell 锁定为 published 332/444、all-candidates 334/447、candidate-only 2/3，但这不等于 ready_for_human_decision。historical full19 live 证据不能再被写成 2026-06-15 当前本机已复放通过；因此 Cloudflare 域名、DNS、反向代理、Neo4j、Redis、对象存储等付费或有状态资源的实际变更仍必须等待 live 正向闭环补齐后，再由 human 在 Wanman 中批准并交给受信部署流程执行。"
   },
   "deployment_tiers": {
     "prototype": {
@@ -317,7 +318,8 @@
       "allowed": false,
       "readiness": "awaiting_source_neo4j_positive_closure",
       "evidence": [
-        "full21-live-closure-formal-review-v2-report.md：正式裁定 authoritative snapshot 仍为 full.18、published 仍为 332/444，candidate shell 收敛为 335/448、3/4，但当前环境尚未形成 source=neo4j 的 live API 正向闭环。",
+        "full22-top-level-tail-formal-review-report.md：正式裁定 authoritative snapshot 仍为 full.18、published 仍为 332/444，candidate shell 收敛为 334/447、2/3。",
+        "full21-live-closure-formal-review-v2-report.md：正式裁定当前环境尚未形成 source=neo4j 的 live API 正向闭环。",
         "full21-live-closure-refresh-report.md：当前 sandbox 只验证到 live 缺依赖时的 degraded/503 语义正确，仍缺可达 Neo4j/Redis 的真实导入与 HTTP 正向样本。"
       ],
       "remaining_gates": [

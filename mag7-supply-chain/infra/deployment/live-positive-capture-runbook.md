@@ -7,8 +7,8 @@
 > 当前唯一正式口径固定为：
 > - `authoritative snapshot=snapshot:2026-06-15.full.18`
 > - `published=332/444`
-> - `all-candidates=335/448`
-> - `candidate-only=3/4`
+> - `all-candidates=334/447`
+> - `candidate-only=2/3`
 
 ## 1. 入口职责
 
@@ -17,7 +17,7 @@
 1. 先落盘不含密钥明文的环境变量预检摘要
 2. 调用现有 full.21 live 执行包完成真实导入与 HTTP 样本采集
 3. 无论成功失败，都输出中文摘要、结构化索引与日志文件
-4. 保证 candidate shell 仍只写 `335/448`、`3/4`，绝不误写成 published
+4. 保证 candidate shell 仍只写 `334/447`、`2/3`，绝不误写成 published
 
 ## 2. 典型用法
 

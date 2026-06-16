@@ -1,37 +1,38 @@
 {
   "schema": "wanman.live-acceptance-manifest",
   "version": 1,
-  "generated_at": "2026-06-16T00:15:00Z",
+  "generated_at": "2026-06-16T04:29:28Z",
   "entry_scope": "live_acceptance_helper_only_not_release_gate",
-  "usage_note": "本 manifest 只定义 full.21 当前口径下的 source=neo4j 正向闭环执行模板，不代表已获得 human 部署批准，也不替代 deployment-manifest.json、products-candidate.json 或 cloudflare-handoff-checklist.json 作为当前正式发布入口。",
+  "usage_note": "本 manifest 只定义 full22 顶层候选壳当前口径下的 source=neo4j 正向闭环执行模板，不代表已获得 human 部署批准，也不替代 deployment-manifest.json、products-candidate.json 或 cloudflare-handoff-checklist.json 作为当前正式发布入口。",
   "source": {
-    "formal_review_primary": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
+    "formal_review_primary": "/workspace/agents/code-reviewer-6/output/full22-top-level-tail-formal-review/full22-top-level-tail-formal-review-report.md",
+    "live_closure_blocker_review": "/workspace/agents/code-reviewer-6/output/full21-live-closure-formal-review-v2/full21-live-closure-formal-review-v2-report.md",
     "api_refresh_supporting": "/workspace/agents/api-tester-2/output/full21-live-closure-refresh/full21-live-closure-refresh-report.md",
     "full_package_manifest": "/workspace/agents/evidence-collector/output/mag7-full-package/mag7-full-package-manifest.json",
-    "full_package_merge_report": "/workspace/agents/evidence-collector/output/mag7-full-package/full21-tail-closure/full21-tail-closure-merge-report.md"
+    "full_package_merge_report": "/workspace/agents/evidence-collector/output/mag7-full-package/full22-top-level-tail-merge/full22-top-level-tail-merge-report.md"
   },
   "release": {
     "authoritative_snapshot": "snapshot:2026-06-15.full.18",
-    "package_snapshot_shell": "snapshot:2026-06-15.full.21-tail-closure-candidate",
+    "package_snapshot_shell": "snapshot:2026-06-16.full.22-amazon-tail-candidate",
     "counts": {
       "published": {
         "relations": 332,
         "evidence": 444
       },
       "all_candidates": {
-        "relations": 335,
-        "evidence": 448
+        "relations": 334,
+        "evidence": 447
       },
       "candidate_only_delta": {
-        "relations": 3,
-        "evidence": 4
+        "relations": 2,
+        "evidence": 3
       }
     },
     "rules": [
       "authoritative snapshot 只能写 snapshot:2026-06-15.full.18",
       "published 只能写 332/444",
-      "all-candidates 只能写 335/448",
-      "candidate-only 只能写 3/4",
+      "all-candidates 只能写 334/447",
+      "candidate-only 只能写 2/3",
       "candidate shell 不得写成 published"
     ],
     "prohibited_regressions": [
@@ -83,14 +84,11 @@
       "anchor_relation_id": "rel:apple:tsmc:manufacturing:apple-silicon"
     },
     "candidate_shell": {
-      "candidate_snapshot_id": "snapshot:2026-06-15.full.21-tail-closure-candidate",
+      "candidate_snapshot_id": "snapshot:2026-06-16.full.22-amazon-tail-candidate",
       "candidate_company_id": "company:AMZN",
       "candidate_only_relation_id": "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
       "candidate_only_relation_id_secondary": "rel:amazon:sk-hynix:component_supply:amzn-r18-16-memory_candidate-hbm3",
-      "shared_family_relation_ids": [
-        "rel:amazon:astera-labs:component_supply:amzn-r18-12-procurement_candidate-smart_fabric_switch",
-        "rel:amazon:astera-labs:component_supply:amzn-r18-13-procurement_candidate-signal_conditioning"
-      ]
+      "shared_family_relation_ids": []
     }
   },
   "success_criteria": [

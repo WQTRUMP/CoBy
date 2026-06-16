@@ -15,7 +15,7 @@ usage() {
   - 它会先生成不含密钥明文的环境预检摘要，再调用底层 live-acceptance-commands.sh。
   - 无论成功或失败，都会在输出目录落盘中文摘要、结构化索引、底层 result/import/http/log 证据。
   - authoritative snapshot 固定为 snapshot:2026-06-15.full.18。
-  - published 固定为 332/444；all-candidates 固定为 335/448；candidate-only 固定为 3/4。
+  - published 固定为 332/444；all-candidates 固定为 334/447；candidate-only 固定为 2/3。
 
 参数：
   --mode           默认 auto。auto 优先 external，缺完整外部依赖时回退 docker。
@@ -415,7 +415,7 @@ cat >"$ENTRY_REPORT_MD" <<EOF
 ## 4. 失败回退口径
 
 - 任一步失败都必须保留 \`output-dir\`，不得删除已采集的 \`result.json\`、\`preflight.json\`、\`bringup.json\`、\`http/*.json\`、\`logs/*\`。
-- 不得把 \`335/448\` 或 \`3/4\` 写成 published。
+- 不得把 \`334/447\` 或 \`2/3\` 写成 published。
 - 不得把 failure fallback 叙述成 prototype/mock 成功。
 - 若失败，请优先查看：\`result.json\`、\`capture-entry-summary.json\`、\`minimal-external-prerequisites.json\`、\`logs/import.stderr.log\`、\`logs/backend-live.log\`。
 

@@ -25,11 +25,11 @@ usage() {
   EXPECTED_PACKAGE_SNAPSHOT  默认 snapshot:2026-06-15.full.18
   EXPECTED_RELATION_COUNT    默认 332
   EXPECTED_EVIDENCE_COUNT    默认 444
-  EXPECTED_ALL_CANDIDATE_RELATION_COUNT 默认 335
-  EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT 默认 448
-  EXPECTED_CANDIDATE_ONLY_RELATION_COUNT 默认 3
-  EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT 默认 4
-  PACKAGE_SHELL_SNAPSHOT     默认 snapshot:2026-06-15.full.21-tail-closure-candidate
+  EXPECTED_ALL_CANDIDATE_RELATION_COUNT 默认 334
+  EXPECTED_ALL_CANDIDATE_EVIDENCE_COUNT 默认 447
+  EXPECTED_CANDIDATE_ONLY_RELATION_COUNT 默认 2
+  EXPECTED_CANDIDATE_ONLY_EVIDENCE_COUNT 默认 3
+  PACKAGE_SHELL_SNAPSHOT     默认 snapshot:2026-06-16.full.22-amazon-tail-candidate
   API_BASE                   默认 http://127.0.0.1:4000
   HOST                       默认 127.0.0.1
   PORT                       默认 4000
@@ -203,7 +203,7 @@ write_minimal_prerequisites() {
         "可达的 Neo4j 5.26 兼容实例",
         "可达的 Redis 7.4 兼容实例",
         "live 模式环境变量：GRAPH_RUNTIME_MODE=live、NEO4J_URI、NEO4J_USERNAME、NEO4J_PASSWORD、NEO4J_DATABASE、REDIS_URL",
-        "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、published=332/444 与 candidate shell=3/4 隔离同时成立"
+        "重新执行本脚本并拿到 source=neo4j 的导入结果、health=ok、published=332/444 与 candidate shell=2/3 隔离同时成立"
       ],
       external_env_template: {
         GRAPH_RUNTIME_MODE: "live",
@@ -636,7 +636,7 @@ command -v npm >/dev/null 2>&1 || fail_stage "preflight" "npm_missing" "缺少 n
 command -v curl >/dev/null 2>&1 || fail_stage "preflight" "curl_missing" "缺少 curl" "当前运行器未安装 curl。"
 test -f "$PACKAGE_MANIFEST" || fail_stage "preflight" "package_manifest_missing" "找不到 full package manifest" "$PACKAGE_MANIFEST 不存在。"
 [[ "$PACKAGE_AUTHORITATIVE_SNAPSHOT" = "$EXPECTED_PACKAGE_SNAPSHOT" ]] || fail_stage "preflight" "authoritative_snapshot_mismatch" "数据包 authoritative snapshot 与 full.18 不一致" "检测到 $PACKAGE_AUTHORITATIVE_SNAPSHOT，预期 $EXPECTED_PACKAGE_SNAPSHOT。"
-[[ "$PACKAGE_SNAPSHOT_ID" = "$PACKAGE_SHELL_SNAPSHOT" ]] || fail_stage "preflight" "package_shell_snapshot_mismatch" "数据包 package shell snapshot 与当前 full.21 壳不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $PACKAGE_SHELL_SNAPSHOT。"
+[[ "$PACKAGE_SNAPSHOT_ID" = "$PACKAGE_SHELL_SNAPSHOT" ]] || fail_stage "preflight" "package_shell_snapshot_mismatch" "数据包 package shell snapshot 与当前 full22 壳不一致" "检测到 $PACKAGE_SNAPSHOT_ID，预期 $PACKAGE_SHELL_SNAPSHOT。"
 [[ "$PACKAGE_PUBLISHED_RELATION_COUNT" = "$EXPECTED_RELATION_COUNT" ]] || fail_stage "preflight" "published_relation_count_mismatch" "published relations 计数与当前正式口径不一致" "检测到 $PACKAGE_PUBLISHED_RELATION_COUNT，预期 $EXPECTED_RELATION_COUNT。"
 [[ "$PACKAGE_PUBLISHED_EVIDENCE_COUNT" = "$EXPECTED_EVIDENCE_COUNT" ]] || fail_stage "preflight" "published_evidence_count_mismatch" "published evidence 计数与当前正式口径不一致" "检测到 $PACKAGE_PUBLISHED_EVIDENCE_COUNT，预期 $EXPECTED_EVIDENCE_COUNT。"
 [[ "$PACKAGE_ALL_CANDIDATE_RELATION_COUNT" = "$EXPECTED_ALL_CANDIDATE_RELATION_COUNT" ]] || fail_stage "preflight" "all_candidate_relation_count_mismatch" "all-candidates relations 计数与当前正式口径不一致" "检测到 $PACKAGE_ALL_CANDIDATE_RELATION_COUNT，预期 $EXPECTED_ALL_CANDIDATE_RELATION_COUNT。"
@@ -857,7 +857,7 @@ jq -e \
       (.liveImport.candidateOnlyEvidenceCount == ($expectedCandidateOnlyEvidenceCount | tonumber))
     end
   )
-' "$IMPORT_JSON" >/dev/null || fail_stage "import" "import_manifest_boundary_mismatch" "导入结果未命中 manifest 约束的 full.21 边界" "需要 authoritative snapshot=full.18、all-candidates=335/448、candidate-only=3/4。"
+' "$IMPORT_JSON" >/dev/null || fail_stage "import" "import_manifest_boundary_mismatch" "导入结果未命中 manifest 约束的 full22 边界" "需要 authoritative snapshot=full.18、all-candidates=334/447、candidate-only=2/3。"
 
 log_cmd "npm --prefix $BACKEND_DIR start"
 npm --prefix "$BACKEND_DIR" start >"$SERVER_LOG" 2>&1 &
